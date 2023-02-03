@@ -15,7 +15,7 @@ const streamifyArray = require('streamify-array');
 /**
  * An RDF store allows quads to be stored and fetched, based on one or more customizable indexes.
  */
-export class RdfStore<E, Q extends RDF.BaseQuad = RDF.Quad>
+export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad>
 implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
   public static readonly DEFAULT_INDEX_COMBINATIONS: QuadTermName[][] = [
     [ 'graph', 'subject', 'predicate', 'object' ],
