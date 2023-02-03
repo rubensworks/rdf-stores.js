@@ -2,7 +2,7 @@ import type * as RDF from '@rdfjs/types';
 import type { QuadTermName } from 'rdf-terms';
 import type { ITermDictionary } from '../dictionary/ITermDictionary';
 import type { IRdfStoreOptions } from '../IRdfStoreOptions';
-import type { PatternTerm, QuadPatternTerms } from '../PatternTerm';
+import type { PatternTerm, QuadPatternTerms, QuadTerms } from '../PatternTerm';
 import type { IRdfStoreIndex } from './IRdfStoreIndex';
 
 /**
@@ -24,15 +24,14 @@ export class RdfStoreIndexNestedMap<E, Q extends RDF.BaseQuad = RDF.Quad> implem
     this.nestedMap = new Map();
   }
 
-  public add(quad: Q): void {
+  public add(terms: QuadTerms): void {
     let map = this.nestedMap;
-    for (const [ i, component ] of this.componentOrder.entries()) {
+    for (const [ i, term ] of terms.entries()) {
       const mapActual = map;
-      const term = quad[component];
       const encodedTerm = this.dictionary.encode(term);
       let nextMap = mapActual.get(encodedTerm);
       if (!nextMap) {
-        nextMap = i === this.componentOrder.length - 1 ? true : new Map();
+        nextMap = i === terms.length - 1 ? true : new Map();
         mapActual.set(encodedTerm, nextMap);
       }
       map = <NestedMapActual<E>> nextMap;

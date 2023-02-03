@@ -9,3 +9,8 @@ export type PatternTerm = RDF.NamedNode | RDF.BlankNode | RDF.Literal | RDF.Defa
  * Four pattern terms.
  */
 export type QuadPatternTerms = [ PatternTerm, PatternTerm, PatternTerm, PatternTerm ];
+
+/**
+ * Four terms.
+ */
+export type QuadTerms = [ RDF.Term, RDF.Term, RDF.Term, RDF.Term ];

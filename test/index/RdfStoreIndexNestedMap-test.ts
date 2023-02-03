@@ -41,12 +41,12 @@ describe('RdfStoreIndexNestedMap', () => {
 
     describe('that has one quad', () => {
       beforeEach(() => {
-        index.add(DF.quad(
+        index.add([
           DF.namedNode('s'),
           DF.namedNode('p'),
           DF.namedNode('o'),
           DF.namedNode('g'),
-        ));
+        ]);
       });
 
       describe('find', () => {
@@ -111,30 +111,30 @@ describe('RdfStoreIndexNestedMap', () => {
 
     describe('that has multiple quads', () => {
       beforeEach(() => {
-        index.add(DF.quad(
+        index.add([
           DF.namedNode('s1'),
           DF.namedNode('p1'),
           DF.namedNode('o1'),
           DF.namedNode('g1'),
-        ));
-        index.add(DF.quad(
+        ]);
+        index.add([
           DF.namedNode('s1'),
           DF.namedNode('p2'),
           DF.namedNode('o2'),
           DF.namedNode('g1'),
-        ));
-        index.add(DF.quad(
+        ]);
+        index.add([
           DF.namedNode('s2'),
           DF.namedNode('p1'),
           DF.namedNode('o1'),
           DF.namedNode('g1'),
-        ));
-        index.add(DF.quad(
+        ]);
+        index.add([
           DF.namedNode('s2'),
           DF.namedNode('p2'),
           DF.namedNode('o2'),
           DF.namedNode('g2'),
-        ));
+        ]);
       });
 
       describe('find', () => {
@@ -364,12 +364,12 @@ describe('RdfStoreIndexNestedMap', () => {
 
     describe('that has one quad', () => {
       beforeEach(() => {
-        index.add(DF.quad(
-          DF.namedNode('s'),
-          DF.namedNode('p'),
-          DF.namedNode('o'),
+        index.add([
           DF.namedNode('g'),
-        ));
+          DF.namedNode('o'),
+          DF.namedNode('p'),
+          DF.namedNode('s'),
+        ]);
       });
 
       describe('find', () => {

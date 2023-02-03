@@ -69,7 +69,7 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
    */
   public addQuad(quad: Q): void {
     for (const index of this.indexes) {
-      index.add(quad);
+      index.add(orderQuadComponents(index.componentOrder, [ quad.subject, quad.predicate, quad.object, quad.graph ]));
     }
   }
 
