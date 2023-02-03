@@ -57,12 +57,12 @@ describe('RdfStoreIndexNestedMap', () => {
             undefined,
             undefined,
           ])).toEqual([
-            DF.quad(
+            [
               DF.namedNode('s'),
               DF.namedNode('p'),
               DF.namedNode('o'),
               DF.namedNode('g'),
-            ),
+            ],
           ]);
         });
 
@@ -73,12 +73,12 @@ describe('RdfStoreIndexNestedMap', () => {
             DF.namedNode('o'),
             DF.namedNode('g'),
           ])).toEqual([
-            DF.quad(
+            [
               DF.namedNode('s'),
               DF.namedNode('p'),
               DF.namedNode('o'),
               DF.namedNode('g'),
-            ),
+            ],
           ]);
         });
 
@@ -89,12 +89,12 @@ describe('RdfStoreIndexNestedMap', () => {
             undefined,
             DF.namedNode('g'),
           ])).toEqual([
-            DF.quad(
+            [
               DF.namedNode('s'),
               DF.namedNode('p'),
               DF.namedNode('o'),
               DF.namedNode('g'),
-            ),
+            ],
           ]);
         });
 
@@ -145,30 +145,30 @@ describe('RdfStoreIndexNestedMap', () => {
             undefined,
             undefined,
           ])).toEqual([
-            DF.quad(
+            [
               DF.namedNode('s1'),
               DF.namedNode('p1'),
               DF.namedNode('o1'),
               DF.namedNode('g1'),
-            ),
-            DF.quad(
+            ],
+            [
               DF.namedNode('s1'),
               DF.namedNode('p2'),
               DF.namedNode('o2'),
               DF.namedNode('g1'),
-            ),
-            DF.quad(
+            ],
+            [
               DF.namedNode('s2'),
               DF.namedNode('p1'),
               DF.namedNode('o1'),
               DF.namedNode('g1'),
-            ),
-            DF.quad(
+            ],
+            [
               DF.namedNode('s2'),
               DF.namedNode('p2'),
               DF.namedNode('o2'),
               DF.namedNode('g2'),
-            ),
+            ],
           ]);
         });
 
@@ -179,12 +179,12 @@ describe('RdfStoreIndexNestedMap', () => {
             DF.namedNode('o1'),
             DF.namedNode('g1'),
           ])).toEqual([
-            DF.quad(
+            [
               DF.namedNode('s1'),
               DF.namedNode('p1'),
               DF.namedNode('o1'),
               DF.namedNode('g1'),
-            ),
+            ],
           ]);
 
           expect(index.find([
@@ -193,12 +193,12 @@ describe('RdfStoreIndexNestedMap', () => {
             DF.namedNode('o2'),
             DF.namedNode('g1'),
           ])).toEqual([
-            DF.quad(
+            [
               DF.namedNode('s1'),
               DF.namedNode('p2'),
               DF.namedNode('o2'),
               DF.namedNode('g1'),
-            ),
+            ],
           ]);
 
           expect(index.find([
@@ -207,12 +207,12 @@ describe('RdfStoreIndexNestedMap', () => {
             DF.namedNode('o1'),
             DF.namedNode('g1'),
           ])).toEqual([
-            DF.quad(
+            [
               DF.namedNode('s2'),
               DF.namedNode('p1'),
               DF.namedNode('o1'),
               DF.namedNode('g1'),
-            ),
+            ],
           ]);
 
           expect(index.find([
@@ -221,12 +221,12 @@ describe('RdfStoreIndexNestedMap', () => {
             DF.namedNode('o2'),
             DF.namedNode('g2'),
           ])).toEqual([
-            DF.quad(
+            [
               DF.namedNode('s2'),
               DF.namedNode('p2'),
               DF.namedNode('o2'),
               DF.namedNode('g2'),
-            ),
+            ],
           ]);
         });
 
@@ -237,18 +237,18 @@ describe('RdfStoreIndexNestedMap', () => {
             undefined,
             undefined,
           ])).toEqual([
-            DF.quad(
+            [
               DF.namedNode('s1'),
               DF.namedNode('p1'),
               DF.namedNode('o1'),
               DF.namedNode('g1'),
-            ),
-            DF.quad(
+            ],
+            [
               DF.namedNode('s1'),
               DF.namedNode('p2'),
               DF.namedNode('o2'),
               DF.namedNode('g1'),
-            ),
+            ],
           ]);
 
           expect(index.find([
@@ -257,18 +257,18 @@ describe('RdfStoreIndexNestedMap', () => {
             undefined,
             undefined,
           ])).toEqual([
-            DF.quad(
+            [
               DF.namedNode('s2'),
               DF.namedNode('p1'),
               DF.namedNode('o1'),
               DF.namedNode('g1'),
-            ),
-            DF.quad(
+            ],
+            [
               DF.namedNode('s2'),
               DF.namedNode('p2'),
               DF.namedNode('o2'),
               DF.namedNode('g2'),
-            ),
+            ],
           ]);
 
           expect(index.find([
@@ -277,18 +277,18 @@ describe('RdfStoreIndexNestedMap', () => {
             undefined,
             undefined,
           ])).toEqual([
-            DF.quad(
+            [
               DF.namedNode('s1'),
               DF.namedNode('p1'),
               DF.namedNode('o1'),
               DF.namedNode('g1'),
-            ),
-            DF.quad(
+            ],
+            [
               DF.namedNode('s2'),
               DF.namedNode('p1'),
               DF.namedNode('o1'),
               DF.namedNode('g1'),
-            ),
+            ],
           ]);
 
           expect(index.find([
@@ -297,12 +297,12 @@ describe('RdfStoreIndexNestedMap', () => {
             undefined,
             undefined,
           ])).toEqual([
-            DF.quad(
+            [
               DF.namedNode('s2'),
               DF.namedNode('p1'),
               DF.namedNode('o1'),
               DF.namedNode('g1'),
-            ),
+            ],
           ]);
 
           expect(index.find([
@@ -311,12 +311,12 @@ describe('RdfStoreIndexNestedMap', () => {
             undefined,
             DF.namedNode('g2'),
           ])).toEqual([
-            DF.quad(
+            [
               DF.namedNode('s2'),
               DF.namedNode('p2'),
               DF.namedNode('o2'),
               DF.namedNode('g2'),
-            ),
+            ],
           ]);
 
           expect(index.find([
@@ -380,12 +380,12 @@ describe('RdfStoreIndexNestedMap', () => {
             undefined,
             undefined,
           ])).toEqual([
-            DF.quad(
-              DF.namedNode('s'),
-              DF.namedNode('p'),
-              DF.namedNode('o'),
+            [
               DF.namedNode('g'),
-            ),
+              DF.namedNode('o'),
+              DF.namedNode('p'),
+              DF.namedNode('s'),
+            ],
           ]);
         });
 
@@ -396,12 +396,12 @@ describe('RdfStoreIndexNestedMap', () => {
             DF.namedNode('p'),
             DF.namedNode('s'),
           ])).toEqual([
-            DF.quad(
-              DF.namedNode('s'),
-              DF.namedNode('p'),
-              DF.namedNode('o'),
+            [
               DF.namedNode('g'),
-            ),
+              DF.namedNode('o'),
+              DF.namedNode('p'),
+              DF.namedNode('s'),
+            ],
           ]);
         });
 
@@ -412,12 +412,12 @@ describe('RdfStoreIndexNestedMap', () => {
             DF.namedNode('p'),
             undefined,
           ])).toEqual([
-            DF.quad(
-              DF.namedNode('s'),
-              DF.namedNode('p'),
-              DF.namedNode('o'),
+            [
               DF.namedNode('g'),
-            ),
+              DF.namedNode('o'),
+              DF.namedNode('p'),
+              DF.namedNode('s'),
+            ],
           ]);
         });
 

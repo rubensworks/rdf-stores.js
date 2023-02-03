@@ -23,9 +23,11 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
     [ 'graph', 'object', 'subject', 'predicate' ],
   ];
 
+  private readonly dataFactory: RDF.DataFactory<Q>;
   private readonly indexes: IRdfStoreIndex<E, Q>[];
 
   public constructor(options: IRdfStoreOptions<E, Q>) {
+    this.dataFactory = options.dataFactory;
     this.indexes = RdfStore.constructIndexes(options);
   }
 
@@ -104,6 +106,14 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
           return term;
         });
     const index = this.indexes[getBestIndex(this.indexes.map(indexThis => indexThis.componentOrder), quadComponents)];
-    return streamifyArray(index.find(orderQuadComponents(index.componentOrder, quadComponents)));
+    return streamifyArray(
+      index.find(orderQuadComponents(index.componentOrder, quadComponents))
+        .map(decomposedQuad => this.dataFactory.quad(
+          decomposedQuad[index.componentOrderInverse.subject],
+          decomposedQuad[index.componentOrderInverse.predicate],
+          decomposedQuad[index.componentOrderInverse.object],
+          decomposedQuad[index.componentOrderInverse.graph],
+        )),
+    );
   }
 }

@@ -10,6 +10,7 @@ export interface IRdfStoreIndex<E, Q extends RDF.BaseQuad = RDF.Quad> {
    * The order in which quad components are stored.
    */
   readonly componentOrder: QuadTermName[];
+  readonly componentOrderInverse: Record<QuadTermName, number>;
 
   /**
    * Add a quad to the index.
@@ -18,7 +19,8 @@ export interface IRdfStoreIndex<E, Q extends RDF.BaseQuad = RDF.Quad> {
   add: (terms: QuadTerms) => void;
   /**
    * Find all quads matching the given terms.
+   * Quads are represented as an array of terms, in the component order of this index.
    * @param terms An array of pattern terms, ordered in the component order of this index.
    */
-  find: (terms: QuadPatternTerms) => Q[];
+  find: (terms: QuadPatternTerms) => QuadTerms[];
 }

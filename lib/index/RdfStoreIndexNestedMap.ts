@@ -12,12 +12,10 @@ export class RdfStoreIndexNestedMap<E, Q extends RDF.BaseQuad = RDF.Quad> implem
   public readonly componentOrder: QuadTermName[];
   public readonly componentOrderInverse: Record<QuadTermName, number>;
 
-  private readonly dataFactory: RDF.DataFactory<Q>;
   private readonly dictionary: ITermDictionary<E>;
   private readonly nestedMap: NestedMapActual<E>;
 
   public constructor(options: IRdfStoreOptions<E, Q>, componentOrder: QuadTermName[]) {
-    this.dataFactory = options.dataFactory;
     this.dictionary = options.dictionary;
     this.componentOrder = componentOrder;
     this.componentOrderInverse = <any>Object.fromEntries(this.componentOrder.map((value, key) => [ value, key ]));
@@ -38,17 +36,11 @@ export class RdfStoreIndexNestedMap<E, Q extends RDF.BaseQuad = RDF.Quad> implem
     }
   }
 
-  public find(terms: QuadPatternTerms): Q[] {
-    const decomposedQuads = this.findInner(terms, this.nestedMap);
-    return decomposedQuads.map(decomposedQuad => this.dataFactory.quad(
-      decomposedQuad[this.componentOrderInverse.subject],
-      decomposedQuad[this.componentOrderInverse.predicate],
-      decomposedQuad[this.componentOrderInverse.object],
-      decomposedQuad[this.componentOrderInverse.graph],
-    ));
+  public find(terms: QuadPatternTerms): QuadTerms[] {
+    return <QuadTerms[]> this.findInner(terms, this.nestedMap);
   }
 
-  public findInner(terms: PatternTerm[], map: NestedMapActual<E>): RDF.Term[][] {
+  protected findInner(terms: PatternTerm[], map: NestedMapActual<E>): RDF.Term[][] {
     if (terms.length === 0) {
       return [[]];
     }
