@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 import * as assert from 'assert';
 import type * as RDF from '@rdfjs/types';
+import { Store } from 'n3';
 import { DataFactory } from 'rdf-data-factory';
 import type { IRdfStoreOptions } from '../lib/IRdfStoreOptions';
 import { RdfStore } from '../lib/RdfStore';
@@ -11,7 +12,15 @@ import { RdfStore } from '../lib/RdfStore';
  */
 export class PerformanceTest {
   public constructor(
-    public readonly approaches: { name: string; options: IRdfStoreOptions<any, any> }[],
+    public readonly approaches: {
+      name: string;
+      options: {
+        type: 'rdfstore';
+        options: IRdfStoreOptions<any, any>;
+      } | {
+        type: 'n3';
+      };
+    }[],
     public readonly dimension = 256,
     public readonly prefix = 'http://example.org/#',
     public readonly dataFactory: RDF.DataFactory = new DataFactory(),
@@ -21,20 +30,20 @@ export class PerformanceTest {
     for (const approach of this.approaches) {
       console.log(`\n# ${approach.name}\n`);
 
-      let store = new RdfStore(approach.options);
+      let store = approach.options.type === 'n3' ? new Store() : new RdfStore(approach.options.options);
       this.addTriplesToDefaultGraph(this.dimension, store);
       this.findTriplesNoVariables(this.dimension, store);
       this.findTriples1Variable(this.dimension, store);
       this.findTriples2Variables(this.dimension, store);
       console.log();
 
-      store = new RdfStore(approach.options);
+      store = approach.options.type === 'n3' ? new Store() : new RdfStore(approach.options.options);
       this.addQuadsToGraphs(this.dimension / 4, store);
       this.findQuadsInGraphs(this.dimension / 4, store);
     }
   }
 
-  public addTriplesToDefaultGraph(dimension: number, store: RdfStore): void {
+  public addTriplesToDefaultGraph(dimension: number, store: RdfStore | Store): void {
     const TEST = `- Adding ${dimension * dimension * dimension} triples to the default graph`;
     console.time(TEST);
     for (let subjectIt = 0; subjectIt < dimension; subjectIt++) {
@@ -52,7 +61,7 @@ export class PerformanceTest {
     console.log(`* Memory usage for triples: ${Math.round(process.memoryUsage().rss / 1_024 / 1_024)}MB`);
   }
 
-  public findTriplesNoVariables(dimension: number, store: RdfStore): void {
+  public findTriplesNoVariables(dimension: number, store: RdfStore | Store): void {
     const TEST = `- Finding all ${dimension * dimension * dimension} triples in the default graph ${dimension * dimension} times (0 variables)`;
     console.time(TEST);
     for (let subjectIt = 0; subjectIt < dimension; subjectIt++) {
@@ -62,6 +71,7 @@ export class PerformanceTest {
             this.dataFactory.namedNode(`${this.prefix}${subjectIt}`),
             this.dataFactory.namedNode(`${this.prefix}${predicateIt}`),
             this.dataFactory.namedNode(`${this.prefix}${objectIt}`),
+            this.dataFactory.defaultGraph(),
           ).length, 1);
         }
       }
@@ -69,7 +79,7 @@ export class PerformanceTest {
     console.timeEnd(TEST);
   }
 
-  public findTriples1Variable(dimension: number, store: RdfStore): void {
+  public findTriples1Variable(dimension: number, store: RdfStore | Store): void {
     const TEST = `- Finding all ${dimension * dimension * dimension} triples in the default graph ${dimension * dimension * 2} times (1 variable)`;
     console.time(TEST);
     for (let i = 0; i < dimension; i++) {
@@ -90,7 +100,7 @@ export class PerformanceTest {
     console.timeEnd(TEST);
   }
 
-  public findTriples2Variables(dimension: number, store: RdfStore): void {
+  public findTriples2Variables(dimension: number, store: RdfStore | Store): void {
     const TEST = `- Finding all ${dimension * dimension * dimension} triples in the default graph ${dimension * dimension * 3} times (2 variables)`;
     console.time(TEST);
     for (let i = 0; i < dimension; i++) {
@@ -105,7 +115,7 @@ export class PerformanceTest {
     console.timeEnd(TEST);
   }
 
-  public addQuadsToGraphs(dimension: number, store: RdfStore): void {
+  public addQuadsToGraphs(dimension: number, store: RdfStore | Store): void {
     const TEST = `- Adding ${dimension * dimension * dimension * dimension} quads`;
     console.time(TEST);
     for (let subjectIt = 0; subjectIt < dimension; subjectIt++) {
@@ -126,7 +136,7 @@ export class PerformanceTest {
     console.log(`* Memory usage for quads: ${Math.round(process.memoryUsage().rss / 1_024 / 1_024)}MB`);
   }
 
-  public findQuadsInGraphs(dimension: number, store: RdfStore): void {
+  public findQuadsInGraphs(dimension: number, store: RdfStore | Store): void {
     const TEST = `- Finding all ${dimension * dimension * dimension * dimension} quads ${dimension * dimension * dimension * 4} times`;
     console.time(TEST);
     for (let i = 0; i < dimension; i++) {
