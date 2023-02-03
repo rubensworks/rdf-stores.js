@@ -14,3 +14,8 @@ export type QuadPatternTerms = [ PatternTerm, PatternTerm, PatternTerm, PatternT
  * Four terms.
  */
 export type QuadTerms = [ RDF.Term, RDF.Term, RDF.Term, RDF.Term ];
+
+/**
+ * Four encoded terms.
+ */
+export type EncodedQuadTerms<E> = [ E, E, E, E ];

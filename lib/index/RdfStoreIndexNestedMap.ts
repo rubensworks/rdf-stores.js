@@ -1,7 +1,7 @@
 import type * as RDF from '@rdfjs/types';
 import type { ITermDictionary } from '../dictionary/ITermDictionary';
 import type { IRdfStoreOptions } from '../IRdfStoreOptions';
-import type { PatternTerm, QuadPatternTerms, QuadTerms } from '../PatternTerm';
+import type { EncodedQuadTerms, PatternTerm, QuadPatternTerms, QuadTerms } from '../PatternTerm';
 import type { IRdfStoreIndex } from './IRdfStoreIndex';
 
 /**
@@ -16,15 +16,14 @@ export class RdfStoreIndexNestedMap<E> implements IRdfStoreIndex<E> {
     this.nestedMap = new Map();
   }
 
-  public add(terms: QuadTerms): void {
+  public add(terms: EncodedQuadTerms<E>): void {
     let map = this.nestedMap;
     for (const [ i, term ] of terms.entries()) {
       const mapActual = map;
-      const encodedTerm = this.dictionary.encode(term);
-      let nextMap = mapActual.get(encodedTerm);
+      let nextMap = mapActual.get(term);
       if (!nextMap) {
         nextMap = i === terms.length - 1 ? true : new Map();
-        mapActual.set(encodedTerm, nextMap);
+        mapActual.set(term, nextMap);
       }
       map = <NestedMapActual<E>> nextMap;
     }

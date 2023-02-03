@@ -6,13 +6,15 @@ const DF = new DataFactory();
 
 describe('RdfStoreIndexNestedRecord', () => {
   let index: RdfStoreIndexNestedRecord<number>;
+  let dictionary: TermDictionaryNumber;
 
   describe('in SPOG order', () => {
     beforeEach(() => {
+      dictionary = new TermDictionaryNumber();
       index = new RdfStoreIndexNestedRecord<number>({
         indexCombinations: [],
         indexConstructor: <any> undefined,
-        dictionary: new TermDictionaryNumber(),
+        dictionary,
         dataFactory: new DataFactory(),
       });
     });
@@ -39,10 +41,10 @@ describe('RdfStoreIndexNestedRecord', () => {
     describe('that has one quad', () => {
       beforeEach(() => {
         index.add([
-          DF.namedNode('s'),
-          DF.namedNode('p'),
-          DF.namedNode('o'),
-          DF.namedNode('g'),
+          dictionary.encode(DF.namedNode('s')),
+          dictionary.encode(DF.namedNode('p')),
+          dictionary.encode(DF.namedNode('o')),
+          dictionary.encode(DF.namedNode('g')),
         ]);
       });
 
@@ -109,28 +111,28 @@ describe('RdfStoreIndexNestedRecord', () => {
     describe('that has multiple quads', () => {
       beforeEach(() => {
         index.add([
-          DF.namedNode('s1'),
-          DF.namedNode('p1'),
-          DF.namedNode('o1'),
-          DF.namedNode('g1'),
+          dictionary.encode(DF.namedNode('s1')),
+          dictionary.encode(DF.namedNode('p1')),
+          dictionary.encode(DF.namedNode('o1')),
+          dictionary.encode(DF.namedNode('g1')),
         ]);
         index.add([
-          DF.namedNode('s1'),
-          DF.namedNode('p2'),
-          DF.namedNode('o2'),
-          DF.namedNode('g1'),
+          dictionary.encode(DF.namedNode('s1')),
+          dictionary.encode(DF.namedNode('p2')),
+          dictionary.encode(DF.namedNode('o2')),
+          dictionary.encode(DF.namedNode('g1')),
         ]);
         index.add([
-          DF.namedNode('s2'),
-          DF.namedNode('p1'),
-          DF.namedNode('o1'),
-          DF.namedNode('g1'),
+          dictionary.encode(DF.namedNode('s2')),
+          dictionary.encode(DF.namedNode('p1')),
+          dictionary.encode(DF.namedNode('o1')),
+          dictionary.encode(DF.namedNode('g1')),
         ]);
         index.add([
-          DF.namedNode('s2'),
-          DF.namedNode('p2'),
-          DF.namedNode('o2'),
-          DF.namedNode('g2'),
+          dictionary.encode(DF.namedNode('s2')),
+          dictionary.encode(DF.namedNode('p2')),
+          dictionary.encode(DF.namedNode('o2')),
+          dictionary.encode(DF.namedNode('g2')),
         ]);
       });
 
@@ -329,10 +331,11 @@ describe('RdfStoreIndexNestedRecord', () => {
 
   describe('in GOPS order', () => {
     beforeEach(() => {
+      dictionary = new TermDictionaryNumber();
       index = new RdfStoreIndexNestedRecord<number>({
         indexCombinations: [],
         indexConstructor: <any> undefined,
-        dictionary: new TermDictionaryNumber(),
+        dictionary,
         dataFactory: new DataFactory(),
       });
     });
@@ -359,10 +362,10 @@ describe('RdfStoreIndexNestedRecord', () => {
     describe('that has one quad', () => {
       beforeEach(() => {
         index.add([
-          DF.namedNode('g'),
-          DF.namedNode('o'),
-          DF.namedNode('p'),
-          DF.namedNode('s'),
+          dictionary.encode(DF.namedNode('g')),
+          dictionary.encode(DF.namedNode('o')),
+          dictionary.encode(DF.namedNode('p')),
+          dictionary.encode(DF.namedNode('s')),
         ]);
       });
 

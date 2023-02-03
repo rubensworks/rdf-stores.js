@@ -1,6 +1,6 @@
 import type { QuadTermName } from 'rdf-terms';
 import { QUAD_TERM_NAMES } from 'rdf-terms';
-import type { QuadPatternTerms, QuadTerms } from './PatternTerm';
+import type { QuadPatternTerms } from './PatternTerm';
 
 export const QUAD_TERM_NAMES_INVERSE: Record<QuadTermName, number> =
   <any>Object.fromEntries(QUAD_TERM_NAMES.map((value, key) => [ value, key ]));
@@ -51,11 +51,11 @@ export function getComponentOrderScore(
  * @param desiredComponentOrder The desired order of components.
  * @param quadPattern A quad pattern.
  */
-export function orderQuadComponents<T extends QuadTerms | QuadPatternTerms>(
+export function orderQuadComponents<T>(
   desiredComponentOrder: QuadTermName[],
-  quadPattern: T,
-): T {
-  return <T> desiredComponentOrder.map(desiredComponent => {
+  quadPattern: T[],
+): T[] {
+  return desiredComponentOrder.map(desiredComponent => {
     const desiredComponentIndex = QUAD_TERM_NAMES_INVERSE[desiredComponent];
     return quadPattern[desiredComponentIndex];
   });

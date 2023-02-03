@@ -3,12 +3,13 @@ import type * as RDF from '@rdfjs/types';
 import { DataFactory } from 'rdf-data-factory';
 import type { QuadTermName } from 'rdf-terms';
 import { QUAD_TERM_NAMES } from 'rdf-terms';
+import type { ITermDictionary } from './dictionary/ITermDictionary';
 import { TermDictionaryNumber } from './dictionary/TermDictionaryNumber';
 import type { IRdfStoreIndex } from './index/IRdfStoreIndex';
 import { RdfStoreIndexNestedMap } from './index/RdfStoreIndexNestedMap';
 import type { IRdfStoreOptions } from './IRdfStoreOptions';
 import { getBestIndex, orderQuadComponents } from './OrderUtils';
-import type { QuadPatternTerms } from './PatternTerm';
+import type { EncodedQuadTerms, QuadPatternTerms } from './PatternTerm';
 
 const streamifyArray = require('streamify-array');
 
@@ -24,10 +25,12 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
   ];
 
   private readonly dataFactory: RDF.DataFactory<Q>;
+  private readonly dictionary: ITermDictionary<E>;
   private readonly indexesWrapped: IRdfStoreIndexWrapped<E>[];
 
   public constructor(options: IRdfStoreOptions<E, Q>) {
     this.dataFactory = options.dataFactory;
+    this.dictionary = options.dictionary;
     this.indexesWrapped = RdfStore.constructIndexesWrapped(options);
   }
 
@@ -87,12 +90,15 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
    * @param quad An RDF quad.
    */
   public addQuad(quad: Q): void {
+    const quadEncoded = [
+      this.dictionary.encode(quad.subject),
+      this.dictionary.encode(quad.predicate),
+      this.dictionary.encode(quad.object),
+      this.dictionary.encode(quad.graph),
+    ];
     for (const indexWrapped of this.indexesWrapped) {
       // Before sending the quad to the index, make sure its components are ordered corresponding to the index's order.
-      indexWrapped.index.add(orderQuadComponents(
-        indexWrapped.componentOrder,
-        [ quad.subject, quad.predicate, quad.object, quad.graph ],
-      ));
+      indexWrapped.index.add(<EncodedQuadTerms<E>>orderQuadComponents(indexWrapped.componentOrder, quadEncoded));
     }
   }
 
@@ -135,7 +141,7 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
     )];
 
     // Re-order the quad pattern based on this best index's component order
-    const quadComponentsOrdered = orderQuadComponents(indexWrapped.componentOrder, quadComponents);
+    const quadComponentsOrdered = <QuadPatternTerms> orderQuadComponents(indexWrapped.componentOrder, quadComponents);
 
     // Call the best index's find method.
     // eslint-disable-next-line unicorn/no-array-callback-reference
