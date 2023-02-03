@@ -17,16 +17,11 @@ export class RdfStoreIndexNestedRecord<E extends number> implements IRdfStoreInd
   }
 
   public add(terms: EncodedQuadTerms<E>): void {
-    let map = this.nestedRecords;
-    for (const [ i, term ] of terms.entries()) {
-      const mapActual = map;
-      let nextMap = mapActual[term];
-      if (!nextMap) {
-        nextMap = i === terms.length - 1 ? true : {};
-        mapActual[term] = nextMap;
-      }
-      map = <NestedRecordActual<E>> nextMap;
-    }
+    const map0 = this.nestedRecords;
+    const map1 = map0[terms[0]] || (map0[terms[0]] = <any>{});
+    const map2 = map1[terms[1]] || (map1[terms[1]] = <any>{});
+    const map3 = map2[terms[2]] || (map2[terms[2]] = <any>{});
+    map3[terms[3]] = true;
   }
 
   public find(terms: QuadPatternTerms): IterableIterator<QuadTerms> {
@@ -64,4 +59,4 @@ export class RdfStoreIndexNestedRecord<E extends number> implements IRdfStoreInd
 }
 
 export type NestedRecord<E extends string | number | symbol> = NestedRecordActual<E> | true;
-export type NestedRecordActual<E extends string | number | symbol> = Record<E, any>;
+export type NestedRecordActual<E extends string | number | symbol> = Record<E, Record<E, Record<E, Record<E, any>>>>;
