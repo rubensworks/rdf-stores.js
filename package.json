@@ -30,7 +30,11 @@
     "index.js"
   ],
   "dependencies": {
-    "@rdfjs/types": "*"
+    "@rdfjs/types": "*",
+    "rdf-data-factory": "^1.1.1",
+    "rdf-string": "^1.6.2",
+    "rdf-terms": "^1.9.1",
+    "streamify-array": "^1.0.1"
   },
   "pre-commit": [
     "build",
@@ -42,6 +46,7 @@
     "@types/jest": "^27.0.0",
     "@typescript-eslint/eslint-plugin": "^5.0.0",
     "@typescript-eslint/parser": "^5.0.0",
+    "arrayify-stream": "^2.0.1",
     "coveralls": "^3.0.0",
     "eslint": "^7.9.0",
     "eslint-config-es": "^3.23.0",
@@ -51,6 +56,7 @@
     "eslint-plugin-tsdoc": "^0.2.7",
     "eslint-plugin-unused-imports": "^1.0.0",
     "jest": "^27.0.0",
+    "jest-each": "^29.4.1",
     "jest-rdf": "^1.5.0",
     "manual-git-changelog": "^1.0.0",
     "pre-commit": "^1.2.2",
