@@ -4,7 +4,7 @@ import { DataFactory } from 'rdf-data-factory';
 import type { QuadTermName } from 'rdf-terms';
 import { QUAD_TERM_NAMES } from 'rdf-terms';
 import type { ITermDictionary } from './dictionary/ITermDictionary';
-import { TermDictionaryNumber } from './dictionary/TermDictionaryNumber';
+import { TermDictionaryNumberMap } from './dictionary/TermDictionaryNumberMap';
 import type { IRdfStoreIndex } from './index/IRdfStoreIndex';
 import { RdfStoreIndexNestedMap } from './index/RdfStoreIndexNestedMap';
 import type { IRdfStoreOptions } from './IRdfStoreOptions';
@@ -43,7 +43,7 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
     return new RdfStore<number>({
       indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
       indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
-      dictionary: new TermDictionaryNumber(),
+      dictionary: new TermDictionaryNumberMap(),
       dataFactory: new DataFactory(),
     });
   }

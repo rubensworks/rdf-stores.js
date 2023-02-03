@@ -4,9 +4,9 @@ import { stringToTerm, termToString } from 'rdf-string';
 import type { ITermDictionary } from './ITermDictionary';
 
 /**
- * A term dictionary that encodes to numbers, and stores the dictionary in memory.
+ * A term dictionary that encodes to numbers, and stores the dictionary in memory in a Map.
  */
-export class TermDictionaryNumber implements ITermDictionary<number> {
+export class TermDictionaryNumberMap implements ITermDictionary<number> {
   private lastId = 0;
   private readonly dictionary: Map<string, number> = new Map();
   private readonly reverseDictionary: Map<number, string> = new Map();

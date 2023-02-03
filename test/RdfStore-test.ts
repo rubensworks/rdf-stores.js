@@ -2,7 +2,7 @@ import arrayifyStream from 'arrayify-stream';
 import each from 'jest-each';
 import { DataFactory } from 'rdf-data-factory';
 import type { QuadTermName } from 'rdf-terms';
-import { TermDictionaryNumber } from '../lib/dictionary/TermDictionaryNumber';
+import { TermDictionaryNumberMap } from '../lib/dictionary/TermDictionaryNumberMap';
 import { RdfStoreIndexNestedMap } from '../lib/index/RdfStoreIndexNestedMap';
 import { RdfStore } from '../lib/RdfStore';
 import 'jest-rdf';
@@ -50,7 +50,7 @@ describe('RdfStore', () => {
       store = new RdfStore<number>({
         indexCombinations,
         indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
-        dictionary: new TermDictionaryNumber(),
+        dictionary: new TermDictionaryNumberMap(),
         dataFactory: new DataFactory(),
       });
     });
@@ -366,7 +366,7 @@ describe('RdfStore', () => {
       expect(() => new RdfStore<number>({
         indexCombinations: [],
         indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
-        dictionary: new TermDictionaryNumber(),
+        dictionary: new TermDictionaryNumberMap(),
         dataFactory: new DataFactory(),
       })).toThrow(`At least one index combination is required`);
     });
@@ -375,7 +375,7 @@ describe('RdfStore', () => {
       expect(() => new RdfStore<number>({
         indexCombinations: [[ 'subject', 'predicate' ]],
         indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
-        dictionary: new TermDictionaryNumber(),
+        dictionary: new TermDictionaryNumberMap(),
         dataFactory: new DataFactory(),
       })).toThrow(`Invalid index combination: subject,predicate`);
     });

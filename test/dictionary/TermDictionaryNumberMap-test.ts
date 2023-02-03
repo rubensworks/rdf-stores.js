@@ -1,15 +1,15 @@
 import { DataFactory } from 'rdf-data-factory';
 import type { ITermDictionary } from '../../lib/dictionary/ITermDictionary';
-import { TermDictionaryNumber } from '../../lib/dictionary/TermDictionaryNumber';
+import { TermDictionaryNumberMap } from '../../lib/dictionary/TermDictionaryNumberMap';
 import 'jest-rdf';
 
 const DF = new DataFactory();
 
-describe('TermDictionaryNumber', () => {
+describe('TermDictionaryNumberMap', () => {
   let dict: ITermDictionary<number>;
 
   beforeEach(() => {
-    dict = new TermDictionaryNumber();
+    dict = new TermDictionaryNumberMap();
   });
 
   describe('encode', () => {

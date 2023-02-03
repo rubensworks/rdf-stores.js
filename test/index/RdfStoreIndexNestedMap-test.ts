@@ -1,16 +1,16 @@
 import { DataFactory } from 'rdf-data-factory';
-import { TermDictionaryNumber } from '../../lib/dictionary/TermDictionaryNumber';
+import { TermDictionaryNumberMap } from '../../lib/dictionary/TermDictionaryNumberMap';
 import { RdfStoreIndexNestedMap } from '../../lib/index/RdfStoreIndexNestedMap';
 
 const DF = new DataFactory();
 
 describe('RdfStoreIndexNestedMap', () => {
   let index: RdfStoreIndexNestedMap<number>;
-  let dictionary: TermDictionaryNumber;
+  let dictionary: TermDictionaryNumberMap;
 
   describe('in SPOG order', () => {
     beforeEach(() => {
-      dictionary = new TermDictionaryNumber();
+      dictionary = new TermDictionaryNumberMap();
       index = new RdfStoreIndexNestedMap<number>({
         indexCombinations: [],
         indexConstructor: <any> undefined,
@@ -331,7 +331,7 @@ describe('RdfStoreIndexNestedMap', () => {
 
   describe('in GOPS order', () => {
     beforeEach(() => {
-      dictionary = new TermDictionaryNumber();
+      dictionary = new TermDictionaryNumberMap();
       index = new RdfStoreIndexNestedMap<number>({
         indexCombinations: [],
         indexConstructor: <any> undefined,

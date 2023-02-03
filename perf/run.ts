@@ -1,5 +1,6 @@
 import { DataFactory } from 'rdf-data-factory';
-import { TermDictionaryNumber } from '../lib/dictionary/TermDictionaryNumber';
+import { TermDictionaryNumberMap } from '../lib/dictionary/TermDictionaryNumberMap';
+import { TermDictionaryNumberRecord } from '../lib/dictionary/TermDictionaryNumberRecord';
 import { TermDictionarySymbol } from '../lib/dictionary/TermDictionarySymbol';
 import { RdfStoreIndexNestedMap } from '../lib/index/RdfStoreIndexNestedMap';
 import { RdfStoreIndexNestedRecord } from '../lib/index/RdfStoreIndexNestedRecord';
@@ -8,49 +9,73 @@ import { PerformanceTest } from './PerformanceTest';
 
 const test = new PerformanceTest([
   {
-    name: '1 Record index (number)',
+    name: '1 Record index (Map<number>)',
     options: {
       type: 'rdfstore',
       options: {
         indexCombinations: [[ 'graph', 'subject', 'predicate', 'object' ]],
         indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
-        dictionary: new TermDictionaryNumber(),
+        dictionary: new TermDictionaryNumberMap(),
         dataFactory: new DataFactory(),
       },
     },
   },
   {
-    name: '3 Record indexes (number)',
+    name: '3 Record indexes (Map<number>)',
     options: {
       type: 'rdfstore',
       options: {
         indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
         indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
-        dictionary: new TermDictionaryNumber(),
+        dictionary: new TermDictionaryNumberMap(),
         dataFactory: new DataFactory(),
       },
     },
   },
   {
-    name: '1 Map index (number)',
+    name: '1 Record index (Record<number>)',
+    options: {
+      type: 'rdfstore',
+      options: {
+        indexCombinations: [[ 'graph', 'subject', 'predicate', 'object' ]],
+        indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
+        dictionary: new TermDictionaryNumberRecord(),
+        dataFactory: new DataFactory(),
+      },
+    },
+  },
+  {
+    name: '3 Record indexes (Record<number>)',
+    options: {
+      type: 'rdfstore',
+      options: {
+        indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+        indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
+        dictionary: new TermDictionaryNumberRecord(),
+        dataFactory: new DataFactory(),
+      },
+    },
+  },
+  {
+    name: '1 Map index (Map<number>)',
     options: {
       type: 'rdfstore',
       options: {
         indexCombinations: [[ 'graph', 'subject', 'predicate', 'object' ]],
         indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
-        dictionary: new TermDictionaryNumber(),
+        dictionary: new TermDictionaryNumberMap(),
         dataFactory: new DataFactory(),
       },
     },
   },
   {
-    name: '3 Map indexes (number)',
+    name: '3 Map indexes (Map<number>)',
     options: {
       type: 'rdfstore',
       options: {
         indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
         indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
-        dictionary: new TermDictionaryNumber(),
+        dictionary: new TermDictionaryNumberMap(),
         dataFactory: new DataFactory(),
       },
     },
@@ -87,13 +112,25 @@ const test = new PerformanceTest([
     },
   },
   {
-    name: '3 Map indexes (number) OPT',
+    name: '3 Record indexes (number) OPT',
     options: {
       type: 'rdfstore',
       options: {
         indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
-        indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
-        dictionary: new TermDictionaryNumber(),
+        indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
+        dictionary: new TermDictionaryNumberRecord(),
+        dataFactory: new DataFactory(),
+      },
+    },
+  },
+  {
+    name: '1 Record indexes (number) OPT',
+    options: {
+      type: 'rdfstore',
+      options: {
+        indexCombinations: [[ 'graph', 'subject', 'predicate', 'object' ]],
+        indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
+        dictionary: new TermDictionaryNumberRecord(),
         dataFactory: new DataFactory(),
       },
     },
