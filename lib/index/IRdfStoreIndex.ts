@@ -12,7 +12,7 @@ export interface IRdfStoreIndex<E> {
   /**
    * Find all quads matching the given terms.
    * Quads are represented as an array of terms, in the component order of this index.
-   * @param terms An array of pattern terms, ordered in the component order of this index.
+   * @param terms An iterable of pattern terms, ordered in the component order of this index.
    */
-  find: (terms: QuadPatternTerms) => QuadTerms[];
+  find: (terms: QuadPatternTerms) => IterableIterator<QuadTerms>;
 }

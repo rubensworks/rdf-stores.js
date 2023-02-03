@@ -30,37 +30,37 @@ export class RdfStoreIndexNestedMap<E> implements IRdfStoreIndex<E> {
     }
   }
 
-  public find(terms: QuadPatternTerms): QuadTerms[] {
-    return <QuadTerms[]> this.findInner(terms, this.nestedMap);
+  public * find(terms: QuadPatternTerms): IterableIterator<QuadTerms> {
+    return yield * <IterableIterator<QuadTerms>> this.findInner(0, terms, this.nestedMap, []);
   }
 
-  protected findInner(terms: PatternTerm[], map: NestedMapActual<E>): RDF.Term[][] {
-    if (terms.length === 0) {
-      return [[]];
-    }
-    const currentTerm = terms[0];
+  protected * findInner(
+    index: number,
+    terms: PatternTerm[],
+    map: NestedMapActual<E>,
+    partialQuad: RDF.Term[],
+  ): IterableIterator<RDF.Term[]> {
+    if (index === terms.length) {
+      yield [ ...partialQuad ];
+    } else {
+      const currentTerm = terms[index];
 
-    // If current term is undefined, iterate over all terms at this level.
-    if (!currentTerm) {
-      const partialQuads: RDF.Term[][][] = [];
-      for (const [ key, subMap ] of map.entries()) {
-        const termDefined = this.dictionary.decode(key);
-        partialQuads.push(
-          this.findInner(terms.slice(1), <NestedMapActual<E>> subMap)
-            .map(quadComponents => [ termDefined, ...quadComponents ]),
-        );
+      // If current term is undefined, iterate over all terms at this level.
+      if (!currentTerm) {
+        for (const [ key, subMap ] of map.entries()) {
+          partialQuad[index] = this.dictionary.decode(key);
+          yield * this.findInner(index + 1, terms, <NestedMapActual<E>>subMap, partialQuad);
+        }
+      } else {
+        // If the current term is defined, find one matching map for the current term.
+        const encodedTerm = this.dictionary.encode(currentTerm);
+        const subMap = map.get(encodedTerm);
+        if (subMap) {
+          partialQuad[index] = currentTerm;
+          yield * this.findInner(index + 1, terms, <NestedMapActual<E>>subMap, partialQuad);
+        }
       }
-      return partialQuads.flat();
     }
-
-    // If the current term is defined, find one matching map for the current term.
-    const encodedTerm = this.dictionary.encode(currentTerm);
-    const subMap = map.get(encodedTerm);
-    if (subMap) {
-      return this.findInner(terms.slice(1), <NestedMapActual<E>> subMap)
-        .map(quadComponents => [ currentTerm, ...quadComponents ]);
-    }
-    return [];
   }
 }
 

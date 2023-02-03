@@ -20,18 +20,18 @@ describe('RdfStoreIndexNestedMap', () => {
     describe('that is empty', () => {
       describe('find', () => {
         it('should produce no results', () => {
-          expect(index.find([
+          expect([ ...index.find([
             undefined,
             undefined,
             undefined,
             undefined,
-          ])).toEqual([]);
-          expect(index.find([
+          ]) ]).toEqual([]);
+          expect([ ...index.find([
             DF.namedNode('s'),
             DF.namedNode('p'),
             DF.namedNode('o'),
             DF.namedNode('g'),
-          ])).toEqual([]);
+          ]) ]).toEqual([]);
         });
       });
     });
@@ -48,12 +48,12 @@ describe('RdfStoreIndexNestedMap', () => {
 
       describe('find', () => {
         it('should produce 1 result for a variable pattern', () => {
-          expect(index.find([
+          expect([ ...index.find([
             undefined,
             undefined,
             undefined,
             undefined,
-          ])).toEqual([
+          ]) ]).toEqual([
             [
               DF.namedNode('s'),
               DF.namedNode('p'),
@@ -64,12 +64,12 @@ describe('RdfStoreIndexNestedMap', () => {
         });
 
         it('should produce 1 result for an exact match', () => {
-          expect(index.find([
+          expect([ ...index.find([
             DF.namedNode('s'),
             DF.namedNode('p'),
             DF.namedNode('o'),
             DF.namedNode('g'),
-          ])).toEqual([
+          ]) ]).toEqual([
             [
               DF.namedNode('s'),
               DF.namedNode('p'),
@@ -80,12 +80,12 @@ describe('RdfStoreIndexNestedMap', () => {
         });
 
         it('should produce 1 result for a partial match', () => {
-          expect(index.find([
+          expect([ ...index.find([
             undefined,
             DF.namedNode('p'),
             undefined,
             DF.namedNode('g'),
-          ])).toEqual([
+          ]) ]).toEqual([
             [
               DF.namedNode('s'),
               DF.namedNode('p'),
@@ -96,12 +96,12 @@ describe('RdfStoreIndexNestedMap', () => {
         });
 
         it('should produce 0 results for a partial non-match', () => {
-          expect(index.find([
+          expect([ ...index.find([
             undefined,
             DF.namedNode('p1'),
             undefined,
             DF.namedNode('g'),
-          ])).toEqual([]);
+          ]) ]).toEqual([]);
         });
       });
     });
@@ -136,12 +136,12 @@ describe('RdfStoreIndexNestedMap', () => {
 
       describe('find', () => {
         it('should produce all results for a variable pattern', () => {
-          expect(index.find([
+          expect([ ...index.find([
             undefined,
             undefined,
             undefined,
             undefined,
-          ])).toEqual([
+          ]) ]).toEqual([
             [
               DF.namedNode('s1'),
               DF.namedNode('p1'),
@@ -170,12 +170,12 @@ describe('RdfStoreIndexNestedMap', () => {
         });
 
         it('should produce 1 result for exact matches', () => {
-          expect(index.find([
+          expect([ ...index.find([
             DF.namedNode('s1'),
             DF.namedNode('p1'),
             DF.namedNode('o1'),
             DF.namedNode('g1'),
-          ])).toEqual([
+          ]) ]).toEqual([
             [
               DF.namedNode('s1'),
               DF.namedNode('p1'),
@@ -184,12 +184,12 @@ describe('RdfStoreIndexNestedMap', () => {
             ],
           ]);
 
-          expect(index.find([
+          expect([ ...index.find([
             DF.namedNode('s1'),
             DF.namedNode('p2'),
             DF.namedNode('o2'),
             DF.namedNode('g1'),
-          ])).toEqual([
+          ]) ]).toEqual([
             [
               DF.namedNode('s1'),
               DF.namedNode('p2'),
@@ -198,12 +198,12 @@ describe('RdfStoreIndexNestedMap', () => {
             ],
           ]);
 
-          expect(index.find([
+          expect([ ...index.find([
             DF.namedNode('s2'),
             DF.namedNode('p1'),
             DF.namedNode('o1'),
             DF.namedNode('g1'),
-          ])).toEqual([
+          ]) ]).toEqual([
             [
               DF.namedNode('s2'),
               DF.namedNode('p1'),
@@ -212,12 +212,12 @@ describe('RdfStoreIndexNestedMap', () => {
             ],
           ]);
 
-          expect(index.find([
+          expect([ ...index.find([
             DF.namedNode('s2'),
             DF.namedNode('p2'),
             DF.namedNode('o2'),
             DF.namedNode('g2'),
-          ])).toEqual([
+          ]) ]).toEqual([
             [
               DF.namedNode('s2'),
               DF.namedNode('p2'),
@@ -228,12 +228,12 @@ describe('RdfStoreIndexNestedMap', () => {
         });
 
         it('should produce results for partial matches', () => {
-          expect(index.find([
+          expect([ ...index.find([
             DF.namedNode('s1'),
             undefined,
             undefined,
             undefined,
-          ])).toEqual([
+          ]) ]).toEqual([
             [
               DF.namedNode('s1'),
               DF.namedNode('p1'),
@@ -248,12 +248,12 @@ describe('RdfStoreIndexNestedMap', () => {
             ],
           ]);
 
-          expect(index.find([
+          expect([ ...index.find([
             DF.namedNode('s2'),
             undefined,
             undefined,
             undefined,
-          ])).toEqual([
+          ]) ]).toEqual([
             [
               DF.namedNode('s2'),
               DF.namedNode('p1'),
@@ -268,12 +268,12 @@ describe('RdfStoreIndexNestedMap', () => {
             ],
           ]);
 
-          expect(index.find([
+          expect([ ...index.find([
             undefined,
             DF.namedNode('p1'),
             undefined,
             undefined,
-          ])).toEqual([
+          ]) ]).toEqual([
             [
               DF.namedNode('s1'),
               DF.namedNode('p1'),
@@ -288,12 +288,12 @@ describe('RdfStoreIndexNestedMap', () => {
             ],
           ]);
 
-          expect(index.find([
+          expect([ ...index.find([
             DF.namedNode('s2'),
             DF.namedNode('p1'),
             undefined,
             undefined,
-          ])).toEqual([
+          ]) ]).toEqual([
             [
               DF.namedNode('s2'),
               DF.namedNode('p1'),
@@ -302,12 +302,12 @@ describe('RdfStoreIndexNestedMap', () => {
             ],
           ]);
 
-          expect(index.find([
+          expect([ ...index.find([
             DF.namedNode('s2'),
             undefined,
             undefined,
             DF.namedNode('g2'),
-          ])).toEqual([
+          ]) ]).toEqual([
             [
               DF.namedNode('s2'),
               DF.namedNode('p2'),
@@ -316,12 +316,12 @@ describe('RdfStoreIndexNestedMap', () => {
             ],
           ]);
 
-          expect(index.find([
+          expect([ ...index.find([
             DF.namedNode('s2'),
             undefined,
             undefined,
             DF.namedNode('g3'),
-          ])).toEqual([]);
+          ]) ]).toEqual([]);
         });
       });
     });
@@ -340,18 +340,18 @@ describe('RdfStoreIndexNestedMap', () => {
     describe('that is empty', () => {
       describe('find', () => {
         it('should produce no results', () => {
-          expect(index.find([
+          expect([ ...index.find([
             undefined,
             undefined,
             undefined,
             undefined,
-          ])).toEqual([]);
-          expect(index.find([
+          ]) ]).toEqual([]);
+          expect([ ...index.find([
             DF.namedNode('g'),
             DF.namedNode('o'),
             DF.namedNode('p'),
             DF.namedNode('s'),
-          ])).toEqual([]);
+          ]) ]).toEqual([]);
         });
       });
     });
@@ -368,12 +368,12 @@ describe('RdfStoreIndexNestedMap', () => {
 
       describe('find', () => {
         it('should produce 1 result for a variable pattern', () => {
-          expect(index.find([
+          expect([ ...index.find([
             undefined,
             undefined,
             undefined,
             undefined,
-          ])).toEqual([
+          ]) ]).toEqual([
             [
               DF.namedNode('g'),
               DF.namedNode('o'),
@@ -384,12 +384,12 @@ describe('RdfStoreIndexNestedMap', () => {
         });
 
         it('should produce 1 result for an exact match', () => {
-          expect(index.find([
+          expect([ ...index.find([
             DF.namedNode('g'),
             DF.namedNode('o'),
             DF.namedNode('p'),
             DF.namedNode('s'),
-          ])).toEqual([
+          ]) ]).toEqual([
             [
               DF.namedNode('g'),
               DF.namedNode('o'),
@@ -400,12 +400,12 @@ describe('RdfStoreIndexNestedMap', () => {
         });
 
         it('should produce 1 result for a partial match', () => {
-          expect(index.find([
+          expect([ ...index.find([
             DF.namedNode('g'),
             undefined,
             DF.namedNode('p'),
             undefined,
-          ])).toEqual([
+          ]) ]).toEqual([
             [
               DF.namedNode('g'),
               DF.namedNode('o'),
@@ -416,12 +416,12 @@ describe('RdfStoreIndexNestedMap', () => {
         });
 
         it('should produce 0 results for a partial non-match', () => {
-          expect(index.find([
+          expect([ ...index.find([
             DF.namedNode('g'),
             undefined,
             DF.namedNode('p1'),
             undefined,
-          ])).toEqual([]);
+          ]) ]).toEqual([]);
         });
       });
     });

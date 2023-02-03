@@ -1,5 +1,4 @@
-import
-  type * as RDF from '@rdfjs/types';
+import type * as RDF from '@rdfjs/types';
 import { DataFactory } from 'rdf-data-factory';
 import { stringToTerm, termToString } from 'rdf-string';
 import type { ITermDictionary } from './ITermDictionary';

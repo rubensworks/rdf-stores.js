@@ -106,18 +106,18 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
   }
 
   /**
-   * Returns an array containing all quads matching the pattern.
+   * Returns a generator prodicing all quads matching the pattern.
    * @param subject The optional subject.
    * @param predicate The optional predicate.
    * @param object The optional object.
    * @param graph The optional graph.
    */
-  public getQuads(
+  public * readQuads(
     subject?: RDF.Term | null,
     predicate?: RDF.Term | null,
     object?: RDF.Term | null,
     graph?: RDF.Term | null,
-  ): Q[] {
+  ): IterableIterator<Q> {
     // Construct a quad pattern array
     const quadComponents: QuadPatternTerms = <QuadPatternTerms>
       [ subject || undefined, predicate || undefined, object || undefined, graph || undefined ]
@@ -139,14 +139,31 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
 
     // Call the best index's find method.
     // eslint-disable-next-line unicorn/no-array-callback-reference
-    return indexWrapped.index.find(quadComponentsOrdered)
-    // De-order the resulting quad components into the normal SPOG order for quad creation.
-      .map(decomposedQuad => this.dataFactory.quad(
+    for (const decomposedQuad of indexWrapped.index.find(quadComponentsOrdered)) {
+      // De-order the resulting quad components into the normal SPOG order for quad creation.
+      yield this.dataFactory.quad(
         decomposedQuad[indexWrapped.componentOrderInverse.subject],
         decomposedQuad[indexWrapped.componentOrderInverse.predicate],
         decomposedQuad[indexWrapped.componentOrderInverse.object],
         decomposedQuad[indexWrapped.componentOrderInverse.graph],
-      ));
+      );
+    }
+  }
+
+  /**
+   * Returns an array containing all quads matching the pattern.
+   * @param subject The optional subject.
+   * @param predicate The optional predicate.
+   * @param object The optional object.
+   * @param graph The optional graph.
+   */
+  public getQuads(
+    subject?: RDF.Term | null,
+    predicate?: RDF.Term | null,
+    object?: RDF.Term | null,
+    graph?: RDF.Term | null,
+  ): Q[] {
+    return [ ...this.readQuads(subject, predicate, object, graph) ];
   }
 
   /**
