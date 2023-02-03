@@ -24,34 +24,38 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
   ];
 
   private readonly dataFactory: RDF.DataFactory<Q>;
-  private readonly indexes: IRdfStoreIndex<E, Q>[];
+  private readonly indexesWrapped: IRdfStoreIndexWrapped<E>[];
 
   public constructor(options: IRdfStoreOptions<E, Q>) {
     this.dataFactory = options.dataFactory;
-    this.indexes = RdfStore.constructIndexes(options);
+    this.indexesWrapped = RdfStore.constructIndexesWrapped(options);
   }
 
   public static createDefault(): RdfStore<number> {
     return new RdfStore<number>({
       indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
-      indexConstructor: (subOptions, componentOrder) => new RdfStoreIndexNestedMap(subOptions, componentOrder),
+      indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
       dictionary: new TermDictionaryNumber(),
       dataFactory: new DataFactory(),
     });
   }
 
-  public static constructIndexes<E, Q extends RDF.BaseQuad = RDF.Quad>(
+  public static constructIndexesWrapped<E, Q extends RDF.BaseQuad = RDF.Quad>(
     options: IRdfStoreOptions<E, Q>,
-  ): IRdfStoreIndex<E, Q>[] {
-    const indexes: IRdfStoreIndex<E, Q>[] = [];
+  ): IRdfStoreIndexWrapped<E>[] {
+    const indexes: IRdfStoreIndexWrapped<E>[] = [];
     if (options.indexCombinations.length === 0) {
       throw new Error('At least one index combination is required');
     }
-    for (const combination of options.indexCombinations) {
-      if (!RdfStore.isCombinationValid(combination)) {
-        throw new Error(`Invalid index combination: ${combination}`);
+    for (const componentOrder of options.indexCombinations) {
+      if (!RdfStore.isCombinationValid(componentOrder)) {
+        throw new Error(`Invalid index combination: ${componentOrder}`);
       }
-      indexes.push(options.indexConstructor(options, combination));
+      indexes.push({
+        index: options.indexConstructor(options),
+        componentOrder,
+        componentOrderInverse: <any>Object.fromEntries(componentOrder.map((value, key) => [ value, key ])),
+      });
     }
     return indexes;
   }
@@ -70,8 +74,11 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
    * @param quad An RDF quad.
    */
   public addQuad(quad: Q): void {
-    for (const index of this.indexes) {
-      index.add(orderQuadComponents(index.componentOrder, [ quad.subject, quad.predicate, quad.object, quad.graph ]));
+    for (const indexWrapped of this.indexesWrapped) {
+      indexWrapped.index.add(orderQuadComponents(
+        indexWrapped.componentOrder,
+        [ quad.subject, quad.predicate, quad.object, quad.graph ],
+      ));
     }
   }
 
@@ -105,15 +112,24 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
           }
           return term;
         });
-    const index = this.indexes[getBestIndex(this.indexes.map(indexThis => indexThis.componentOrder), quadComponents)];
+    const indexWrapped = this.indexesWrapped[getBestIndex(
+      this.indexesWrapped.map(indexThis => indexThis.componentOrder),
+      quadComponents,
+    )];
     return streamifyArray(
-      index.find(orderQuadComponents(index.componentOrder, quadComponents))
+      indexWrapped.index.find(orderQuadComponents(indexWrapped.componentOrder, quadComponents))
         .map(decomposedQuad => this.dataFactory.quad(
-          decomposedQuad[index.componentOrderInverse.subject],
-          decomposedQuad[index.componentOrderInverse.predicate],
-          decomposedQuad[index.componentOrderInverse.object],
-          decomposedQuad[index.componentOrderInverse.graph],
+          decomposedQuad[indexWrapped.componentOrderInverse.subject],
+          decomposedQuad[indexWrapped.componentOrderInverse.predicate],
+          decomposedQuad[indexWrapped.componentOrderInverse.object],
+          decomposedQuad[indexWrapped.componentOrderInverse.graph],
         )),
     );
   }
+}
+
+export interface IRdfStoreIndexWrapped<E> {
+  componentOrder: QuadTermName[];
+  componentOrderInverse: Record<QuadTermName, number>;
+  index: IRdfStoreIndex<E>;
 }

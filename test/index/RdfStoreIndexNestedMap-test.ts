@@ -9,15 +9,12 @@ describe('RdfStoreIndexNestedMap', () => {
 
   describe('in SPOG order', () => {
     beforeEach(() => {
-      index = new RdfStoreIndexNestedMap<number>(
-        {
-          indexCombinations: [],
-          indexConstructor: <any> undefined,
-          dictionary: new TermDictionaryNumber(),
-          dataFactory: new DataFactory(),
-        },
-        [ 'subject', 'predicate', 'object', 'graph' ],
-      );
+      index = new RdfStoreIndexNestedMap<number>({
+        indexCombinations: [],
+        indexConstructor: <any> undefined,
+        dictionary: new TermDictionaryNumber(),
+        dataFactory: new DataFactory(),
+      });
     });
 
     describe('that is empty', () => {
@@ -332,15 +329,12 @@ describe('RdfStoreIndexNestedMap', () => {
 
   describe('in GOPS order', () => {
     beforeEach(() => {
-      index = new RdfStoreIndexNestedMap<number>(
-        {
-          indexCombinations: [],
-          indexConstructor: <any> undefined,
-          dictionary: new TermDictionaryNumber(),
-          dataFactory: new DataFactory(),
-        },
-        [ 'graph', 'object', 'predicate', 'subject' ],
-      );
+      index = new RdfStoreIndexNestedMap<number>({
+        indexCombinations: [],
+        indexConstructor: <any> undefined,
+        dictionary: new TermDictionaryNumber(),
+        dataFactory: new DataFactory(),
+      });
     });
 
     describe('that is empty', () => {

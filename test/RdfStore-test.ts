@@ -49,7 +49,7 @@ describe('RdfStore', () => {
     beforeEach(() => {
       store = new RdfStore<number>({
         indexCombinations,
-        indexConstructor: (subOptions, componentOrderIn) => new RdfStoreIndexNestedMap(subOptions, componentOrderIn),
+        indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
         dictionary: new TermDictionaryNumber(),
         dataFactory: new DataFactory(),
       });
@@ -357,7 +357,7 @@ describe('RdfStore', () => {
     });
 
     it('contains 3 indexes', () => {
-      expect((<any> store).indexes).toHaveLength(3);
+      expect((<any> store).indexesWrapped).toHaveLength(3);
     });
   });
 
@@ -365,7 +365,7 @@ describe('RdfStore', () => {
     it('not no combinations', () => {
       expect(() => new RdfStore<number>({
         indexCombinations: [],
-        indexConstructor: (subOptions, componentOrderIn) => new RdfStoreIndexNestedMap(subOptions, componentOrderIn),
+        indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
         dictionary: new TermDictionaryNumber(),
         dataFactory: new DataFactory(),
       })).toThrow(`At least one index combination is required`);
@@ -374,7 +374,7 @@ describe('RdfStore', () => {
     it('not not enough components', () => {
       expect(() => new RdfStore<number>({
         indexCombinations: [[ 'subject', 'predicate' ]],
-        indexConstructor: (subOptions, componentOrderIn) => new RdfStoreIndexNestedMap(subOptions, componentOrderIn),
+        indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
         dictionary: new TermDictionaryNumber(),
         dataFactory: new DataFactory(),
       })).toThrow(`Invalid index combination: subject,predicate`);

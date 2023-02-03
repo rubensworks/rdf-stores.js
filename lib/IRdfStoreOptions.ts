@@ -18,9 +18,8 @@ export interface IRdfStoreOptions<E, Q extends RDF.BaseQuad = RDF.Quad> {
   /**
    * Callback for creating an index.
    * @param options The store options.
-   * @param combination The quad component order for which the index is created.
    */
-  indexConstructor: (options: IRdfStoreOptions<E, Q>, combination: QuadTermName[]) => IRdfStoreIndex<E, Q>;
+  indexConstructor: (options: IRdfStoreOptions<E, Q>) => IRdfStoreIndex<E>;
   /**
    * The dictionary for encoding and decoding RDF terms.
    */

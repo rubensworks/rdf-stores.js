@@ -1,5 +1,4 @@
 import type * as RDF from '@rdfjs/types';
-import type { QuadTermName } from 'rdf-terms';
 import type { ITermDictionary } from '../dictionary/ITermDictionary';
 import type { IRdfStoreOptions } from '../IRdfStoreOptions';
 import type { PatternTerm, QuadPatternTerms, QuadTerms } from '../PatternTerm';
@@ -8,17 +7,12 @@ import type { IRdfStoreIndex } from './IRdfStoreIndex';
 /**
  * An RDF store index that is implemented using nested Maps.
  */
-export class RdfStoreIndexNestedMap<E, Q extends RDF.BaseQuad = RDF.Quad> implements IRdfStoreIndex<E, Q> {
-  public readonly componentOrder: QuadTermName[];
-  public readonly componentOrderInverse: Record<QuadTermName, number>;
-
+export class RdfStoreIndexNestedMap<E> implements IRdfStoreIndex<E> {
   private readonly dictionary: ITermDictionary<E>;
   private readonly nestedMap: NestedMapActual<E>;
 
-  public constructor(options: IRdfStoreOptions<E, Q>, componentOrder: QuadTermName[]) {
+  public constructor(options: IRdfStoreOptions<E>) {
     this.dictionary = options.dictionary;
-    this.componentOrder = componentOrder;
-    this.componentOrderInverse = <any>Object.fromEntries(this.componentOrder.map((value, key) => [ value, key ]));
     this.nestedMap = new Map();
   }
 
