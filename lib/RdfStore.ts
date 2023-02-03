@@ -106,18 +106,18 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
   }
 
   /**
-   * Returns a stream that processes all quads matching the pattern.
+   * Returns an array containing all quads matching the pattern.
    * @param subject The optional subject.
    * @param predicate The optional predicate.
    * @param object The optional object.
    * @param graph The optional graph.
    */
-  public match(
+  public getQuads(
     subject?: RDF.Term | null,
     predicate?: RDF.Term | null,
     object?: RDF.Term | null,
     graph?: RDF.Term | null,
-  ): RDF.Stream<Q> {
+  ): Q[] {
     // Construct a quad pattern array
     const quadComponents: QuadPatternTerms = <QuadPatternTerms>
       [ subject || undefined, predicate || undefined, object || undefined, graph || undefined ]
@@ -138,17 +138,31 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
     const quadComponentsOrdered = orderQuadComponents(indexWrapped.componentOrder, quadComponents);
 
     // Call the best index's find method.
-    return streamifyArray(
-      // eslint-disable-next-line unicorn/no-array-callback-reference
-      indexWrapped.index.find(quadComponentsOrdered)
-        // De-order the resulting quad components into the normal SPOG order for quad creation.
-        .map(decomposedQuad => this.dataFactory.quad(
-          decomposedQuad[indexWrapped.componentOrderInverse.subject],
-          decomposedQuad[indexWrapped.componentOrderInverse.predicate],
-          decomposedQuad[indexWrapped.componentOrderInverse.object],
-          decomposedQuad[indexWrapped.componentOrderInverse.graph],
-        )),
-    );
+    // eslint-disable-next-line unicorn/no-array-callback-reference
+    return indexWrapped.index.find(quadComponentsOrdered)
+    // De-order the resulting quad components into the normal SPOG order for quad creation.
+      .map(decomposedQuad => this.dataFactory.quad(
+        decomposedQuad[indexWrapped.componentOrderInverse.subject],
+        decomposedQuad[indexWrapped.componentOrderInverse.predicate],
+        decomposedQuad[indexWrapped.componentOrderInverse.object],
+        decomposedQuad[indexWrapped.componentOrderInverse.graph],
+      ));
+  }
+
+  /**
+   * Returns a stream that produces all quads matching the pattern.
+   * @param subject The optional subject.
+   * @param predicate The optional predicate.
+   * @param object The optional object.
+   * @param graph The optional graph.
+   */
+  public match(
+    subject?: RDF.Term | null,
+    predicate?: RDF.Term | null,
+    object?: RDF.Term | null,
+    graph?: RDF.Term | null,
+  ): RDF.Stream<Q> {
+    return streamifyArray(this.getQuads(subject, predicate, object, graph));
   }
 }
 
