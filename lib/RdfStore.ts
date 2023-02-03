@@ -31,6 +31,11 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
     this.indexesWrapped = RdfStore.constructIndexesWrapped(options);
   }
 
+  /**
+   * Create an RDF store with default settings.
+   * Concretely, this store stores triples in GSPO, GPOS, and GOSP order,
+   * and makes use of in-memory number dictionary encoding.
+   */
   public static createDefault(): RdfStore<number> {
     return new RdfStore<number>({
       indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
@@ -40,6 +45,10 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
     });
   }
 
+  /**
+   * Internal helper to create index objects.
+   * @param options The RDF store options object.
+   */
   public static constructIndexesWrapped<E, Q extends RDF.BaseQuad = RDF.Quad>(
     options: IRdfStoreOptions<E, Q>,
   ): IRdfStoreIndexWrapped<E>[] {
@@ -60,6 +69,10 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
     return indexes;
   }
 
+  /**
+   * Check if a given quad term order is valid.
+   * @param combination A quad term order.
+   */
   public static isCombinationValid(combination: QuadTermName[]): boolean {
     for (const quadTermName of QUAD_TERM_NAMES) {
       if (!combination.includes(quadTermName)) {
@@ -75,6 +88,7 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
    */
   public addQuad(quad: Q): void {
     for (const indexWrapped of this.indexesWrapped) {
+      // Before sending the quad to the index, make sure its components are ordered corresponding to the index's order.
       indexWrapped.index.add(orderQuadComponents(
         indexWrapped.componentOrder,
         [ quad.subject, quad.predicate, quad.object, quad.graph ],
@@ -104,6 +118,7 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
     object?: RDF.Term | null,
     graph?: RDF.Term | null,
   ): RDF.Stream<Q> {
+    // Construct a quad pattern array
     const quadComponents: QuadPatternTerms = <QuadPatternTerms>
       [ subject || undefined, predicate || undefined, object || undefined, graph || undefined ]
         .map(term => {
@@ -112,12 +127,21 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
           }
           return term;
         });
+
+    // Determine the best index for this pattern
     const indexWrapped = this.indexesWrapped[getBestIndex(
       this.indexesWrapped.map(indexThis => indexThis.componentOrder),
       quadComponents,
     )];
+
+    // Re-order the quad pattern based on this best index's component order
+    const quadComponentsOrdered = orderQuadComponents(indexWrapped.componentOrder, quadComponents);
+
+    // Call the best index's find method.
     return streamifyArray(
-      indexWrapped.index.find(orderQuadComponents(indexWrapped.componentOrder, quadComponents))
+      // eslint-disable-next-line unicorn/no-array-callback-reference
+      indexWrapped.index.find(quadComponentsOrdered)
+        // De-order the resulting quad components into the normal SPOG order for quad creation.
         .map(decomposedQuad => this.dataFactory.quad(
           decomposedQuad[indexWrapped.componentOrderInverse.subject],
           decomposedQuad[indexWrapped.componentOrderInverse.predicate],
