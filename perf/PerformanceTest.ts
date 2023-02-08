@@ -62,7 +62,7 @@ export class PerformanceTest {
   }
 
   public findTriplesNoVariables(dimension: number, store: RdfStore | Store): void {
-    const TEST = `- Finding all ${dimension * dimension * dimension} triples in the default graph ${dimension * dimension} times (0 variables)`;
+    const TEST = `- Finding all ${dimension * dimension * dimension} triples in the default graph ${dimension * dimension * dimension} times (0 variables)`;
     console.time(TEST);
     for (let subjectIt = 0; subjectIt < dimension; subjectIt++) {
       for (let predicateIt = 0; predicateIt < dimension; predicateIt++) {
@@ -101,7 +101,7 @@ export class PerformanceTest {
   }
 
   public findTriples2Variables(dimension: number, store: RdfStore | Store): void {
-    const TEST = `- Finding all ${dimension * dimension * dimension} triples in the default graph ${dimension * dimension * 3} times (2 variables)`;
+    const TEST = `- Finding all ${dimension * dimension * dimension} triples in the default graph ${dimension * 3} times (2 variables)`;
     console.time(TEST);
     for (let i = 0; i < dimension; i++) {
       assert.equal(store.getQuads(this.dataFactory.namedNode(`${this.prefix}${i}`), null, null, this.dataFactory.defaultGraph()).length, dimension * dimension);
