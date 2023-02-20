@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 import * as assert from 'assert';
 import type * as RDF from '@rdfjs/types';
+import arrayifyStream from 'arrayify-stream';
 import { Store } from 'n3';
 import { DataFactory } from 'rdf-data-factory';
 import type { IRdfStoreOptions } from '../lib/IRdfStoreOptions';
@@ -26,7 +27,7 @@ export class PerformanceTest {
     public readonly dataFactory: RDF.DataFactory = new DataFactory(),
   ) {}
 
-  public run(): void {
+  public async run(): Promise<void> {
     for (const approach of this.approaches) {
       console.log(`\n# ${approach.name}\n`);
 
@@ -35,6 +36,7 @@ export class PerformanceTest {
       this.findTriplesNoVariables(this.dimension, store);
       this.findTriples1Variable(this.dimension, store);
       this.findTriples2Variables(this.dimension, store);
+      await this.findTriples1VariableStream(this.dimension, <any> store);
       console.log();
 
       store = approach.options.type === 'n3' ? new Store() : new RdfStore(approach.options.options);
@@ -111,6 +113,27 @@ export class PerformanceTest {
     }
     for (let kCount = 0; kCount < dimension; kCount++) {
       assert.equal(store.getQuads(null, null, this.dataFactory.namedNode(`${this.prefix}${kCount}`), this.dataFactory.defaultGraph()).length, dimension * dimension);
+    }
+    console.timeEnd(TEST);
+  }
+
+  public async findTriples1VariableStream(dimension: number, store: RdfStore): Promise<void> {
+    const TEST = `- Finding all ${dimension * dimension * dimension} triples in the default graph ${dimension * dimension * 2} times (1 variable) via a stream`;
+    console.time(TEST);
+    for (let i = 0; i < dimension; i++) {
+      for (let j = 0; j < dimension; j++) {
+        assert.equal((await arrayifyStream(store.match(this.dataFactory.namedNode(`${this.prefix}${i}`), this.dataFactory.namedNode(`${this.prefix}${j}`), null, this.dataFactory.defaultGraph()))).length, dimension);
+      }
+    }
+    for (let i = 0; i < dimension; i++) {
+      for (let j = 0; j < dimension; j++) {
+        assert.equal((await arrayifyStream(store.match(this.dataFactory.namedNode(`${this.prefix}${i}`), null, this.dataFactory.namedNode(`${this.prefix}${j}`), this.dataFactory.defaultGraph()))).length, dimension);
+      }
+    }
+    for (let i = 0; i < dimension; i++) {
+      for (let j = 0; j < dimension; j++) {
+        assert.equal((await arrayifyStream(store.match(null, this.dataFactory.namedNode(`${this.prefix}${i}`), this.dataFactory.namedNode(`${this.prefix}${j}`), this.dataFactory.defaultGraph()))).length, dimension);
+      }
     }
     console.timeEnd(TEST);
   }

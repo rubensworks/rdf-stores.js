@@ -1,5 +1,7 @@
 import type { EventEmitter } from 'events';
 import type * as RDF from '@rdfjs/types';
+import type { AsyncIterator } from 'asynciterator';
+import { wrap } from 'asynciterator';
 import { DataFactory } from 'rdf-data-factory';
 import type { QuadTermName } from 'rdf-terms';
 import { QUAD_TERM_NAMES } from 'rdf-terms';
@@ -10,8 +12,6 @@ import { RdfStoreIndexNestedRecord } from './index/RdfStoreIndexNestedRecord';
 import type { IRdfStoreOptions } from './IRdfStoreOptions';
 import { getBestIndex, orderQuadComponents } from './OrderUtils';
 import type { EncodedQuadTerms, QuadPatternTerms } from './PatternTerm';
-
-const streamifyArray = require('streamify-array');
 
 /**
  * An RDF store allows quads to be stored and fetched, based on one or more customizable indexes.
@@ -183,8 +183,8 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
     predicate?: RDF.Term | null,
     object?: RDF.Term | null,
     graph?: RDF.Term | null,
-  ): RDF.Stream<Q> {
-    return streamifyArray(this.getQuads(subject, predicate, object, graph));
+  ): RDF.Stream<Q> & AsyncIterator<Q> {
+    return wrap(this.readQuads(subject, predicate, object, graph));
   }
 }
 

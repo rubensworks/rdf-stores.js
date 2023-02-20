@@ -31,10 +31,10 @@
   ],
   "dependencies": {
     "@rdfjs/types": "*",
+    "asynciterator": "^3.8.0",
     "rdf-data-factory": "^1.1.1",
     "rdf-string": "^1.6.2",
-    "rdf-terms": "^1.9.1",
-    "streamify-array": "^1.0.1"
+    "rdf-terms": "^1.9.1"
   },
   "pre-commit": [
     "build",
@@ -44,9 +44,9 @@
   "devDependencies": {
     "@rubensworks/eslint-config": "^1.0.0",
     "@types/jest": "^29.0.0",
+    "@types/n3": "^1.10.4",
     "@typescript-eslint/eslint-plugin": "^5.0.0",
     "@typescript-eslint/parser": "^5.0.0",
-    "@types/n3": "^1.10.4",
     "arrayify-stream": "^2.0.1",
     "coveralls": "^3.0.0",
     "eslint": "^7.9.0",
@@ -62,6 +62,7 @@
     "manual-git-changelog": "^1.0.0",
     "n3": "^1.16.3",
     "pre-commit": "^1.2.2",
+    "streamify-array": "^1.0.1",
     "ts-jest": "^29.0.0",
     "typescript": "^4.0.2"
   },

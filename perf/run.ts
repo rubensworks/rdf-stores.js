@@ -186,4 +186,5 @@ const test = new PerformanceTest([
     },
   },
 ], Number.parseInt(process.argv[2], 10) || 256);
+// eslint-disable-next-line @typescript-eslint/no-floating-promises
 test.run();

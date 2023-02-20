@@ -73,6 +73,19 @@ describe('RdfStore', () => {
         ));
       });
 
+      describe('getQuads', () => {
+        it('should produce 1 result for a variable pattern', () => {
+          expect(store.getQuads()).toEqual([
+            DF.quad(
+              DF.namedNode('s'),
+              DF.namedNode('p'),
+              DF.namedNode('o'),
+              DF.namedNode('g'),
+            ),
+          ]);
+        });
+      });
+
       describe('find', () => {
         it('should produce 1 result for a variable pattern', async() => {
           expect(await arrayifyStream(store.match())).toEqual([
