@@ -9,6 +9,8 @@ module.exports = {
         '@rubensworks'
     ],
     rules: {
-        'no-implicit-coercion': 'off'
+        'no-implicit-coercion': 'off',
+        '@typescript-eslint/no-extra-parens': 'off',
+        'unicorn/no-for-loop': 'off'
     }
 };

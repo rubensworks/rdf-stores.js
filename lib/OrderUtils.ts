@@ -14,11 +14,15 @@ export function getBestIndex(
   componentOrders: QuadTermName[][],
   quadPattern: QuadPatternTerms,
 ): number {
+  if (componentOrders.length === 1 || quadPattern.every(term => term !== undefined)) {
+    return 0;
+  }
+
   // Determine the quad component names for which we require a defined lookup
   const definedQuadComponentNames: QuadTermName[] = [];
-  for (const [ quadComponentId, quadComponentName ] of QUAD_TERM_NAMES.entries()) {
+  for (let quadComponentId = 0; quadComponentId < QUAD_TERM_NAMES.length; quadComponentId++) {
     if (quadPattern[quadComponentId]) {
-      definedQuadComponentNames.push(quadComponentName);
+      definedQuadComponentNames.push(QUAD_TERM_NAMES[quadComponentId]);
     }
   }
 
