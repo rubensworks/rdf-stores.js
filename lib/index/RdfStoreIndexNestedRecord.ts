@@ -1,7 +1,7 @@
 import type * as RDF from '@rdfjs/types';
 import type { ITermDictionary } from '../dictionary/ITermDictionary';
 import type { IRdfStoreOptions } from '../IRdfStoreOptions';
-import type { PatternTerm, QuadPatternTerms, QuadTerms, EncodedQuadTerms } from '../PatternTerm';
+import type { QuadPatternTerms, QuadTerms, EncodedQuadTerms } from '../PatternTerm';
 import type { IRdfStoreIndex } from './IRdfStoreIndex';
 
 /**
@@ -24,34 +24,41 @@ export class RdfStoreIndexNestedRecord<E extends number> implements IRdfStoreInd
     map3[terms[3]] = true;
   }
 
-  public find(terms: QuadPatternTerms): IterableIterator<QuadTerms> {
-    return <IterableIterator<QuadTerms>> this.findInner(0, terms, this.nestedRecords, []);
-  }
+  public * find(terms: QuadPatternTerms): IterableIterator<QuadTerms> {
+    const ids: (E | undefined)[] = terms.map(term => term ? this.dictionary.encode(term) : term);
+    const id0 = ids[0];
+    const id1 = ids[1];
+    const id2 = ids[2];
+    const id3 = ids[3];
 
-  protected * findInner(
-    index: number,
-    terms: PatternTerm[],
-    map: NestedRecordActual<E>,
-    partialQuad: RDF.Term[],
-  ): IterableIterator<RDF.Term[]> {
-    if (index === terms.length) {
-      yield [ ...partialQuad ];
-    } else {
-      const currentTerm = terms[index];
+    let partialQuad0: RDF.Term;
+    let partialQuad1: RDF.Term;
+    let partialQuad2: RDF.Term;
+    let partialQuad3: RDF.Term;
 
-      // If current term is undefined, iterate over all terms at this level.
-      if (!currentTerm) {
-        for (const [ key, subMap ] of Object.entries(map)) {
-          partialQuad[index] = this.dictionary.decode(<E>Number.parseInt(key, 10));
-          yield * this.findInner(index + 1, terms, <NestedRecordActual<E>>subMap, partialQuad);
-        }
-      } else {
-        // If the current term is defined, find one matching map for the current term.
-        const encodedTerm = this.dictionary.encode(currentTerm);
-        const subMap = map[encodedTerm];
-        if (subMap) {
-          partialQuad[index] = currentTerm;
-          yield * this.findInner(index + 1, terms, <NestedRecordActual<E>>subMap, partialQuad);
+    let map1: NestedRecordActual<E>;
+    let map2: NestedRecordActual<E>;
+    let map3: NestedRecordActual<E>;
+    let map4: NestedRecordActual<E>;
+
+    const map0: NestedRecordActual<E> = this.nestedRecords;
+    const map0Keys = id0 !== undefined ? (id0 in map0 ? [ id0 ] : []) : Object.keys(map0);
+    for (const key1 of map0Keys) {
+      map1 = map0[<E>key1];
+      partialQuad0 = terms[0] || this.dictionary.decode(<E>Number.parseInt(<string>key1, 10));
+      const map1Keys = id1 !== undefined ? (id1 in map1 ? [ id1 ] : []) : Object.keys(map1);
+      for (const key2 of map1Keys) {
+        map2 = map1[<E>key2];
+        partialQuad1 = terms[1] || this.dictionary.decode(<E>Number.parseInt(<string>key2, 10));
+        const map2Keys = id2 !== undefined ? (id2 in map2 ? [ id2 ] : []) : Object.keys(map2);
+        for (const key3 of map2Keys) {
+          map3 = map2[<E>key3];
+          partialQuad2 = terms[2] || this.dictionary.decode(<E>Number.parseInt(<string>key3, 10));
+          const map3Keys = id3 !== undefined ? (id3 in map3 ? [ id3 ] : []) : Object.keys(map3);
+          for (const key4 of map3Keys) {
+            partialQuad3 = terms[3] || this.dictionary.decode(<E>Number.parseInt(<string>key4, 10));
+            yield <any>[ partialQuad0, partialQuad1, partialQuad2, partialQuad3 ];
+          }
         }
       }
     }

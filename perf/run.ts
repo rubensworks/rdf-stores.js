@@ -4,6 +4,7 @@ import { TermDictionaryNumberRecord } from '../lib/dictionary/TermDictionaryNumb
 import { TermDictionaryNumberRecordFullTerms } from '../lib/dictionary/TermDictionaryNumberRecordFullTerms';
 import { TermDictionarySymbol } from '../lib/dictionary/TermDictionarySymbol';
 import { RdfStoreIndexNestedMap } from '../lib/index/RdfStoreIndexNestedMap';
+import { RdfStoreIndexNestedMapRecursive } from '../lib/index/RdfStoreIndexNestedMapRecursive';
 import { RdfStoreIndexNestedRecord } from '../lib/index/RdfStoreIndexNestedRecord';
 import { RdfStore } from '../lib/RdfStore';
 import { PerformanceTest } from './PerformanceTest';
@@ -100,6 +101,30 @@ const test = new PerformanceTest([
       options: {
         indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
         indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
+        dictionary: new TermDictionaryNumberMap(),
+        dataFactory: new DataFactory(),
+      },
+    },
+  },
+  {
+    name: '1 Map index recursive (Map<number>)',
+    options: {
+      type: 'rdfstore',
+      options: {
+        indexCombinations: [[ 'graph', 'subject', 'predicate', 'object' ]],
+        indexConstructor: subOptions => new RdfStoreIndexNestedMapRecursive(subOptions),
+        dictionary: new TermDictionaryNumberMap(),
+        dataFactory: new DataFactory(),
+      },
+    },
+  },
+  {
+    name: '3 Map indexes recursive (Map<number>)',
+    options: {
+      type: 'rdfstore',
+      options: {
+        indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+        indexConstructor: subOptions => new RdfStoreIndexNestedMapRecursive(subOptions),
         dictionary: new TermDictionaryNumberMap(),
         dataFactory: new DataFactory(),
       },
