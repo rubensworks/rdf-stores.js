@@ -4,7 +4,7 @@ import { DataFactory } from 'rdf-data-factory';
 import type { QuadTermName } from 'rdf-terms';
 import { QUAD_TERM_NAMES } from 'rdf-terms';
 import type { ITermDictionary } from './dictionary/ITermDictionary';
-import { TermDictionaryNumberRecord } from './dictionary/TermDictionaryNumberRecord';
+import { TermDictionaryNumberRecordFullTerms } from './dictionary/TermDictionaryNumberRecordFullTerms';
 import type { IRdfStoreIndex } from './index/IRdfStoreIndex';
 import { RdfStoreIndexNestedRecord } from './index/RdfStoreIndexNestedRecord';
 import type { IRdfStoreOptions } from './IRdfStoreOptions';
@@ -27,11 +27,13 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
   private readonly dataFactory: RDF.DataFactory<Q>;
   private readonly dictionary: ITermDictionary<E>;
   private readonly indexesWrapped: IRdfStoreIndexWrapped<E>[];
+  private readonly indexesWrappedComponentOrders: QuadTermName[][];
 
   public constructor(options: IRdfStoreOptions<E, Q>) {
     this.dataFactory = options.dataFactory;
     this.dictionary = options.dictionary;
     this.indexesWrapped = RdfStore.constructIndexesWrapped(options);
+    this.indexesWrappedComponentOrders = this.indexesWrapped.map(indexThis => indexThis.componentOrder);
   }
 
   /**
@@ -43,7 +45,7 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
     return new RdfStore<number>({
       indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
       indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
-      dictionary: new TermDictionaryNumberRecord(),
+      dictionary: new TermDictionaryNumberRecordFullTerms(),
       dataFactory: new DataFactory(),
     });
   }
@@ -135,10 +137,7 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
         });
 
     // Determine the best index for this pattern
-    const indexWrapped = this.indexesWrapped[getBestIndex(
-      this.indexesWrapped.map(indexThis => indexThis.componentOrder),
-      quadComponents,
-    )];
+    const indexWrapped = this.indexesWrapped[getBestIndex(this.indexesWrappedComponentOrders, quadComponents)];
 
     // Re-order the quad pattern based on this best index's component order
     const quadComponentsOrdered = <QuadPatternTerms> orderQuadComponents(indexWrapped.componentOrder, quadComponents);

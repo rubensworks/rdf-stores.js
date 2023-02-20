@@ -1,6 +1,7 @@
 import { DataFactory } from 'rdf-data-factory';
 import { TermDictionaryNumberMap } from '../lib/dictionary/TermDictionaryNumberMap';
 import { TermDictionaryNumberRecord } from '../lib/dictionary/TermDictionaryNumberRecord';
+import { TermDictionaryNumberRecordFullTerms } from '../lib/dictionary/TermDictionaryNumberRecordFullTerms';
 import { TermDictionarySymbol } from '../lib/dictionary/TermDictionarySymbol';
 import { RdfStoreIndexNestedMap } from '../lib/index/RdfStoreIndexNestedMap';
 import { RdfStoreIndexNestedRecord } from '../lib/index/RdfStoreIndexNestedRecord';
@@ -52,6 +53,30 @@ const test = new PerformanceTest([
         indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
         indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
         dictionary: new TermDictionaryNumberRecord(),
+        dataFactory: new DataFactory(),
+      },
+    },
+  },
+  {
+    name: '1 Record index (Record<number> FT)',
+    options: {
+      type: 'rdfstore',
+      options: {
+        indexCombinations: [[ 'graph', 'subject', 'predicate', 'object' ]],
+        indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
+        dictionary: new TermDictionaryNumberRecordFullTerms(),
+        dataFactory: new DataFactory(),
+      },
+    },
+  },
+  {
+    name: '3 Record indexes (Record<number> FT)',
+    options: {
+      type: 'rdfstore',
+      options: {
+        indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+        indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
+        dictionary: new TermDictionaryNumberRecordFullTerms(),
         dataFactory: new DataFactory(),
       },
     },
@@ -118,7 +143,7 @@ const test = new PerformanceTest([
       options: {
         indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
         indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
-        dictionary: new TermDictionaryNumberRecord(),
+        dictionary: new TermDictionaryNumberRecordFullTerms(),
         dataFactory: new DataFactory(),
       },
     },
@@ -130,7 +155,7 @@ const test = new PerformanceTest([
       options: {
         indexCombinations: [[ 'graph', 'subject', 'predicate', 'object' ]],
         indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
-        dictionary: new TermDictionaryNumberRecord(),
+        dictionary: new TermDictionaryNumberRecordFullTerms(),
         dataFactory: new DataFactory(),
       },
     },
