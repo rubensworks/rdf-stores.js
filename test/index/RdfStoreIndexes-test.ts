@@ -65,6 +65,23 @@ describe('RdfStoreIndexes', () => {
             ]) ]).toEqual([]);
           });
         });
+
+        describe('count', () => {
+          it('should return 0', () => {
+            expect(index.count([
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+            ])).toEqual(0);
+            expect(index.count([
+              DF.namedNode('s'),
+              DF.namedNode('p'),
+              DF.namedNode('o'),
+              DF.namedNode('g'),
+            ])).toEqual(0);
+          });
+        });
       });
 
       describe('that has one quad', () => {
@@ -133,6 +150,58 @@ describe('RdfStoreIndexes', () => {
               undefined,
               DF.namedNode('g'),
             ]) ]).toEqual([]);
+
+            expect([ ...index.find([
+              DF.namedNode('s'),
+              DF.namedNode('p'),
+              DF.namedNode('o1'),
+              undefined,
+            ]) ]).toEqual([]);
+          });
+        });
+
+        describe('count', () => {
+          it('should return 1 for a variable pattern', () => {
+            expect(index.count([
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+            ])).toEqual(1);
+          });
+
+          it('should return 1 for an exact match', () => {
+            expect(index.count([
+              DF.namedNode('s'),
+              DF.namedNode('p'),
+              DF.namedNode('o'),
+              DF.namedNode('g'),
+            ])).toEqual(1);
+          });
+
+          it('should return 1 for a partial match', () => {
+            expect(index.count([
+              undefined,
+              DF.namedNode('p'),
+              undefined,
+              DF.namedNode('g'),
+            ])).toEqual(1);
+          });
+
+          it('should return 0 for a partial non-match', () => {
+            expect(index.count([
+              undefined,
+              DF.namedNode('p1'),
+              undefined,
+              DF.namedNode('g'),
+            ])).toEqual(0);
+
+            expect(index.count([
+              DF.namedNode('s'),
+              DF.namedNode('p'),
+              DF.namedNode('o1'),
+              undefined,
+            ])).toEqual(0);
           });
         });
       });
@@ -353,6 +422,91 @@ describe('RdfStoreIndexes', () => {
               undefined,
               DF.namedNode('g3'),
             ]) ]).toEqual([]);
+          });
+        });
+
+        describe('count', () => {
+          it('should return results for a variable pattern', () => {
+            expect(index.count([
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+            ])).toEqual(4);
+          });
+
+          it('should produce 1 result for exact matches', () => {
+            expect(index.count([
+              DF.namedNode('s1'),
+              DF.namedNode('p1'),
+              DF.namedNode('o1'),
+              DF.namedNode('g1'),
+            ])).toEqual(1);
+
+            expect(index.count([
+              DF.namedNode('s1'),
+              DF.namedNode('p2'),
+              DF.namedNode('o2'),
+              DF.namedNode('g1'),
+            ])).toEqual(1);
+
+            expect(index.count([
+              DF.namedNode('s2'),
+              DF.namedNode('p1'),
+              DF.namedNode('o1'),
+              DF.namedNode('g1'),
+            ])).toEqual(1);
+
+            expect(index.count([
+              DF.namedNode('s2'),
+              DF.namedNode('p2'),
+              DF.namedNode('o2'),
+              DF.namedNode('g2'),
+            ])).toEqual(1);
+          });
+
+          it('should produce results for partial matches', () => {
+            expect(index.count([
+              DF.namedNode('s1'),
+              undefined,
+              undefined,
+              undefined,
+            ])).toEqual(2);
+
+            expect(index.count([
+              DF.namedNode('s2'),
+              undefined,
+              undefined,
+              undefined,
+            ])).toEqual(2);
+
+            expect(index.count([
+              undefined,
+              DF.namedNode('p1'),
+              undefined,
+              undefined,
+            ])).toEqual(2);
+
+            expect(index.count([
+              DF.namedNode('s2'),
+              DF.namedNode('p1'),
+              undefined,
+              undefined,
+            ])).toEqual(1);
+
+            expect(index.count([
+              DF.namedNode('s2'),
+              undefined,
+              undefined,
+              DF.namedNode('g2'),
+            ])).toEqual(1);
+
+            expect(index.count([
+              DF.namedNode('s2'),
+              undefined,
+              undefined,
+              DF.namedNode('g3'),
+            ])).toEqual(0);
           });
         });
       });

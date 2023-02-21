@@ -186,6 +186,39 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
   ): RDF.Stream<Q> & AsyncIterator<Q> {
     return wrap(this.readQuads(subject, predicate, object, graph));
   }
+
+  /**
+   * Returns the exact cardinality of the quads matching the pattern.
+   * @param subject The optional subject.
+   * @param predicate The optional predicate.
+   * @param object The optional object.
+   * @param graph The optional graph.
+   */
+  public countQuads(
+    subject?: RDF.Term | null,
+    predicate?: RDF.Term | null,
+    object?: RDF.Term | null,
+    graph?: RDF.Term | null,
+  ): number {
+    // Construct a quad pattern array
+    const quadComponents: QuadPatternTerms = <QuadPatternTerms>
+      [ subject || undefined, predicate || undefined, object || undefined, graph || undefined ]
+        .map(term => {
+          if (term && (term.termType === 'Variable' || term.termType === 'Quad')) {
+            return;
+          }
+          return term;
+        });
+
+    // Determine the best index for this pattern
+    const indexWrapped = this.indexesWrapped[getBestIndex(this.indexesWrappedComponentOrders, quadComponents)];
+
+    // Re-order the quad pattern based on this best index's component order
+    const quadComponentsOrdered = <QuadPatternTerms> orderQuadComponents(indexWrapped.componentOrder, quadComponents);
+
+    // Call the best index's count method.
+    return indexWrapped.index.count(quadComponentsOrdered);
+  }
 }
 
 export interface IRdfStoreIndexWrapped<E> {

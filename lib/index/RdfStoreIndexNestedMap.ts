@@ -57,23 +57,60 @@ export class RdfStoreIndexNestedMap<E> implements IRdfStoreIndex<E> {
     const map0Keys = id0 !== undefined ? (map0.has(id0) ? [ id0 ] : []) : map0.keys();
     for (const key1 of map0Keys) {
       map1 = <any>map0.get(key1);
-      partialQuad0 = terms[0] || this.dictionary.decode(<E>Number.parseInt(<string>key1, 10));
+      partialQuad0 = terms[0] || this.dictionary.decode(key1);
       const map1Keys = id1 !== undefined ? (map1.has(id1) ? [ id1 ] : []) : map1.keys();
       for (const key2 of map1Keys) {
         map2 = <any>map1.get(key2);
-        partialQuad1 = terms[1] || this.dictionary.decode(<E>Number.parseInt(<string>key2, 10));
+        partialQuad1 = terms[1] || this.dictionary.decode(key2);
         const map2Keys = id2 !== undefined ? (map2.has(id2) ? [ id2 ] : []) : map2.keys();
         for (const key3 of map2Keys) {
           map3 = <any>map2.get(key3);
-          partialQuad2 = terms[2] || this.dictionary.decode(<E>Number.parseInt(<string>key3, 10));
+          partialQuad2 = terms[2] || this.dictionary.decode(key3);
           const map3Keys = id3 !== undefined ? (map3.has(id3) ? [ id3 ] : []) : map3.keys();
           for (const key4 of map3Keys) {
-            partialQuad3 = terms[3] || this.dictionary.decode(<E>Number.parseInt(<string>key4, 10));
+            partialQuad3 = terms[3] || this.dictionary.decode(key4);
             yield <any>[ partialQuad0, partialQuad1, partialQuad2, partialQuad3 ];
           }
         }
       }
     }
+  }
+
+  public count(terms: QuadPatternTerms): number {
+    let count = 0;
+
+    const ids: (E | undefined)[] = terms.map(term => term ? this.dictionary.encode(term) : term);
+    const id0 = ids[0];
+    const id1 = ids[1];
+    const id2 = ids[2];
+    const id3 = ids[3];
+
+    let map1: NestedMapActual<E>;
+    let map2: NestedMapActual<E>;
+    let map3: NestedMapActual<E>;
+
+    const map0: NestedMapActual<E> = this.nestedMap;
+    const map0Keys = id0 !== undefined ? (map0.has(id0) ? [ id0 ] : []) : map0.keys();
+    for (const key1 of map0Keys) {
+      map1 = <any>map0.get(key1);
+      const map1Keys = id1 !== undefined ? (map1.has(id1) ? [ id1 ] : []) : map1.keys();
+      for (const key2 of map1Keys) {
+        map2 = <any>map1.get(key2);
+        const map2Keys = id2 !== undefined ? (map2.has(id2) ? [ id2 ] : []) : map2.keys();
+        for (const key3 of map2Keys) {
+          map3 = <any>map2.get(key3);
+          if (id3 !== undefined) {
+            if (map3.has(id3)) {
+              count++;
+            }
+          } else {
+            count += map3.size;
+          }
+        }
+      }
+    }
+
+    return count;
   }
 }
 

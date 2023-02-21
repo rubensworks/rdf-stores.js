@@ -37,6 +37,7 @@ export class PerformanceTest {
       this.findTriples1Variable(this.dimension, store);
       this.findTriples2Variables(this.dimension, store);
       await this.findTriples1VariableStream(this.dimension, <any> store);
+      this.countTriples1Variable(this.dimension, store);
       console.log();
 
       store = approach.options.type === 'n3' ? new Store() : new RdfStore(approach.options.options);
@@ -133,6 +134,27 @@ export class PerformanceTest {
     for (let i = 0; i < dimension; i++) {
       for (let j = 0; j < dimension; j++) {
         assert.equal((await arrayifyStream(store.match(null, this.dataFactory.namedNode(`${this.prefix}${i}`), this.dataFactory.namedNode(`${this.prefix}${j}`), this.dataFactory.defaultGraph()))).length, dimension);
+      }
+    }
+    console.timeEnd(TEST);
+  }
+
+  public countTriples1Variable(dimension: number, store: RdfStore | Store): void {
+    const TEST = `- Counting all ${dimension * dimension * dimension} triples in the default graph ${dimension * dimension * 2} times (1 variable)`;
+    console.time(TEST);
+    for (let i = 0; i < dimension; i++) {
+      for (let j = 0; j < dimension; j++) {
+        assert.equal(store.countQuads(this.dataFactory.namedNode(`${this.prefix}${i}`), this.dataFactory.namedNode(`${this.prefix}${j}`), null, this.dataFactory.defaultGraph()), dimension);
+      }
+    }
+    for (let i = 0; i < dimension; i++) {
+      for (let j = 0; j < dimension; j++) {
+        assert.equal(store.countQuads(this.dataFactory.namedNode(`${this.prefix}${i}`), null, this.dataFactory.namedNode(`${this.prefix}${j}`), this.dataFactory.defaultGraph()), dimension);
+      }
+    }
+    for (let i = 0; i < dimension; i++) {
+      for (let j = 0; j < dimension; j++) {
+        assert.equal(store.countQuads(null, this.dataFactory.namedNode(`${this.prefix}${i}`), this.dataFactory.namedNode(`${this.prefix}${j}`), this.dataFactory.defaultGraph()), dimension);
       }
     }
     console.timeEnd(TEST);

@@ -62,6 +62,46 @@ export class RdfStoreIndexNestedMapRecursive<E> implements IRdfStoreIndex<E> {
       }
     }
   }
+
+  public count(terms: QuadPatternTerms): number {
+    return this.countInner(0, terms, this.nestedMap);
+  }
+
+  protected countInner(
+    index: number,
+    terms: PatternTerm[],
+    map: NestedMapActual<E>,
+  ): number {
+    const currentTerm = terms[index];
+    let count = 0;
+
+    // If current term is undefined, iterate over all terms at this level.
+    if (!currentTerm) {
+      if (index === terms.length - 1) {
+        return map.size;
+      }
+
+      for (const subMap of map.values()) {
+        count += this.countInner(index + 1, terms, <NestedMapActual<E>>subMap);
+      }
+    } else {
+      // If the current term is defined, find one matching map for the current term.
+      const encodedTerm = this.dictionary.encode(currentTerm);
+      if (index === terms.length - 1) {
+        if (map.has(this.dictionary.encode(currentTerm))) {
+          return 1;
+        }
+        return 0;
+      }
+
+      const subMap = map.get(encodedTerm);
+      if (subMap) {
+        count += this.countInner(index + 1, terms, <NestedMapActual<E>>subMap);
+      }
+    }
+
+    return count;
+  }
 }
 
 export type NestedMap<E> = NestedMapActual<E> | true;

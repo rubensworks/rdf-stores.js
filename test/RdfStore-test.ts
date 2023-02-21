@@ -86,6 +86,12 @@ describe('RdfStore', () => {
         });
       });
 
+      describe('countQuads', () => {
+        it('should return 1 for a variable pattern', () => {
+          expect(store.countQuads()).toEqual(1);
+        });
+      });
+
       describe('find', () => {
         it('should produce 1 result for a variable pattern', async() => {
           expect(await arrayifyStream(store.match())).toEqual([
@@ -359,6 +365,83 @@ describe('RdfStore', () => {
             undefined,
             DF.namedNode('g3'),
           ))).toEqual([]);
+        });
+      });
+
+      describe('countQuads', () => {
+        it('should produce all results for a variable pattern', async() => {
+          expect(store.countQuads()).toEqual(4);
+        });
+
+        it('should produce 1 result for exact matches', async() => {
+          expect(store.countQuads(
+            DF.namedNode('s1'),
+            DF.namedNode('p1'),
+            DF.namedNode('o1'),
+            DF.namedNode('g1'),
+          )).toEqual(1);
+
+          expect(store.countQuads(
+            DF.namedNode('s1'),
+            DF.namedNode('p2'),
+            DF.namedNode('o2'),
+            DF.namedNode('g1'),
+          )).toEqual(1);
+
+          expect(store.countQuads(
+            DF.namedNode('s2'),
+            DF.namedNode('p1'),
+            DF.namedNode('o1'),
+            DF.namedNode('g1'),
+          )).toEqual(1);
+
+          expect(store.countQuads(
+            DF.namedNode('s2'),
+            DF.namedNode('p2'),
+            DF.namedNode('o2'),
+            DF.namedNode('g2'),
+          )).toEqual(1);
+        });
+
+        it('should produce results for partial matches', async() => {
+          expect(store.countQuads(
+            DF.namedNode('s1'),
+          )).toEqual(2);
+
+          expect(store.countQuads(
+            DF.namedNode('s2'),
+          )).toEqual(2);
+
+          expect(store.countQuads(
+            undefined,
+            DF.namedNode('p1'),
+          )).toEqual(2);
+
+          expect(store.countQuads(
+            DF.namedNode('s2'),
+            DF.namedNode('p1'),
+          )).toEqual(1);
+
+          expect(store.countQuads(
+            DF.namedNode('s2'),
+            undefined,
+            undefined,
+            DF.namedNode('g2'),
+          )).toEqual(1);
+
+          expect(store.countQuads(
+            DF.namedNode('s2'),
+            DF.variable('v1'),
+            DF.variable('v2'),
+            DF.namedNode('g2'),
+          )).toEqual(1);
+
+          expect(store.countQuads(
+            DF.namedNode('s2'),
+            undefined,
+            undefined,
+            DF.namedNode('g3'),
+          )).toEqual(0);
         });
       });
     });

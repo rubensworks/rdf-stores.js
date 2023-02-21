@@ -39,7 +39,6 @@ export class RdfStoreIndexNestedRecord<E extends number> implements IRdfStoreInd
     let map1: NestedRecordActual<E>;
     let map2: NestedRecordActual<E>;
     let map3: NestedRecordActual<E>;
-    let map4: NestedRecordActual<E>;
 
     const map0: NestedRecordActual<E> = this.nestedRecords;
     const map0Keys = id0 !== undefined ? (id0 in map0 ? [ id0 ] : []) : Object.keys(map0);
@@ -62,6 +61,43 @@ export class RdfStoreIndexNestedRecord<E extends number> implements IRdfStoreInd
         }
       }
     }
+  }
+
+  public count(terms: QuadPatternTerms): number {
+    let count = 0;
+
+    const ids: (E | undefined)[] = terms.map(term => term ? this.dictionary.encode(term) : term);
+    const id0 = ids[0];
+    const id1 = ids[1];
+    const id2 = ids[2];
+    const id3 = ids[3];
+
+    let map1: NestedRecordActual<E>;
+    let map2: NestedRecordActual<E>;
+    let map3: NestedRecordActual<E>;
+
+    const map0: NestedRecordActual<E> = this.nestedRecords;
+    const map0Keys = id0 !== undefined ? (id0 in map0 ? [ id0 ] : []) : Object.keys(map0);
+    for (const key1 of map0Keys) {
+      map1 = map0[<E>key1];
+      const map1Keys = id1 !== undefined ? (id1 in map1 ? [ id1 ] : []) : Object.keys(map1);
+      for (const key2 of map1Keys) {
+        map2 = map1[<E>key2];
+        const map2Keys = id2 !== undefined ? (id2 in map2 ? [ id2 ] : []) : Object.keys(map2);
+        for (const key3 of map2Keys) {
+          map3 = map2[<E>key3];
+          if (id3 !== undefined) {
+            if (id3 in map3) {
+              count++;
+            }
+          } else {
+            count += Object.keys(map3).length;
+          }
+        }
+      }
+    }
+
+    return count;
   }
 }
 

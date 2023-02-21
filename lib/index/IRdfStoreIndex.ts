@@ -15,4 +15,10 @@ export interface IRdfStoreIndex<E> {
    * @param terms An iterable of pattern terms, ordered in the component order of this index.
    */
   find: (terms: QuadPatternTerms) => IterableIterator<QuadTerms>;
+  /**
+   * Count the quads matching the given terms.
+   * Quads are represented as an array of terms, in the component order of this index.
+   * @param terms An iterable of pattern terms, ordered in the component order of this index.
+   */
+  count: (terms: QuadPatternTerms) => number;
 }
