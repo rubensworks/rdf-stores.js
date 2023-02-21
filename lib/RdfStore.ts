@@ -99,8 +99,9 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
   /**
    * Add a quad to the store.
    * @param quad An RDF quad.
+   * @return boolean If the quad was not yet present in the index.
    */
-  public addQuad(quad: Q): void {
+  public addQuad(quad: Q): boolean {
     const quadEncoded = [
       this.dictionary.encode(quad.subject),
       this.dictionary.encode(quad.predicate),
@@ -115,7 +116,9 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
     }
     if (newQuad) {
       this._size++;
+      return true;
     }
+    return false;
   }
 
   /**

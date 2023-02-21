@@ -73,6 +73,26 @@ describe('RdfStore', () => {
         ));
       });
 
+      describe('addQuad', () => {
+        it('should not modify the index when adding the same quad', () => {
+          expect(store.addQuad(DF.quad(
+            DF.namedNode('s'),
+            DF.namedNode('p'),
+            DF.namedNode('o'),
+            DF.namedNode('g'),
+          ))).toBeFalsy();
+        });
+
+        it('should modify the index when adding another quad', () => {
+          expect(store.addQuad(DF.quad(
+            DF.namedNode('s1'),
+            DF.namedNode('p1'),
+            DF.namedNode('o1'),
+            DF.namedNode('g1'),
+          ))).toBeTruthy();
+        });
+      });
+
       describe('size', () => {
         it('should be 1', () => {
           expect(store.size).toEqual(1);
