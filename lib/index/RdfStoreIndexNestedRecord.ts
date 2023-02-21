@@ -16,12 +16,16 @@ export class RdfStoreIndexNestedRecord<E extends number> implements IRdfStoreInd
     this.nestedRecords = <any>{};
   }
 
-  public add(terms: EncodedQuadTerms<E>): void {
+  public add(terms: EncodedQuadTerms<E>): boolean {
     const map0 = this.nestedRecords;
     const map1 = map0[terms[0]] || (map0[terms[0]] = <any>{});
     const map2 = map1[terms[1]] || (map1[terms[1]] = <any>{});
     const map3 = map2[terms[2]] || (map2[terms[2]] = <any>{});
+    if (map3[terms[3]]) {
+      return false;
+    }
     map3[terms[3]] = true;
+    return true;
   }
 
   public * find(terms: QuadPatternTerms): IterableIterator<QuadTerms> {

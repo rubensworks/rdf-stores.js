@@ -16,7 +16,7 @@ export class RdfStoreIndexNestedMap<E> implements IRdfStoreIndex<E> {
     this.nestedMap = new Map();
   }
 
-  public add(terms: EncodedQuadTerms<E>): void {
+  public add(terms: EncodedQuadTerms<E>): boolean {
     const map0 = this.nestedMap;
     let map1: NestedMapActual<E> = <any> map0.get(terms[0]);
     if (!map1) {
@@ -33,7 +33,11 @@ export class RdfStoreIndexNestedMap<E> implements IRdfStoreIndex<E> {
       map3 = new Map();
       map2.set(terms[2], map3);
     }
-    map3.set(terms[3], true);
+    const contained = map3.has(terms[3]);
+    if (!contained) {
+      map3.set(terms[3], true);
+    }
+    return !contained;
   }
 
   public * find(terms: QuadPatternTerms): IterableIterator<QuadTerms> {

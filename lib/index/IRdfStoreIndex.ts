@@ -7,8 +7,9 @@ export interface IRdfStoreIndex<E> {
   /**
    * Add a quad to the index.
    * @param terms An array of encoded terms, ordered in the component order of this index.
+   * @return If the quad was not yet present in the index.
    */
-  add: (terms: EncodedQuadTerms<E>) => void;
+  add: (terms: EncodedQuadTerms<E>) => boolean;
   /**
    * Find all quads matching the given terms.
    * Quads are represented as an array of terms, in the component order of this index.

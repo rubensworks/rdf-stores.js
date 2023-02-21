@@ -29,6 +29,8 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
   private readonly indexesWrapped: IRdfStoreIndexWrapped<E>[];
   private readonly indexesWrappedComponentOrders: QuadTermName[][];
 
+  private _size = 0;
+
   public constructor(options: IRdfStoreOptions<E, Q>) {
     this.dataFactory = options.dataFactory;
     this.dictionary = options.dictionary;
@@ -88,6 +90,13 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
   }
 
   /**
+   * The number of quads in this store.
+   */
+  public get size(): number {
+    return this._size;
+  }
+
+  /**
    * Add a quad to the store.
    * @param quad An RDF quad.
    */
@@ -98,9 +107,14 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
       this.dictionary.encode(quad.object),
       this.dictionary.encode(quad.graph),
     ];
+    let newQuad = false;
     for (const indexWrapped of this.indexesWrapped) {
       // Before sending the quad to the index, make sure its components are ordered corresponding to the index's order.
-      indexWrapped.index.add(<EncodedQuadTerms<E>>orderQuadComponents(indexWrapped.componentOrder, quadEncoded));
+      newQuad = indexWrapped.index
+        .add(<EncodedQuadTerms<E>>orderQuadComponents(indexWrapped.componentOrder, quadEncoded));
+    }
+    if (newQuad) {
+      this._size++;
     }
   }
 
@@ -209,6 +223,11 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
           }
           return term;
         });
+
+    // Optimize all-variables pattern
+    if (quadComponents.every(quadComponent => quadComponent === undefined)) {
+      return this.size;
+    }
 
     // Determine the best index for this pattern
     const indexWrapped = this.indexesWrapped[getBestIndex(this.indexesWrappedComponentOrders, quadComponents)];

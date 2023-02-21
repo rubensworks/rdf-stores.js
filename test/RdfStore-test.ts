@@ -73,6 +73,12 @@ describe('RdfStore', () => {
         ));
       });
 
+      describe('size', () => {
+        it('should be 1', () => {
+          expect(store.size).toEqual(1);
+        });
+      });
+
       describe('getQuads', () => {
         it('should produce 1 result for a variable pattern', () => {
           expect(store.getQuads()).toEqual([
@@ -176,6 +182,12 @@ describe('RdfStore', () => {
           ),
         ]));
         await new Promise(resolve => ret.on('end', resolve));
+      });
+
+      describe('size', () => {
+        it('should be 4', () => {
+          expect(store.size).toEqual(4);
+        });
       });
 
       describe('find', () => {

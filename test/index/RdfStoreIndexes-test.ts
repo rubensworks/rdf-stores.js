@@ -94,6 +94,26 @@ describe('RdfStoreIndexes', () => {
           ]);
         });
 
+        describe('add', () => {
+          it('should not modify the index when adding the same quad', () => {
+            expect(index.add([
+              dictionary.encode(DF.namedNode('s')),
+              dictionary.encode(DF.namedNode('p')),
+              dictionary.encode(DF.namedNode('o')),
+              dictionary.encode(DF.namedNode('g')),
+            ])).toBeFalsy();
+          });
+
+          it('should modify the index when adding another quad', () => {
+            expect(index.add([
+              dictionary.encode(DF.namedNode('s1')),
+              dictionary.encode(DF.namedNode('p1')),
+              dictionary.encode(DF.namedNode('o1')),
+              dictionary.encode(DF.namedNode('g1')),
+            ])).toBeTruthy();
+          });
+        });
+
         describe('find', () => {
           it('should produce 1 result for a variable pattern', () => {
             expect([ ...index.find([

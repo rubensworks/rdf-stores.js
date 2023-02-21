@@ -17,17 +17,22 @@ export class RdfStoreIndexNestedMapRecursive<E> implements IRdfStoreIndex<E> {
     this.nestedMap = new Map();
   }
 
-  public add(terms: EncodedQuadTerms<E>): void {
+  public add(terms: EncodedQuadTerms<E>): boolean {
     let map = this.nestedMap;
+    let contained = false;
     for (const [ i, term ] of terms.entries()) {
       const mapActual = map;
       let nextMap = mapActual.get(term);
       if (!nextMap) {
         nextMap = i === terms.length - 1 ? true : new Map();
         mapActual.set(term, nextMap);
+      } else if (i === terms.length - 1) {
+        contained = true;
       }
       map = <NestedMapActual<E>> nextMap;
     }
+
+    return !contained;
   }
 
   public * find(terms: QuadPatternTerms): IterableIterator<QuadTerms> {
