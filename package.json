@@ -1,5 +1,5 @@
 {
-  "name": "rdf-star-stores",
+  "name": "rdf-store",
   "version": "1.0.0",
   "description": "A TypeScript/JavaScript implementation of the RDF/JS store interface with support for quoted triples.",
   "keywords": [
@@ -14,12 +14,12 @@
   ],
   "main": "index.js",
   "typings": "index",
-  "repository": "git@github.com:rubensworks/rdf-star-stores.js.git",
+  "repository": "git@github.com:rubensworks/rdf-store.js.git",
   "author": "Ruben Taelman <rubensworks@gmail.com>",
   "bugs": {
-    "url": "https://github.com/rubensworks/rdf-star-stores.js/issues"
+    "url": "https://github.com/rubensworks/rdf-store.js/issues"
   },
-  "homepage": "https://github.com/rubensworks/rdf-star-stores.js#readme",
+  "homepage": "https://github.com/rubensworks/rdf-store.js#readme",
   "license": "MIT",
   "files": [
     "lib/**/*.d.ts",
