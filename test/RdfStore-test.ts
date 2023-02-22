@@ -914,6 +914,135 @@ describe('RdfStore', () => {
         });
       });
     });
+
+    describe('that has quoted quads', () => {
+      beforeEach(async() => {
+        const ret = store.import(streamifyArray([
+          DF.quad(
+            DF.namedNode('ex:alice'),
+            DF.namedNode('ex:says'),
+            DF.quad(
+              DF.namedNode('ex:bob'),
+              DF.namedNode('ex:name'),
+              DF.literal('"Bob"'),
+            ),
+          ),
+          DF.quad(
+            DF.namedNode('ex:carol'),
+            DF.namedNode('ex:says'),
+            DF.quad(
+              DF.namedNode('ex:bob'),
+              DF.namedNode('ex:name'),
+              DF.literal('"NotBob"'),
+            ),
+          ),
+        ]));
+        await new Promise(resolve => ret.on('end', resolve));
+      });
+
+      describe('getQuads', () => {
+        it('should produce results for a top-level pattern', () => {
+          expect(store.getQuads(
+            undefined,
+            DF.namedNode('ex:says'),
+          )).toEqual([
+            DF.quad(
+              DF.namedNode('ex:alice'),
+              DF.namedNode('ex:says'),
+              DF.quad(
+                DF.namedNode('ex:bob'),
+                DF.namedNode('ex:name'),
+                DF.literal('"Bob"'),
+              ),
+            ),
+            DF.quad(
+              DF.namedNode('ex:carol'),
+              DF.namedNode('ex:says'),
+              DF.quad(
+                DF.namedNode('ex:bob'),
+                DF.namedNode('ex:name'),
+                DF.literal('"NotBob"'),
+              ),
+            ),
+          ]);
+        });
+
+        it('should produce results for a quoted triple', () => {
+          expect(store.getQuads(
+            undefined,
+            DF.namedNode('ex:says'),
+            DF.quad(
+              DF.namedNode('ex:bob'),
+              DF.namedNode('ex:name'),
+              DF.literal('"Bob"'),
+            ),
+          )).toEqual([
+            DF.quad(
+              DF.namedNode('ex:alice'),
+              DF.namedNode('ex:says'),
+              DF.quad(
+                DF.namedNode('ex:bob'),
+                DF.namedNode('ex:name'),
+                DF.literal('"Bob"'),
+              ),
+            ),
+          ]);
+        });
+
+        it('should produce results for a quoted variable', () => {
+          expect(store.getQuads(
+            undefined,
+            DF.namedNode('ex:says'),
+            DF.quad(
+              DF.namedNode('ex:bob'),
+              DF.namedNode('ex:name'),
+              DF.variable('name'),
+            ),
+          )).toEqual([
+            DF.quad(
+              DF.namedNode('ex:alice'),
+              DF.namedNode('ex:says'),
+              DF.quad(
+                DF.namedNode('ex:bob'),
+                DF.namedNode('ex:name'),
+                DF.literal('"Bob"'),
+              ),
+            ),
+            DF.quad(
+              DF.namedNode('ex:carol'),
+              DF.namedNode('ex:says'),
+              DF.quad(
+                DF.namedNode('ex:bob'),
+                DF.namedNode('ex:name'),
+                DF.literal('"NotBob"'),
+              ),
+            ),
+          ]);
+        });
+
+        it('should produce results for a quoted variable with partial match', () => {
+          expect(store.getQuads(
+            undefined,
+            DF.namedNode('ex:says'),
+            DF.quad(
+              DF.variable('person'),
+              DF.namedNode('ex:name'),
+              DF.literal('"Bob"'),
+            ),
+          )).toEqual([
+            DF.quad(
+              DF.namedNode('ex:alice'),
+              DF.namedNode('ex:says'),
+              DF.quad(
+                DF.namedNode('ex:bob'),
+                DF.namedNode('ex:name'),
+                DF.literal('"Bob"'),
+              ),
+            ),
+          ]);
+        });
+      });
+    });
   });
 
   describe('createDefault', () => {

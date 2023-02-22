@@ -43,6 +43,13 @@ export class PerformanceTest {
       store = approach.options.type === 'n3' ? new Store() : new RdfStore(approach.options.options);
       this.addQuadsToGraphs(this.dimension / 4, store);
       this.findQuadsInGraphs(this.dimension / 4, store);
+      console.log();
+
+      if (approach.options.type !== 'n3') {
+        store = new RdfStore(approach.options.options);
+        this.addQuotedTriplesToGraphs(this.dimension / 2, store);
+        this.findQuotedTriplesInGraphs(this.dimension / 2, store);
+      }
     }
   }
 
@@ -195,6 +202,67 @@ export class PerformanceTest {
     }
     for (let i = 0; i < dimension; i++) {
       assert.equal(store.getQuads(null, null, null, this.dataFactory.namedNode(`${this.prefix}${i}`)).length, dimension * dimension * dimension);
+    }
+    console.timeEnd(TEST);
+  }
+
+  public addQuotedTriplesToGraphs(dimension: number, store: RdfStore): void {
+    const TEST = `- Adding ${dimension * dimension * dimension} quoted triples`;
+    console.time(TEST);
+    for (let person1It = 0; person1It < dimension; person1It++) {
+      for (let person2It = 0; person2It < dimension; person2It++) {
+        for (let nameIt = 0; nameIt < dimension; nameIt++) {
+          store.addQuad(this.dataFactory.quad(
+            this.dataFactory.namedNode(`${this.prefix}person-${person1It}`),
+            this.dataFactory.namedNode(`${this.prefix}says`),
+            this.dataFactory.quad(
+              this.dataFactory.namedNode(`${this.prefix}person-${person2It}`),
+              this.dataFactory.namedNode(`${this.prefix}name`),
+              this.dataFactory.literal(`${this.prefix}${nameIt}`),
+            ),
+          ));
+        }
+      }
+    }
+    console.timeEnd(TEST);
+    console.log(`* Memory usage for quoted triples: ${Math.round(process.memoryUsage().rss / 1_024 / 1_024)}MB`);
+  }
+
+  public findQuotedTriplesInGraphs(dimension: number, store: RdfStore): void {
+    const TEST = `- Finding all ${dimension * dimension * dimension} quoted triples ${dimension * 3} times`;
+    console.time(TEST);
+    for (let i = 0; i < dimension; i++) {
+      assert.equal(store.getQuads(
+        this.dataFactory.namedNode(`${this.prefix}person-${i}`),
+        this.dataFactory.namedNode(`${this.prefix}says`),
+        this.dataFactory.quad(
+          this.dataFactory.variable!('person2'),
+          this.dataFactory.namedNode(`${this.prefix}name`),
+          this.dataFactory.variable!('name'),
+        ),
+      ).length, dimension * dimension);
+    }
+    for (let i = 0; i < dimension; i++) {
+      assert.equal(store.getQuads(
+        this.dataFactory.variable!('person1'),
+        this.dataFactory.namedNode(`${this.prefix}says`),
+        this.dataFactory.quad(
+          this.dataFactory.namedNode(`${this.prefix}person-${i}`),
+          this.dataFactory.namedNode(`${this.prefix}name`),
+          this.dataFactory.variable!('name'),
+        ),
+      ).length, dimension * dimension);
+    }
+    for (let i = 0; i < dimension; i++) {
+      assert.equal(store.getQuads(
+        this.dataFactory.variable!('person1'),
+        this.dataFactory.namedNode(`${this.prefix}says`),
+        this.dataFactory.quad(
+          this.dataFactory.variable!('person1'),
+          this.dataFactory.namedNode(`${this.prefix}name`),
+          this.dataFactory.literal(`${this.prefix}${i}`),
+        ),
+      ).length, dimension * dimension);
     }
     console.timeEnd(TEST);
   }

@@ -4,7 +4,7 @@ import type { AsyncIterator } from 'asynciterator';
 import { wrap } from 'asynciterator';
 import { DataFactory } from 'rdf-data-factory';
 import type { QuadTermName } from 'rdf-terms';
-import { QUAD_TERM_NAMES } from 'rdf-terms';
+import { matchPattern, QUAD_TERM_NAMES } from 'rdf-terms';
 import { DatasetCoreWrapper } from './dataset/DatasetCoreWrapper';
 import type { ITermDictionary } from './dictionary/ITermDictionary';
 import { TermDictionaryNumberRecordFullTerms } from './dictionary/TermDictionaryNumberRecordFullTerms';
@@ -216,12 +216,20 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     object?: RDF.Term | null,
     graph?: RDF.Term | null,
   ): IterableIterator<Q> {
+    let requireQuotedTripleFiltering = false;
+
     // Construct a quad pattern array
     const quadComponents: QuadPatternTerms = <QuadPatternTerms>
       [ subject || undefined, predicate || undefined, object || undefined, graph || undefined ]
         .map(term => {
-          if (term && (term.termType === 'Variable' || term.termType === 'Quad')) {
-            return;
+          if (term) {
+            if (term.termType === 'Variable') {
+              return;
+            }
+            if (term.termType === 'Quad') {
+              requireQuotedTripleFiltering = true;
+              return;
+            }
           }
           return term;
         });
@@ -236,12 +244,19 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     // eslint-disable-next-line unicorn/no-array-callback-reference
     for (const decomposedQuad of indexWrapped.index.find(quadComponentsOrdered)) {
       // De-order the resulting quad components into the normal SPOG order for quad creation.
-      yield this.dataFactory.quad(
+      const quad = this.dataFactory.quad(
         decomposedQuad[indexWrapped.componentOrderInverse.subject],
         decomposedQuad[indexWrapped.componentOrderInverse.predicate],
         decomposedQuad[indexWrapped.componentOrderInverse.object],
         decomposedQuad[indexWrapped.componentOrderInverse.graph],
       );
+      if (requireQuotedTripleFiltering) {
+        if (matchPattern(quad, subject!, predicate!, object!, graph!)) {
+          yield quad;
+        }
+      } else {
+        yield quad;
+      }
     }
   }
 
