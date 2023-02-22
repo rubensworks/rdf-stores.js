@@ -35,6 +35,36 @@ export class RdfStoreIndexNestedMapRecursive<E> implements IRdfStoreIndex<E> {
     return !contained;
   }
 
+  public remove(terms: EncodedQuadTerms<E>): boolean {
+    const map0 = this.nestedMap;
+    const map1: NestedMapActual<E> | undefined = <any> map0.get(terms[0]);
+    if (!map1) {
+      return false;
+    }
+    const map2: NestedMapActual<E> | undefined = <any> map1.get(terms[1]);
+    if (!map2) {
+      return false;
+    }
+    const map3: NestedMapActual<E> | undefined = <any> map2.get(terms[2]);
+    if (!map3) {
+      return false;
+    }
+    const ret = map3.delete(terms[3]);
+
+    // Clean up intermediate maps
+    if (ret && map3.size === 0) {
+      map2.delete(terms[2]);
+      if (map2.size === 0) {
+        map1.delete(terms[1]);
+        if (map1.size === 0) {
+          map0.delete(terms[0]);
+        }
+      }
+    }
+
+    return ret;
+  }
+
   public * find(terms: QuadPatternTerms): IterableIterator<QuadTerms> {
     return yield * <IterableIterator<QuadTerms>> this.findInner(0, terms, this.nestedMap, []);
   }
@@ -58,11 +88,13 @@ export class RdfStoreIndexNestedMapRecursive<E> implements IRdfStoreIndex<E> {
         }
       } else {
         // If the current term is defined, find one matching map for the current term.
-        const encodedTerm = this.dictionary.encode(currentTerm);
-        const subMap = map.get(encodedTerm);
-        if (subMap) {
-          partialQuad[index] = currentTerm;
-          yield * this.findInner(index + 1, terms, <NestedMapActual<E>>subMap, partialQuad);
+        const encodedTerm = this.dictionary.encodeOptional(currentTerm);
+        if (encodedTerm !== undefined) {
+          const subMap = map.get(encodedTerm);
+          if (subMap) {
+            partialQuad[index] = currentTerm;
+            yield * this.findInner(index + 1, terms, <NestedMapActual<E>>subMap, partialQuad);
+          }
         }
       }
     }
@@ -91,17 +123,19 @@ export class RdfStoreIndexNestedMapRecursive<E> implements IRdfStoreIndex<E> {
       }
     } else {
       // If the current term is defined, find one matching map for the current term.
-      const encodedTerm = this.dictionary.encode(currentTerm);
-      if (index === terms.length - 1) {
-        if (map.has(this.dictionary.encode(currentTerm))) {
-          return 1;
+      const encodedTerm = this.dictionary.encodeOptional(currentTerm);
+      if (encodedTerm !== undefined) {
+        if (index === terms.length - 1) {
+          if (map.has(encodedTerm)) {
+            return 1;
+          }
+          return 0;
         }
-        return 0;
-      }
 
-      const subMap = map.get(encodedTerm);
-      if (subMap) {
-        count += this.countInner(index + 1, terms, <NestedMapActual<E>>subMap);
+        const subMap = map.get(encodedTerm);
+        if (subMap) {
+          count += this.countInner(index + 1, terms, <NestedMapActual<E>>subMap);
+        }
       }
     }
 

@@ -17,6 +17,10 @@ export class TermDictionarySymbol implements ITermDictionary<symbol> {
     return Symbol.for(`rdf::${termToString(term)}`);
   }
 
+  public encodeOptional(term: RDF.Term): symbol {
+    return this.encode(term);
+  }
+
   public decode(encoding: symbol): RDF.Term {
     const string = Symbol.keyFor(encoding);
     if (string === undefined) {

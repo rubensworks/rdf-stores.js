@@ -1,5 +1,6 @@
 import type { QuadTermName } from 'rdf-terms';
 import { QUAD_TERM_NAMES } from 'rdf-terms';
+import type { ITermDictionary } from './dictionary/ITermDictionary';
 import type { QuadPatternTerms } from './PatternTerm';
 
 export const QUAD_TERM_NAMES_INVERSE: Record<QuadTermName, number> =
@@ -63,4 +64,33 @@ export function orderQuadComponents<T>(
     const desiredComponentIndex = QUAD_TERM_NAMES_INVERSE[desiredComponent];
     return quadPattern[desiredComponentIndex];
   });
+}
+
+/**
+ * Encode the given array of quad terms.
+ * @param terms Non-encoded quad terms.
+ * @param dictionary A dictionary
+ * @return array An array of encoded terms.
+ * The array will be undefined if at least one of the patterns does not occur within the dictionary.
+ */
+export function encodeOptionalTerms<E>(
+  terms: QuadPatternTerms,
+  dictionary: ITermDictionary<E>,
+): (E | undefined)[] | undefined {
+  const encodedTerms = terms.map(term => {
+    if (term) {
+      const encodedTerm = dictionary.encodeOptional(term);
+      if (encodedTerm === undefined) {
+        return 'none';
+      }
+      return encodedTerm;
+    }
+    return term;
+  });
+
+  if (encodedTerms.includes('none')) {
+    return undefined;
+  }
+
+  return <(E | undefined)[]> encodedTerms;
 }

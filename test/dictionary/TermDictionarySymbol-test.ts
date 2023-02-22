@@ -40,6 +40,22 @@ describe('TermDictionarySymbol', () => {
     });
   });
 
+  describe('encodeOptional', () => {
+    it('should not return undefined for non-encoded terms', () => {
+      const s1 = dict.encode(DF.namedNode('ex:s1'));
+      const s2 = dict.encode(DF.namedNode('ex:s2'));
+      const s3 = dict.encode(DF.namedNode('ex:s3'));
+
+      expect(s1).not.toBe(s2);
+      expect(s2).not.toBe(s3);
+
+      expect(dict.encodeOptional(DF.namedNode('ex:s1'))).toBe(s1);
+      expect(dict.encodeOptional(DF.namedNode('ex:s2'))).toBe(s2);
+      expect(dict.encodeOptional(DF.namedNode('ex:s3'))).toBe(s3);
+      expect(dict.encodeOptional(DF.namedNode('ex:s4'))).not.toBe(s3);
+    });
+  });
+
   describe('decode', () => {
     it('should throw when entry does not exist', () => {
       // eslint-disable-next-line symbol-description

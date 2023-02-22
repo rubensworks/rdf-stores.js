@@ -82,6 +82,17 @@ describe('RdfStoreIndexes', () => {
             ])).toEqual(0);
           });
         });
+
+        describe('remove', () => {
+          it('should be unable to remove non-existing quads', () => {
+            expect(index.remove([
+              dictionary.encode(DF.namedNode('s')),
+              dictionary.encode(DF.namedNode('p')),
+              dictionary.encode(DF.namedNode('o')),
+              dictionary.encode(DF.namedNode('g')),
+            ])).toEqual(false);
+          });
+        });
       });
 
       describe('that has one quad', () => {
@@ -222,6 +233,42 @@ describe('RdfStoreIndexes', () => {
               DF.namedNode('o1'),
               undefined,
             ])).toEqual(0);
+          });
+        });
+
+        describe('remove', () => {
+          it('should be able to remove an existing quad', () => {
+            expect(index.remove([
+              dictionary.encode(DF.namedNode('s')),
+              dictionary.encode(DF.namedNode('p')),
+              dictionary.encode(DF.namedNode('o')),
+              dictionary.encode(DF.namedNode('g')),
+            ])).toEqual(true);
+          });
+
+          it('should be able to remove an existing quad only once', () => {
+            expect(index.remove([
+              dictionary.encode(DF.namedNode('s')),
+              dictionary.encode(DF.namedNode('p')),
+              dictionary.encode(DF.namedNode('o')),
+              dictionary.encode(DF.namedNode('g')),
+            ])).toEqual(true);
+
+            expect(index.remove([
+              dictionary.encode(DF.namedNode('s')),
+              dictionary.encode(DF.namedNode('p')),
+              dictionary.encode(DF.namedNode('o')),
+              dictionary.encode(DF.namedNode('g')),
+            ])).toEqual(false);
+          });
+
+          it('should be unable to remove non-existing quads', () => {
+            expect(index.remove([
+              dictionary.encode(DF.namedNode('s-no')),
+              dictionary.encode(DF.namedNode('p-no')),
+              dictionary.encode(DF.namedNode('o-no')),
+              dictionary.encode(DF.namedNode('g-no')),
+            ])).toEqual(false);
           });
         });
       });
@@ -442,6 +489,31 @@ describe('RdfStoreIndexes', () => {
               undefined,
               DF.namedNode('g3'),
             ]) ]).toEqual([]);
+
+            expect([ ...index.find([
+              DF.namedNode('p1'),
+              undefined,
+              undefined,
+              undefined,
+            ]) ]).toEqual([]);
+            expect([ ...index.find([
+              DF.namedNode('s1'),
+              DF.namedNode('s1'),
+              undefined,
+              undefined,
+            ]) ]).toEqual([]);
+            expect([ ...index.find([
+              DF.namedNode('s1'),
+              DF.namedNode('p1'),
+              DF.namedNode('s1'),
+              undefined,
+            ]) ]).toEqual([]);
+            expect([ ...index.find([
+              DF.namedNode('s1'),
+              DF.namedNode('p1'),
+              DF.namedNode('o1'),
+              DF.namedNode('s1'),
+            ]) ]).toEqual([]);
           });
         });
 
@@ -527,6 +599,106 @@ describe('RdfStoreIndexes', () => {
               undefined,
               DF.namedNode('g3'),
             ])).toEqual(0);
+
+            expect(index.count([
+              DF.namedNode('p1'),
+              undefined,
+              undefined,
+              undefined,
+            ])).toEqual(0);
+            expect(index.count([
+              DF.namedNode('s1'),
+              DF.namedNode('s1'),
+              undefined,
+              undefined,
+            ])).toEqual(0);
+            expect(index.count([
+              DF.namedNode('s1'),
+              DF.namedNode('p1'),
+              DF.namedNode('s1'),
+              undefined,
+            ])).toEqual(0);
+            expect(index.count([
+              DF.namedNode('s1'),
+              DF.namedNode('p1'),
+              DF.namedNode('o1'),
+              DF.namedNode('s1'),
+            ])).toEqual(0);
+          });
+        });
+
+        describe('remove', () => {
+          it('should be able to remove existing quads', () => {
+            expect(index.remove([
+              dictionary.encode(DF.namedNode('s1')),
+              dictionary.encode(DF.namedNode('p1')),
+              dictionary.encode(DF.namedNode('o1')),
+              dictionary.encode(DF.namedNode('g1')),
+            ])).toEqual(true);
+            expect(index.remove([
+              dictionary.encode(DF.namedNode('s1')),
+              dictionary.encode(DF.namedNode('p2')),
+              dictionary.encode(DF.namedNode('o2')),
+              dictionary.encode(DF.namedNode('g1')),
+            ])).toEqual(true);
+            expect(index.remove([
+              dictionary.encode(DF.namedNode('s2')),
+              dictionary.encode(DF.namedNode('p1')),
+              dictionary.encode(DF.namedNode('o1')),
+              dictionary.encode(DF.namedNode('g1')),
+            ])).toEqual(true);
+            expect(index.remove([
+              dictionary.encode(DF.namedNode('s2')),
+              dictionary.encode(DF.namedNode('p2')),
+              dictionary.encode(DF.namedNode('o2')),
+              dictionary.encode(DF.namedNode('g2')),
+            ])).toEqual(true);
+          });
+
+          it('should be able to remove an existing quad only once', () => {
+            expect(index.remove([
+              dictionary.encode(DF.namedNode('s1')),
+              dictionary.encode(DF.namedNode('p1')),
+              dictionary.encode(DF.namedNode('o1')),
+              dictionary.encode(DF.namedNode('g1')),
+            ])).toEqual(true);
+
+            expect(index.remove([
+              dictionary.encode(DF.namedNode('s1')),
+              dictionary.encode(DF.namedNode('p1')),
+              dictionary.encode(DF.namedNode('o1')),
+              dictionary.encode(DF.namedNode('g1')),
+            ])).toEqual(false);
+          });
+
+          it('should be unable to remove non-existing quads', () => {
+            expect(index.remove([
+              dictionary.encode(DF.namedNode('s1-no')),
+              dictionary.encode(DF.namedNode('p1-no')),
+              dictionary.encode(DF.namedNode('o1-no')),
+              dictionary.encode(DF.namedNode('g1-no')),
+            ])).toEqual(false);
+
+            expect(index.remove([
+              dictionary.encode(DF.namedNode('s1')),
+              dictionary.encode(DF.namedNode('p1-no')),
+              dictionary.encode(DF.namedNode('o1-no')),
+              dictionary.encode(DF.namedNode('g1-no')),
+            ])).toEqual(false);
+
+            expect(index.remove([
+              dictionary.encode(DF.namedNode('s1')),
+              dictionary.encode(DF.namedNode('p1')),
+              dictionary.encode(DF.namedNode('o1-no')),
+              dictionary.encode(DF.namedNode('g1-no')),
+            ])).toEqual(false);
+
+            expect(index.remove([
+              dictionary.encode(DF.namedNode('s1')),
+              dictionary.encode(DF.namedNode('p1')),
+              dictionary.encode(DF.namedNode('o1')),
+              dictionary.encode(DF.namedNode('g1-no')),
+            ])).toEqual(false);
           });
         });
       });

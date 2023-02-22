@@ -109,6 +109,19 @@ describe('TermDictionaryNumberRecordFullTerms', () => {
     });
   });
 
+  describe('encodeOptional', () => {
+    it('should return undefined for non-encoded terms', () => {
+      expect(dict.encode(DF.namedNode('ex:s1'))).toEqual(0);
+      expect(dict.encode(DF.namedNode('ex:s2'))).toEqual(1);
+      expect(dict.encode(DF.namedNode('ex:s3'))).toEqual(2);
+
+      expect(dict.encodeOptional(DF.namedNode('ex:s1'))).toEqual(0);
+      expect(dict.encodeOptional(DF.namedNode('ex:s2'))).toEqual(1);
+      expect(dict.encodeOptional(DF.namedNode('ex:s3'))).toEqual(2);
+      expect(dict.encodeOptional(DF.namedNode('ex:s4'))).toEqual(undefined);
+    });
+  });
+
   describe('decode', () => {
     it('should throw when entry does not exist', () => {
       expect(() => dict.decode(0)).toThrow('The value 0 is not present in this dictionary');

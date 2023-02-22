@@ -1,6 +1,7 @@
 import type * as RDF from '@rdfjs/types';
 import type { ITermDictionary } from '../dictionary/ITermDictionary';
 import type { IRdfStoreOptions } from '../IRdfStoreOptions';
+import { encodeOptionalTerms } from '../OrderUtils';
 import type { QuadPatternTerms, QuadTerms, EncodedQuadTerms } from '../PatternTerm';
 import type { IRdfStoreIndex } from './IRdfStoreIndex';
 
@@ -28,8 +29,44 @@ export class RdfStoreIndexNestedRecord<E extends number> implements IRdfStoreInd
     return true;
   }
 
+  public remove(terms: EncodedQuadTerms<E>): boolean {
+    const map0 = this.nestedRecords;
+    const map1 = map0[terms[0]];
+    if (!map1) {
+      return false;
+    }
+    const map2 = map1[terms[1]];
+    if (!map2) {
+      return false;
+    }
+    const map3 = map2[terms[2]];
+    if (!map3) {
+      return false;
+    }
+    if (!map3[terms[3]]) {
+      return false;
+    }
+    delete map3[terms[3]];
+
+    // Clean up intermediate maps
+    if (Object.keys(map3).length === 0) {
+      delete map2[terms[2]];
+      if (Object.keys(map2).length === 0) {
+        delete map1[terms[1]];
+        if (Object.keys(map1).length === 0) {
+          delete map0[terms[0]];
+        }
+      }
+    }
+
+    return true;
+  }
+
   public * find(terms: QuadPatternTerms): IterableIterator<QuadTerms> {
-    const ids: (E | undefined)[] = terms.map(term => term ? this.dictionary.encode(term) : term);
+    const ids = encodeOptionalTerms(terms, this.dictionary);
+    if (!ids) {
+      return;
+    }
     const id0 = ids[0];
     const id1 = ids[1];
     const id2 = ids[2];
@@ -70,7 +107,10 @@ export class RdfStoreIndexNestedRecord<E extends number> implements IRdfStoreInd
   public count(terms: QuadPatternTerms): number {
     let count = 0;
 
-    const ids: (E | undefined)[] = terms.map(term => term ? this.dictionary.encode(term) : term);
+    const ids = encodeOptionalTerms(terms, this.dictionary);
+    if (!ids) {
+      return 0;
+    }
     const id0 = ids[0];
     const id1 = ids[1];
     const id2 = ids[2];

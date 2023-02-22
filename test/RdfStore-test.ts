@@ -171,6 +171,81 @@ describe('RdfStore', () => {
           ))).toEqual([]);
         });
       });
+
+      describe('removeQuad', () => {
+        it('should not remove a non-existing quad', async() => {
+          expect(store.removeQuad(DF.quad(
+            DF.namedNode('s'),
+            DF.namedNode('s'),
+            DF.namedNode('s'),
+            DF.namedNode('s'),
+          ))).toEqual(false);
+
+          // Store should not be changed
+          expect(store.size).toEqual(1);
+          expect(await arrayifyStream(store.match())).toEqual([
+            DF.quad(
+              DF.namedNode('s'),
+              DF.namedNode('p'),
+              DF.namedNode('o'),
+              DF.namedNode('g'),
+            ),
+          ]);
+        });
+
+        it('should not remove a non-existing quad that is not encoded', async() => {
+          expect(store.removeQuad(DF.quad(
+            DF.namedNode('s-non'),
+            DF.namedNode('s-non'),
+            DF.namedNode('s-non'),
+            DF.namedNode('s-non'),
+          ))).toEqual(false);
+
+          // Store should not be changed
+          expect(store.size).toEqual(1);
+          expect(await arrayifyStream(store.match())).toEqual([
+            DF.quad(
+              DF.namedNode('s'),
+              DF.namedNode('p'),
+              DF.namedNode('o'),
+              DF.namedNode('g'),
+            ),
+          ]);
+        });
+
+        it('should remove an existing quad', async() => {
+          expect(store.removeQuad(DF.quad(
+            DF.namedNode('s'),
+            DF.namedNode('p'),
+            DF.namedNode('o'),
+            DF.namedNode('g'),
+          ))).toEqual(true);
+
+          // Store should be changed
+          expect(store.size).toEqual(0);
+          expect(await arrayifyStream(store.match())).toEqual([]);
+        });
+
+        it('should remove an existing quad just once', async() => {
+          expect(store.removeQuad(DF.quad(
+            DF.namedNode('s'),
+            DF.namedNode('p'),
+            DF.namedNode('o'),
+            DF.namedNode('g'),
+          ))).toEqual(true);
+
+          expect(store.removeQuad(DF.quad(
+            DF.namedNode('s'),
+            DF.namedNode('p'),
+            DF.namedNode('o'),
+            DF.namedNode('g'),
+          ))).toEqual(false);
+
+          // Store should be changed
+          expect(store.size).toEqual(0);
+          expect(await arrayifyStream(store.match())).toEqual([]);
+        });
+      });
     });
 
     describe('that has multiple quads', () => {
@@ -474,6 +549,100 @@ describe('RdfStore', () => {
             undefined,
             DF.namedNode('g3'),
           )).toEqual(0);
+        });
+      });
+
+      describe('removeQuad', () => {
+        it('should not remove a non-existing quad', async() => {
+          expect(store.removeQuad(DF.quad(
+            DF.namedNode('s1'),
+            DF.namedNode('s1'),
+            DF.namedNode('s1'),
+            DF.namedNode('s1'),
+          ))).toEqual(false);
+
+          // Store should not be changed
+          expect(store.size).toEqual(4);
+          expect((await arrayifyStream(store.match())).length).toEqual(4);
+        });
+
+        it('should not remove a non-existing quad that is not encoded', async() => {
+          expect(store.removeQuad(DF.quad(
+            DF.namedNode('s-non'),
+            DF.namedNode('s-non'),
+            DF.namedNode('s-non'),
+            DF.namedNode('s-non'),
+          ))).toEqual(false);
+
+          // Store should not be changed
+          expect(store.size).toEqual(4);
+          expect((await arrayifyStream(store.match())).length).toEqual(4);
+        });
+
+        it('should remove an existing quad', async() => {
+          expect(store.removeQuad(DF.quad(
+            DF.namedNode('s2'),
+            DF.namedNode('p2'),
+            DF.namedNode('o2'),
+            DF.namedNode('g2'),
+          ))).toEqual(true);
+
+          // Store should be changed
+          expect(store.size).toEqual(3);
+          expect((await arrayifyStream(store.match())).length).toEqual(3);
+
+          expect(store.removeQuad(DF.quad(
+            DF.namedNode('s2'),
+            DF.namedNode('p1'),
+            DF.namedNode('o1'),
+            DF.namedNode('g1'),
+          ))).toEqual(true);
+
+          // Store should be changed
+          expect(store.size).toEqual(2);
+          expect((await arrayifyStream(store.match())).length).toEqual(2);
+
+          expect(store.removeQuad(DF.quad(
+            DF.namedNode('s1'),
+            DF.namedNode('p2'),
+            DF.namedNode('o2'),
+            DF.namedNode('g1'),
+          ))).toEqual(true);
+
+          // Store should be changed
+          expect(store.size).toEqual(1);
+          expect((await arrayifyStream(store.match())).length).toEqual(1);
+
+          expect(store.removeQuad(DF.quad(
+            DF.namedNode('s1'),
+            DF.namedNode('p1'),
+            DF.namedNode('o1'),
+            DF.namedNode('g1'),
+          ))).toEqual(true);
+
+          // Store should be changed
+          expect(store.size).toEqual(0);
+          expect((await arrayifyStream(store.match())).length).toEqual(0);
+        });
+
+        it('should remove an existing quad just once', async() => {
+          expect(store.removeQuad(DF.quad(
+            DF.namedNode('s2'),
+            DF.namedNode('p2'),
+            DF.namedNode('o2'),
+            DF.namedNode('g2'),
+          ))).toEqual(true);
+
+          expect(store.removeQuad(DF.quad(
+            DF.namedNode('s2'),
+            DF.namedNode('p2'),
+            DF.namedNode('o2'),
+            DF.namedNode('g2'),
+          ))).toEqual(false);
+
+          // Store should be changed
+          expect(store.size).toEqual(3);
+          expect((await arrayifyStream(store.match())).length).toEqual(3);
         });
       });
     });

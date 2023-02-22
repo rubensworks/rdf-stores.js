@@ -122,6 +122,41 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
   }
 
   /**
+   * Remove a quad from the store.
+   * @param quad An RDF quad.
+   * @return boolean If the quad was present in the index.
+   */
+  public removeQuad(quad: Q): boolean {
+    const quadEncoded = [
+      this.dictionary.encodeOptional(quad.subject),
+      this.dictionary.encodeOptional(quad.predicate),
+      this.dictionary.encodeOptional(quad.object),
+      this.dictionary.encodeOptional(quad.graph),
+    ];
+
+    // We can quickly return false if the quad is not present in the dictionary
+    // eslint-disable-next-line unicorn/no-useless-undefined
+    if (quadEncoded.includes(undefined)) {
+      return false;
+    }
+
+    let wasPresent = false;
+    for (const indexWrapped of this.indexesWrapped) {
+      // Before sending the quad to the index, make sure its components are ordered corresponding to the index's order.
+      wasPresent = indexWrapped.index
+        .remove(<EncodedQuadTerms<E>>orderQuadComponents(indexWrapped.componentOrder, quadEncoded));
+      if (!wasPresent) {
+        break;
+      }
+    }
+    if (wasPresent) {
+      this._size--;
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Import the given stream of quads into the store.
    * @param stream A stream of RDF quads.
    */

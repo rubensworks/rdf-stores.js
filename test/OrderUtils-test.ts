@@ -1,6 +1,9 @@
 import { DataFactory } from 'rdf-data-factory';
 import type { QuadTermName } from 'rdf-terms';
+import type { ITermDictionary } from '../lib/dictionary/ITermDictionary';
+import { TermDictionaryNumberRecordFullTerms } from '../lib/dictionary/TermDictionaryNumberRecordFullTerms';
 import {
+  encodeOptionalTerms,
   getBestIndex, getComponentOrderScore,
   orderQuadComponents,
 } from '../lib/OrderUtils';
@@ -227,6 +230,48 @@ describe('OrderUtils', () => {
         DF.namedNode('p'),
         DF.namedNode('s'),
       ]);
+    });
+  });
+
+  describe('encodeOptionalTerms', () => {
+    let dict: ITermDictionary<number>;
+    beforeEach(() => {
+      dict = new TermDictionaryNumberRecordFullTerms();
+      dict.encode(DF.namedNode('s'));
+      dict.encode(DF.namedNode('p'));
+      dict.encode(DF.namedNode('o'));
+      dict.encode(DF.namedNode('g'));
+    });
+
+    it('should encode defined terms', () => {
+      expect(encodeOptionalTerms([
+        DF.namedNode('s'),
+        DF.namedNode('p'),
+        DF.namedNode('o'),
+        DF.namedNode('g'),
+      ], dict)).toEqual([
+        0, 1, 2, 3,
+      ]);
+    });
+
+    it('should encode undefined terms', () => {
+      expect(encodeOptionalTerms([
+        DF.namedNode('s'),
+        undefined,
+        DF.namedNode('o'),
+        undefined,
+      ], dict)).toEqual([
+        0, undefined, 2, undefined,
+      ]);
+    });
+
+    it('should return undefined for non-encoded terms', () => {
+      expect(encodeOptionalTerms([
+        DF.namedNode('s'),
+        DF.namedNode('p-not-in-dict'),
+        DF.namedNode('o'),
+        DF.namedNode('g'),
+      ], dict)).toEqual(undefined);
     });
   });
 });

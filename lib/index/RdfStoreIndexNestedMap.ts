@@ -1,6 +1,7 @@
 import type * as RDF from '@rdfjs/types';
 import type { ITermDictionary } from '../dictionary/ITermDictionary';
 import type { IRdfStoreOptions } from '../IRdfStoreOptions';
+import { encodeOptionalTerms } from '../OrderUtils';
 import type { EncodedQuadTerms, QuadPatternTerms, QuadTerms } from '../PatternTerm';
 import type { IRdfStoreIndex } from './IRdfStoreIndex';
 
@@ -40,8 +41,41 @@ export class RdfStoreIndexNestedMap<E> implements IRdfStoreIndex<E> {
     return !contained;
   }
 
+  public remove(terms: EncodedQuadTerms<E>): boolean {
+    const map0 = this.nestedMap;
+    const map1: NestedMapActual<E> | undefined = <any> map0.get(terms[0]);
+    if (!map1) {
+      return false;
+    }
+    const map2: NestedMapActual<E> | undefined = <any> map1.get(terms[1]);
+    if (!map2) {
+      return false;
+    }
+    const map3: NestedMapActual<E> | undefined = <any> map2.get(terms[2]);
+    if (!map3) {
+      return false;
+    }
+    const ret = map3.delete(terms[3]);
+
+    // Clean up intermediate maps
+    if (ret && map3.size === 0) {
+      map2.delete(terms[2]);
+      if (map2.size === 0) {
+        map1.delete(terms[1]);
+        if (map1.size === 0) {
+          map0.delete(terms[0]);
+        }
+      }
+    }
+
+    return ret;
+  }
+
   public * find(terms: QuadPatternTerms): IterableIterator<QuadTerms> {
-    const ids: (E | undefined)[] = terms.map(term => term ? this.dictionary.encode(term) : term);
+    const ids = encodeOptionalTerms(terms, this.dictionary);
+    if (!ids) {
+      return;
+    }
     const id0 = ids[0];
     const id1 = ids[1];
     const id2 = ids[2];
@@ -55,7 +89,6 @@ export class RdfStoreIndexNestedMap<E> implements IRdfStoreIndex<E> {
     let map1: NestedMapActual<E>;
     let map2: NestedMapActual<E>;
     let map3: NestedMapActual<E>;
-    let map4: NestedMapActual<E>;
 
     const map0: NestedMapActual<E> = this.nestedMap;
     const map0Keys = id0 !== undefined ? (map0.has(id0) ? [ id0 ] : []) : map0.keys();
@@ -83,7 +116,10 @@ export class RdfStoreIndexNestedMap<E> implements IRdfStoreIndex<E> {
   public count(terms: QuadPatternTerms): number {
     let count = 0;
 
-    const ids: (E | undefined)[] = terms.map(term => term ? this.dictionary.encode(term) : term);
+    const ids = encodeOptionalTerms(terms, this.dictionary);
+    if (!ids) {
+      return 0;
+    }
     const id0 = ids[0];
     const id1 = ids[1];
     const id2 = ids[2];

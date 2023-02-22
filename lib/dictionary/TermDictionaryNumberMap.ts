@@ -27,6 +27,11 @@ export class TermDictionaryNumberMap implements ITermDictionary<number> {
     return encoded;
   }
 
+  public encodeOptional(term: RDF.Term): number | undefined {
+    const key = termToString(term);
+    return this.dictionary.get(key);
+  }
+
   public decode(encoding: number): RDF.Term {
     const string = this.reverseDictionary.get(encoding);
     if (string === undefined) {

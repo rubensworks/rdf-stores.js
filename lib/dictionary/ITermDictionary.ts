@@ -12,6 +12,12 @@ export interface ITermDictionary<E> {
    */
   encode: (term: RDF.Term) => E;
   /**
+   * Return the encoding of the given RDF term, but do not create a new encoding if it doesn't exist,
+   * but return undefined.
+   * @param term An RDF term.
+   */
+  encodeOptional: (term: RDF.Term) => E | undefined;
+  /**
    * Decode the given encoded value into an RDF term.
    * Multiple invocations of this method with the same term MUST return the same value.
    * @param encoding An encoded RDF term.

@@ -11,6 +11,12 @@ export interface IRdfStoreIndex<E> {
    */
   add: (terms: EncodedQuadTerms<E>) => boolean;
   /**
+   * Remove a quad from the index.
+   * @param terms An array of encoded terms, ordered in the component order of this index.
+   * @return boolean If the quad was present in the index.
+   */
+  remove: (terms: EncodedQuadTerms<E>) => boolean;
+  /**
    * Find all quads matching the given terms.
    * Quads are represented as an array of terms, in the component order of this index.
    * @param terms An iterable of pattern terms, ordered in the component order of this index.
