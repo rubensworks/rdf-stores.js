@@ -2,6 +2,7 @@ import arrayifyStream from 'arrayify-stream';
 import each from 'jest-each';
 import { DataFactory } from 'rdf-data-factory';
 import type { QuadTermName } from 'rdf-terms';
+import type { DatasetCoreWrapper } from '../lib/dataset/DatasetCoreWrapper';
 import { TermDictionaryNumberMap } from '../lib/dictionary/TermDictionaryNumberMap';
 import { RdfStoreIndexNestedMap } from '../lib/index/RdfStoreIndexNestedMap';
 import { RdfStore } from '../lib/RdfStore';
@@ -763,6 +764,153 @@ describe('RdfStore', () => {
               DF.namedNode('g2'),
             ),
           ]);
+        });
+      });
+
+      describe('asDataset', () => {
+        let dataset: DatasetCoreWrapper;
+        beforeEach(() => {
+          dataset = store.asDataset();
+        });
+
+        it('returns a dataset core', () => {
+          expect(dataset).not.toBeFalsy();
+        });
+
+        describe('size', () => {
+          it('to return the store size', () => {
+            expect(dataset.size).toEqual(4);
+          });
+        });
+
+        describe('add', () => {
+          it('to add quads', () => {
+            dataset.add(DF.quad(
+              DF.namedNode('s3'),
+              DF.namedNode('p3'),
+              DF.namedNode('o3'),
+              DF.namedNode('g3'),
+            ));
+            dataset.add(DF.quad(
+              DF.namedNode('s4'),
+              DF.namedNode('p4'),
+              DF.namedNode('o4'),
+              DF.namedNode('g4'),
+            ));
+
+            expect(dataset.size).toEqual(6);
+            expect(store.size).toEqual(6);
+          });
+        });
+
+        describe('delete', () => {
+          it('to delete quads', () => {
+            dataset.delete(DF.quad(
+              DF.namedNode('s2'),
+              DF.namedNode('p1'),
+              DF.namedNode('o1'),
+              DF.namedNode('g1'),
+            ));
+            dataset.delete(DF.quad(
+              DF.namedNode('s2'),
+              DF.namedNode('p2'),
+              DF.namedNode('o2'),
+              DF.namedNode('g2'),
+            ));
+
+            expect(dataset.size).toEqual(2);
+            expect(store.size).toEqual(2);
+          });
+        });
+
+        describe('has', () => {
+          it('to return true for contained quads', () => {
+            expect(dataset.has(DF.quad(
+              DF.namedNode('s2'),
+              DF.namedNode('p1'),
+              DF.namedNode('o1'),
+              DF.namedNode('g1'),
+            ))).toEqual(true);
+            expect(dataset.has(DF.quad(
+              DF.namedNode('s2'),
+              DF.namedNode('p2'),
+              DF.namedNode('o2'),
+              DF.namedNode('g2'),
+            ))).toEqual(true);
+            expect(dataset.has(DF.quad(
+              DF.namedNode('s3'),
+              DF.namedNode('p3'),
+              DF.namedNode('o3'),
+              DF.namedNode('g3'),
+            ))).toEqual(false);
+          });
+        });
+
+        describe('match', () => {
+          it('to return a new dataset for matching quads', () => {
+            const dataset2 = dataset.match(undefined, undefined, undefined, DF.namedNode('g1'));
+
+            expect(dataset2).not.toBe(dataset);
+            expect(dataset2.store).not.toBe(dataset.store);
+            expect(dataset2.store.dictionary).toBe(dataset.store.dictionary);
+            expect(dataset2.size).toEqual(3);
+
+            expect(dataset2.has(DF.quad(
+              DF.namedNode('s1'),
+              DF.namedNode('p1'),
+              DF.namedNode('o1'),
+              DF.namedNode('g1'),
+            ))).toEqual(true);
+            expect(dataset2.has(DF.quad(
+              DF.namedNode('s1'),
+              DF.namedNode('p2'),
+              DF.namedNode('o2'),
+              DF.namedNode('g1'),
+            ))).toEqual(true);
+            expect(dataset2.has(DF.quad(
+              DF.namedNode('s2'),
+              DF.namedNode('p1'),
+              DF.namedNode('o1'),
+              DF.namedNode('g1'),
+            ))).toEqual(true);
+            expect(dataset2.has(DF.quad(
+              DF.namedNode('s2'),
+              DF.namedNode('p2'),
+              DF.namedNode('o2'),
+              DF.namedNode('g2'),
+            ))).toEqual(false);
+          });
+        });
+
+        describe('iterator', () => {
+          it('to return all contained triples', () => {
+            expect([ ...dataset ]).toBeRdfIsomorphic([
+              DF.quad(
+                DF.namedNode('s1'),
+                DF.namedNode('p1'),
+                DF.namedNode('o1'),
+                DF.namedNode('g1'),
+              ),
+              DF.quad(
+                DF.namedNode('s1'),
+                DF.namedNode('p2'),
+                DF.namedNode('o2'),
+                DF.namedNode('g1'),
+              ),
+              DF.quad(
+                DF.namedNode('s2'),
+                DF.namedNode('p1'),
+                DF.namedNode('o1'),
+                DF.namedNode('g1'),
+              ),
+              DF.quad(
+                DF.namedNode('s2'),
+                DF.namedNode('p2'),
+                DF.namedNode('o2'),
+                DF.namedNode('g2'),
+              ),
+            ]);
+          });
         });
       });
     });

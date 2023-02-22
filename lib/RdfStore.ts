@@ -5,6 +5,7 @@ import { wrap } from 'asynciterator';
 import { DataFactory } from 'rdf-data-factory';
 import type { QuadTermName } from 'rdf-terms';
 import { QUAD_TERM_NAMES } from 'rdf-terms';
+import { DatasetCoreWrapper } from './dataset/DatasetCoreWrapper';
 import type { ITermDictionary } from './dictionary/ITermDictionary';
 import { TermDictionaryNumberRecordFullTerms } from './dictionary/TermDictionaryNumberRecordFullTerms';
 import type { IRdfStoreIndex } from './index/IRdfStoreIndex';
@@ -23,14 +24,16 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     [ 'graph', 'object', 'subject', 'predicate' ],
   ];
 
-  private readonly dataFactory: RDF.DataFactory<Q>;
-  private readonly dictionary: ITermDictionary<E>;
-  private readonly indexesWrapped: IRdfStoreIndexWrapped<E>[];
+  public readonly options: IRdfStoreOptions<E, Q>;
+  public readonly dataFactory: RDF.DataFactory<Q>;
+  public readonly dictionary: ITermDictionary<E>;
+  public readonly indexesWrapped: IRdfStoreIndexWrapped<E>[];
   private readonly indexesWrappedComponentOrders: QuadTermName[][];
 
   private _size = 0;
 
   public constructor(options: IRdfStoreOptions<E, Q>) {
+    this.options = options;
     this.dataFactory = options.dataFactory;
     this.dictionary = options.dictionary;
     this.indexesWrapped = RdfStore.constructIndexesWrapped(options);
@@ -310,6 +313,14 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
 
     // Call the best index's count method.
     return indexWrapped.index.count(quadComponentsOrdered);
+  }
+
+  /**
+   * Wrap this store inside a DatasetCore interface.
+   * Any mutations in either this store or the wrapper will propagate to each other.
+   */
+  public asDataset(): DatasetCoreWrapper<E, Q> {
+    return new DatasetCoreWrapper(this);
   }
 }
 
