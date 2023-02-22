@@ -645,6 +645,126 @@ describe('RdfStore', () => {
           expect((await arrayifyStream(store.match())).length).toEqual(3);
         });
       });
+
+      describe('remove', () => {
+        it('should not remove quads for an empty stream', async() => {
+          await new Promise(resolve => store.remove(streamifyArray([])).on('end', resolve));
+
+          // Store should not be changed
+          expect(store.size).toEqual(4);
+          expect((await arrayifyStream(store.match())).length).toEqual(4);
+        });
+
+        it('should remove quads for an non-empty stream', async() => {
+          await new Promise(resolve => store.remove(streamifyArray([
+            DF.quad(
+              DF.namedNode('s1'),
+              DF.namedNode('p1'),
+              DF.namedNode('o1'),
+              DF.namedNode('g1'),
+            ),
+            DF.quad(
+              DF.namedNode('s1'),
+              DF.namedNode('p2'),
+              DF.namedNode('o2'),
+              DF.namedNode('g1'),
+            ),
+          ])).on('end', resolve));
+
+          // Store should not be changed
+          expect(store.size).toEqual(2);
+          expect(await arrayifyStream(store.match())).toEqual([
+            DF.quad(
+              DF.namedNode('s2'),
+              DF.namedNode('p1'),
+              DF.namedNode('o1'),
+              DF.namedNode('g1'),
+            ),
+            DF.quad(
+              DF.namedNode('s2'),
+              DF.namedNode('p2'),
+              DF.namedNode('o2'),
+              DF.namedNode('g2'),
+            ),
+          ]);
+        });
+      });
+
+      describe('removeMatches', () => {
+        it('should not remove quads for no matches', async() => {
+          await new Promise(resolve => store.removeMatches(DF.namedNode('no')).on('end', resolve));
+
+          // Store should not be changed
+          expect(store.size).toEqual(4);
+          expect((await arrayifyStream(store.match())).length).toEqual(4);
+        });
+
+        it('should remove quads for matching quads', async() => {
+          await new Promise(resolve => store.removeMatches(
+            DF.namedNode('s1'),
+            undefined,
+            undefined,
+            DF.namedNode('g1'),
+          ).on('end', resolve));
+
+          // Store should not be changed
+          expect(store.size).toEqual(2);
+          expect(await arrayifyStream(store.match())).toEqual([
+            DF.quad(
+              DF.namedNode('s2'),
+              DF.namedNode('p1'),
+              DF.namedNode('o1'),
+              DF.namedNode('g1'),
+            ),
+            DF.quad(
+              DF.namedNode('s2'),
+              DF.namedNode('p2'),
+              DF.namedNode('o2'),
+              DF.namedNode('g2'),
+            ),
+          ]);
+        });
+      });
+
+      describe('deleteGraph', () => {
+        it('should not remove quads for no matches', async() => {
+          await new Promise(resolve => store.deleteGraph(DF.namedNode('no')).on('end', resolve));
+
+          // Store should not be changed
+          expect(store.size).toEqual(4);
+          expect((await arrayifyStream(store.match())).length).toEqual(4);
+        });
+
+        it('should remove quads for the matching graph', async() => {
+          await new Promise(resolve => store.deleteGraph(DF.namedNode('g1')).on('end', resolve));
+
+          // Store should not be changed
+          expect(store.size).toEqual(1);
+          expect(await arrayifyStream(store.match())).toEqual([
+            DF.quad(
+              DF.namedNode('s2'),
+              DF.namedNode('p2'),
+              DF.namedNode('o2'),
+              DF.namedNode('g2'),
+            ),
+          ]);
+        });
+
+        it('should remove quads for the matching graph as string', async() => {
+          await new Promise(resolve => store.deleteGraph('g1').on('end', resolve));
+
+          // Store should not be changed
+          expect(store.size).toEqual(1);
+          expect(await arrayifyStream(store.match())).toEqual([
+            DF.quad(
+              DF.namedNode('s2'),
+              DF.namedNode('p2'),
+              DF.namedNode('o2'),
+              DF.namedNode('g2'),
+            ),
+          ]);
+        });
+      });
     });
   });
 

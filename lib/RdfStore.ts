@@ -16,8 +16,7 @@ import type { EncodedQuadTerms, QuadPatternTerms } from './PatternTerm';
 /**
  * An RDF store allows quads to be stored and fetched, based on one or more customizable indexes.
  */
-export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad>
-implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
+export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF.Store<Q> {
   public static readonly DEFAULT_INDEX_COMBINATIONS: QuadTermName[][] = [
     [ 'graph', 'subject', 'predicate', 'object' ],
     [ 'graph', 'predicate', 'object', 'subject' ],
@@ -157,6 +156,42 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
   }
 
   /**
+   * Removes all streamed quads.
+   * @param stream A stream of quads
+   */
+  public remove(stream: RDF.Stream<Q>): EventEmitter {
+    stream.on('data', quad => this.removeQuad(quad));
+    return stream;
+  }
+
+  /**
+   * All quads matching the pattern will be removed.
+   * @param subject The optional subject.
+   * @param predicate The optional predicate.
+   * @param object The optional object.
+   * @param graph The optional graph.
+   */
+  public removeMatches(
+    subject?: RDF.Term | null | undefined,
+    predicate?: RDF.Term | null | undefined,
+    object?: RDF.Term | null | undefined,
+    graph?: RDF.Term | null | undefined,
+  ): EventEmitter {
+    return this.remove(this.match(subject, predicate, object, graph));
+  }
+
+  /**
+   * Deletes the given named graph.
+   * @param graph The graph term or string to match.
+   */
+  public deleteGraph(graph: string | Q['graph']): EventEmitter {
+    if (typeof graph === 'string') {
+      graph = this.dataFactory.namedNode(graph);
+    }
+    return this.removeMatches(undefined, undefined, undefined, graph);
+  }
+
+  /**
    * Import the given stream of quads into the store.
    * @param stream A stream of RDF quads.
    */
@@ -166,7 +201,7 @@ implements RDF.Source<Q>, RDF.Sink<RDF.Stream<Q>, EventEmitter> {
   }
 
   /**
-   * Returns a generator prodicing all quads matching the pattern.
+   * Returns a generator producing all quads matching the pattern.
    * @param subject The optional subject.
    * @param predicate The optional predicate.
    * @param object The optional object.
