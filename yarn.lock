@@ -3892,9 +3892,9 @@ rdf-js@^4.0.2:
     "@rdfjs/types" "*"
 
 rdf-string@^1.6.0, rdf-string@^1.6.2:
-  version "1.6.2"
-  resolved "https://registry.yarnpkg.com/rdf-string/-/rdf-string-1.6.2.tgz#f709845d50968c6ea9a5273b64a5e1efd0d5877a"
-  integrity sha512-tr0aStKYRmT6ShmGsA4HikIn6O3ZkCBSLWsRbeKhlPVPZodl0QNuws6HuJdD1rUyo9+MNiDw+3wvFSUz6Iwv/g==
+  version "1.6.3"
+  resolved "https://registry.yarnpkg.com/rdf-string/-/rdf-string-1.6.3.tgz#5c3173fad13e6328698277fb8ff151e3423282ab"
+  integrity sha512-HIVwQ2gOqf+ObsCLSUAGFZMIl3rh9uGcRf1KbM85UDhKqP+hy6qj7Vz8FKt3GA54RiThqK3mNcr66dm1LP0+6g==
   dependencies:
     "@rdfjs/types" "*"
     rdf-data-factory "^1.1.0"
