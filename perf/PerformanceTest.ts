@@ -13,40 +13,36 @@ import { RdfStore } from '../lib/RdfStore';
  */
 export class PerformanceTest {
   public constructor(
-    public readonly approaches: {
-      name: string;
-      options: {
-        type: 'rdfstore';
-        options: IRdfStoreOptions<any, any>;
-      } | {
-        type: 'n3';
-      };
-    }[],
+    public readonly approaches: IPerformanceTestApproach[],
     public readonly dimension = 256,
     public readonly prefix = 'http://example.org/#',
     public readonly dataFactory: RDF.DataFactory = new DataFactory(),
   ) {}
 
-  public async run(): Promise<void> {
+  public async run(scope: 'all' | 'triples' | 'quads' | 'quoted'): Promise<void> {
     for (const approach of this.approaches) {
       console.log(`\n# ${approach.name}\n`);
 
-      let store = approach.options.type === 'n3' ? new Store() : new RdfStore(approach.options.options);
-      this.addTriplesToDefaultGraph(this.dimension, store);
-      this.findTriplesNoVariables(this.dimension, store);
-      this.findTriples1Variable(this.dimension, store);
-      this.findTriples2Variables(this.dimension, store);
-      await this.findTriples1VariableStream(this.dimension, <any> store);
-      this.countTriples1Variable(this.dimension, store);
-      console.log();
+      if (scope === 'all' || scope === 'triples') {
+        const store = approach.options.type === 'n3' ? new Store() : new RdfStore(approach.options.options);
+        this.addTriplesToDefaultGraph(this.dimension, store);
+        this.findTriplesNoVariables(this.dimension, store);
+        this.findTriples1Variable(this.dimension, store);
+        this.findTriples2Variables(this.dimension, store);
+        await this.findTriples1VariableStream(this.dimension, <any>store);
+        this.countTriples1Variable(this.dimension, store);
+        console.log();
+      }
 
-      store = approach.options.type === 'n3' ? new Store() : new RdfStore(approach.options.options);
-      this.addQuadsToGraphs(this.dimension / 4, store);
-      this.findQuadsInGraphs(this.dimension / 4, store);
-      console.log();
+      if (scope === 'all' || scope === 'quads') {
+        const store = approach.options.type === 'n3' ? new Store() : new RdfStore(approach.options.options);
+        this.addQuadsToGraphs(this.dimension / 4, store);
+        this.findQuadsInGraphs(this.dimension / 4, store);
+        console.log();
+      }
 
-      if (approach.options.type !== 'n3') {
-        store = new RdfStore(approach.options.options);
+      if ((scope === 'all' || scope === 'quoted') && approach.options.type !== 'n3') {
+        const store = new RdfStore(approach.options.options);
         this.addQuotedTriplesToGraphs(this.dimension / 2, store);
         this.findQuotedTriplesInGraphs(this.dimension / 2, store);
       }
@@ -268,3 +264,13 @@ export class PerformanceTest {
   }
 }
 /* eslint-enable no-console */
+
+export interface IPerformanceTestApproach {
+  name: string;
+  options: {
+    type: 'rdfstore';
+    options: IRdfStoreOptions<any, any>;
+  } | {
+    type: 'n3';
+  };
+}

@@ -64,7 +64,8 @@
     "pre-commit": "^1.2.2",
     "streamify-array": "^1.0.1",
     "ts-jest": "^29.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "yargs": "^17.7.1"
   },
   "jest": {
     "transform": {
