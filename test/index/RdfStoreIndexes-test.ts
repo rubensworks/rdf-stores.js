@@ -9,23 +9,23 @@ import { RdfStoreIndexNestedRecord } from '../../lib/index/RdfStoreIndexNestedRe
 
 const DF = new DataFactory();
 
-const clazzToInstance: Record<string, (dictionary: ITermDictionary<number>) => IRdfStoreIndex<number>> = {
+const clazzToInstance: Record<string, (dictionary: ITermDictionary<number>) => IRdfStoreIndex<number, boolean>> = {
   RdfStoreIndexNestedMap:
-    (dictionary: ITermDictionary<number>) => new RdfStoreIndexNestedMap<number>({
+    (dictionary: ITermDictionary<number>) => new RdfStoreIndexNestedMap<number, boolean>({
       indexCombinations: [],
       indexConstructor: <any> undefined,
       dictionary,
       dataFactory: new DataFactory(),
     }),
   RdfStoreIndexNestedMapRecursive:
-    (dictionary: ITermDictionary<number>) => new RdfStoreIndexNestedMapRecursive<number>({
+    (dictionary: ITermDictionary<number>) => new RdfStoreIndexNestedMapRecursive<number, boolean>({
       indexCombinations: [],
       indexConstructor: <any> undefined,
       dictionary,
       dataFactory: new DataFactory(),
     }),
   RdfStoreIndexNestedRecord:
-    (dictionary: ITermDictionary<number>) => new RdfStoreIndexNestedRecord<number>({
+    (dictionary: ITermDictionary<number>) => new RdfStoreIndexNestedRecord<number, boolean>({
       indexCombinations: [],
       indexConstructor: <any> undefined,
       dictionary,
@@ -34,7 +34,7 @@ const clazzToInstance: Record<string, (dictionary: ITermDictionary<number>) => I
 };
 
 describe('RdfStoreIndexes', () => {
-  let index: IRdfStoreIndex<number>;
+  let index: IRdfStoreIndex<number, boolean>;
   let dictionary: TermDictionaryNumberMap;
 
   each([
@@ -49,6 +49,17 @@ describe('RdfStoreIndexes', () => {
       });
 
       describe('that is empty', () => {
+        describe('get', () => {
+          it('should produce no results', () => {
+            expect(index.get([
+              DF.namedNode('s'),
+              DF.namedNode('p'),
+              DF.namedNode('o'),
+              DF.namedNode('g'),
+            ])).toEqual(undefined);
+          });
+        });
+
         describe('find', () => {
           it('should produce no results', () => {
             expect([ ...index.find([
@@ -97,31 +108,98 @@ describe('RdfStoreIndexes', () => {
 
       describe('that has one quad', () => {
         beforeEach(() => {
-          index.add([
+          index.set([
             dictionary.encode(DF.namedNode('s')),
             dictionary.encode(DF.namedNode('p')),
             dictionary.encode(DF.namedNode('o')),
             dictionary.encode(DF.namedNode('g')),
-          ]);
+          ], true);
         });
 
         describe('add', () => {
           it('should not modify the index when adding the same quad', () => {
-            expect(index.add([
+            expect(index.set([
               dictionary.encode(DF.namedNode('s')),
               dictionary.encode(DF.namedNode('p')),
               dictionary.encode(DF.namedNode('o')),
               dictionary.encode(DF.namedNode('g')),
-            ])).toBeFalsy();
+            ], true)).toBeFalsy();
           });
 
           it('should modify the index when adding another quad', () => {
-            expect(index.add([
+            expect(index.set([
               dictionary.encode(DF.namedNode('s1')),
               dictionary.encode(DF.namedNode('p1')),
               dictionary.encode(DF.namedNode('o1')),
               dictionary.encode(DF.namedNode('g1')),
-            ])).toBeTruthy();
+            ], true)).toBeTruthy();
+          });
+        });
+
+        describe('get', () => {
+          it('should produce results', () => {
+            expect(index.get([
+              DF.namedNode('s'),
+              DF.namedNode('p'),
+              DF.namedNode('o'),
+              DF.namedNode('g'),
+            ])).toEqual(true);
+
+            expect(index.get([
+              DF.namedNode('sother'),
+              DF.namedNode('p'),
+              DF.namedNode('o'),
+              DF.namedNode('g'),
+            ])).toEqual(undefined);
+
+            expect(index.get([
+              DF.namedNode('s'),
+              DF.namedNode('pother'),
+              DF.namedNode('o'),
+              DF.namedNode('g'),
+            ])).toEqual(undefined);
+
+            expect(index.get([
+              DF.namedNode('s'),
+              DF.namedNode('p'),
+              DF.namedNode('oother'),
+              DF.namedNode('g'),
+            ])).toEqual(undefined);
+
+            expect(index.get([
+              DF.namedNode('s'),
+              DF.namedNode('p'),
+              DF.namedNode('o'),
+              DF.namedNode('gother'),
+            ])).toEqual(undefined);
+
+            expect(index.get([
+              DF.namedNode('p'),
+              DF.namedNode('p'),
+              DF.namedNode('p'),
+              DF.namedNode('p'),
+            ])).toEqual(undefined);
+
+            expect(index.get([
+              DF.namedNode('s'),
+              DF.namedNode('s'),
+              DF.namedNode('s'),
+              DF.namedNode('s'),
+            ])).toEqual(undefined);
+
+            expect(index.get([
+              DF.namedNode('s'),
+              DF.namedNode('p'),
+              DF.namedNode('s'),
+              DF.namedNode('s'),
+            ])).toEqual(undefined);
+
+            expect(index.get([
+              DF.namedNode('s'),
+              DF.namedNode('p'),
+              DF.namedNode('o'),
+              DF.namedNode('s'),
+            ])).toEqual(undefined);
           });
         });
 
@@ -275,30 +353,69 @@ describe('RdfStoreIndexes', () => {
 
       describe('that has multiple quads', () => {
         beforeEach(() => {
-          index.add([
+          index.set([
             dictionary.encode(DF.namedNode('s1')),
             dictionary.encode(DF.namedNode('p1')),
             dictionary.encode(DF.namedNode('o1')),
             dictionary.encode(DF.namedNode('g1')),
-          ]);
-          index.add([
+          ], true);
+          index.set([
             dictionary.encode(DF.namedNode('s1')),
             dictionary.encode(DF.namedNode('p2')),
             dictionary.encode(DF.namedNode('o2')),
             dictionary.encode(DF.namedNode('g1')),
-          ]);
-          index.add([
+          ], true);
+          index.set([
             dictionary.encode(DF.namedNode('s2')),
             dictionary.encode(DF.namedNode('p1')),
             dictionary.encode(DF.namedNode('o1')),
             dictionary.encode(DF.namedNode('g1')),
-          ]);
-          index.add([
+          ], true);
+          index.set([
             dictionary.encode(DF.namedNode('s2')),
             dictionary.encode(DF.namedNode('p2')),
             dictionary.encode(DF.namedNode('o2')),
             dictionary.encode(DF.namedNode('g2')),
-          ]);
+          ], true);
+        });
+
+        describe('get', () => {
+          it('should produce results', () => {
+            expect(index.get([
+              DF.namedNode('s1'),
+              DF.namedNode('p1'),
+              DF.namedNode('o1'),
+              DF.namedNode('g1'),
+            ])).toEqual(true);
+
+            expect(index.get([
+              DF.namedNode('s1'),
+              DF.namedNode('p2'),
+              DF.namedNode('o2'),
+              DF.namedNode('g1'),
+            ])).toEqual(true);
+
+            expect(index.get([
+              DF.namedNode('s2'),
+              DF.namedNode('p1'),
+              DF.namedNode('o1'),
+              DF.namedNode('g1'),
+            ])).toEqual(true);
+
+            expect(index.get([
+              DF.namedNode('s2'),
+              DF.namedNode('p2'),
+              DF.namedNode('o2'),
+              DF.namedNode('g2'),
+            ])).toEqual(true);
+
+            expect(index.get([
+              DF.namedNode('sother'),
+              DF.namedNode('p'),
+              DF.namedNode('o'),
+              DF.namedNode('g'),
+            ])).toEqual(undefined);
+          });
         });
 
         describe('find', () => {
@@ -711,6 +828,17 @@ describe('RdfStoreIndexes', () => {
       });
 
       describe('that is empty', () => {
+        describe('get', () => {
+          it('should produce no results', () => {
+            expect(index.get([
+              DF.namedNode('g'),
+              DF.namedNode('o'),
+              DF.namedNode('p'),
+              DF.namedNode('s'),
+            ])).toEqual(undefined);
+          });
+        });
+
         describe('find', () => {
           it('should produce no results', () => {
             expect([ ...index.find([
@@ -731,12 +859,30 @@ describe('RdfStoreIndexes', () => {
 
       describe('that has one quad', () => {
         beforeEach(() => {
-          index.add([
+          index.set([
             dictionary.encode(DF.namedNode('g')),
             dictionary.encode(DF.namedNode('o')),
             dictionary.encode(DF.namedNode('p')),
             dictionary.encode(DF.namedNode('s')),
-          ]);
+          ], true);
+        });
+
+        describe('get', () => {
+          it('should produce results', () => {
+            expect(index.get([
+              DF.namedNode('g'),
+              DF.namedNode('o'),
+              DF.namedNode('p'),
+              DF.namedNode('s'),
+            ])).toEqual(true);
+
+            expect(index.get([
+              DF.namedNode('g'),
+              DF.namedNode('o'),
+              DF.namedNode('p'),
+              DF.namedNode('sother'),
+            ])).toEqual(undefined);
+          });
         });
 
         describe('find', () => {

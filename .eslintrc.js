@@ -11,6 +11,7 @@ module.exports = {
     rules: {
         'no-implicit-coercion': 'off',
         '@typescript-eslint/no-extra-parens': 'off',
-        'unicorn/no-for-loop': 'off'
+        'unicorn/no-for-loop': 'off',
+        'no-bitwise': 'off',
     }
 };

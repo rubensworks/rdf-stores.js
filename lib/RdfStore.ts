@@ -114,7 +114,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     for (const indexWrapped of this.indexesWrapped) {
       // Before sending the quad to the index, make sure its components are ordered corresponding to the index's order.
       newQuad = indexWrapped.index
-        .add(<EncodedQuadTerms<E>>orderQuadComponents(indexWrapped.componentOrder, quadEncoded));
+        .set(<EncodedQuadTerms<E>>orderQuadComponents(indexWrapped.componentOrder, quadEncoded), true);
     }
     if (newQuad) {
       this._size++;
@@ -342,5 +342,5 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
 export interface IRdfStoreIndexWrapped<E> {
   componentOrder: QuadTermName[];
   componentOrderInverse: Record<QuadTermName, number>;
-  index: IRdfStoreIndex<E>;
+  index: IRdfStoreIndex<E, boolean>;
 }

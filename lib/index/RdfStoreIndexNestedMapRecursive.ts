@@ -1,6 +1,7 @@
 import type * as RDF from '@rdfjs/types';
 import type { ITermDictionary } from '../dictionary/ITermDictionary';
 import type { IRdfStoreOptions } from '../IRdfStoreOptions';
+import { encodeOptionalTerms } from '../OrderUtils';
 import type { EncodedQuadTerms, PatternTerm, QuadPatternTerms, QuadTerms } from '../PatternTerm';
 import type { IRdfStoreIndex } from './IRdfStoreIndex';
 
@@ -8,28 +9,28 @@ import type { IRdfStoreIndex } from './IRdfStoreIndex';
  * An RDF store index that is implemented using nested Maps,
  * and finds quads components via recursive methods calls.
  */
-export class RdfStoreIndexNestedMapRecursive<E> implements IRdfStoreIndex<E> {
+export class RdfStoreIndexNestedMapRecursive<E, V> implements IRdfStoreIndex<E, V> {
   private readonly dictionary: ITermDictionary<E>;
-  private readonly nestedMap: NestedMapActual<E>;
+  private readonly nestedMap: NestedMapActual<E, V>;
 
   public constructor(options: IRdfStoreOptions<E>) {
     this.dictionary = options.dictionary;
     this.nestedMap = new Map();
   }
 
-  public add(terms: EncodedQuadTerms<E>): boolean {
+  public set(terms: EncodedQuadTerms<E>, value: V): boolean {
     let map = this.nestedMap;
     let contained = false;
     for (const [ i, term ] of terms.entries()) {
       const mapActual = map;
       let nextMap = mapActual.get(term);
       if (!nextMap) {
-        nextMap = i === terms.length - 1 ? true : new Map();
+        nextMap = i === terms.length - 1 ? value : new Map();
         mapActual.set(term, nextMap);
       } else if (i === terms.length - 1) {
         contained = true;
       }
-      map = <NestedMapActual<E>> nextMap;
+      map = <NestedMapActual<E, V>> nextMap;
     }
 
     return !contained;
@@ -37,15 +38,15 @@ export class RdfStoreIndexNestedMapRecursive<E> implements IRdfStoreIndex<E> {
 
   public remove(terms: EncodedQuadTerms<E>): boolean {
     const map0 = this.nestedMap;
-    const map1: NestedMapActual<E> | undefined = <any> map0.get(terms[0]);
+    const map1: NestedMapActual<E, V> | undefined = <any> map0.get(terms[0]);
     if (!map1) {
       return false;
     }
-    const map2: NestedMapActual<E> | undefined = <any> map1.get(terms[1]);
+    const map2: NestedMapActual<E, V> | undefined = <any> map1.get(terms[1]);
     if (!map2) {
       return false;
     }
-    const map3: NestedMapActual<E> | undefined = <any> map2.get(terms[2]);
+    const map3: NestedMapActual<E, V> | undefined = <any> map2.get(terms[2]);
     if (!map3) {
       return false;
     }
@@ -65,6 +66,31 @@ export class RdfStoreIndexNestedMapRecursive<E> implements IRdfStoreIndex<E> {
     return ret;
   }
 
+  public get(key: QuadTerms): V | undefined {
+    const encoded = encodeOptionalTerms(<QuadPatternTerms> key, this.dictionary);
+    // eslint-disable-next-line unicorn/no-useless-undefined
+    if (!encoded || encoded.includes(undefined)) {
+      return undefined;
+    }
+    return this.getEncoded(<EncodedQuadTerms<E>> encoded);
+  }
+
+  public getEncoded(ids: EncodedQuadTerms<E>): V | undefined {
+    const map1: NestedMapActual<E, V> | undefined = <any> this.nestedMap.get(ids[0]);
+    if (!map1) {
+      return undefined;
+    }
+    const map2: NestedMapActual<E, V> | undefined = <any> map1.get(ids[1]);
+    if (!map2) {
+      return undefined;
+    }
+    const map3: NestedMapActual<E, V> | undefined = <any> map2.get(ids[2]);
+    if (!map3) {
+      return undefined;
+    }
+    return <V | undefined> map3.get(ids[3]);
+  }
+
   public * find(terms: QuadPatternTerms): IterableIterator<QuadTerms> {
     return yield * <IterableIterator<QuadTerms>> this.findInner(0, terms, this.nestedMap, []);
   }
@@ -72,7 +98,7 @@ export class RdfStoreIndexNestedMapRecursive<E> implements IRdfStoreIndex<E> {
   protected * findInner(
     index: number,
     terms: PatternTerm[],
-    map: NestedMapActual<E>,
+    map: NestedMapActual<E, V>,
     partialQuad: RDF.Term[],
   ): IterableIterator<RDF.Term[]> {
     if (index === terms.length) {
@@ -84,7 +110,7 @@ export class RdfStoreIndexNestedMapRecursive<E> implements IRdfStoreIndex<E> {
       if (!currentTerm) {
         for (const [ key, subMap ] of map.entries()) {
           partialQuad[index] = this.dictionary.decode(key);
-          yield * this.findInner(index + 1, terms, <NestedMapActual<E>>subMap, partialQuad);
+          yield * this.findInner(index + 1, terms, <NestedMapActual<E, V>>subMap, partialQuad);
         }
       } else {
         // If the current term is defined, find one matching map for the current term.
@@ -93,7 +119,7 @@ export class RdfStoreIndexNestedMapRecursive<E> implements IRdfStoreIndex<E> {
           const subMap = map.get(encodedTerm);
           if (subMap) {
             partialQuad[index] = currentTerm;
-            yield * this.findInner(index + 1, terms, <NestedMapActual<E>>subMap, partialQuad);
+            yield * this.findInner(index + 1, terms, <NestedMapActual<E, V>>subMap, partialQuad);
           }
         }
       }
@@ -107,7 +133,7 @@ export class RdfStoreIndexNestedMapRecursive<E> implements IRdfStoreIndex<E> {
   protected countInner(
     index: number,
     terms: PatternTerm[],
-    map: NestedMapActual<E>,
+    map: NestedMapActual<E, V>,
   ): number {
     const currentTerm = terms[index];
     let count = 0;
@@ -119,7 +145,7 @@ export class RdfStoreIndexNestedMapRecursive<E> implements IRdfStoreIndex<E> {
       }
 
       for (const subMap of map.values()) {
-        count += this.countInner(index + 1, terms, <NestedMapActual<E>>subMap);
+        count += this.countInner(index + 1, terms, <NestedMapActual<E, V>>subMap);
       }
     } else {
       // If the current term is defined, find one matching map for the current term.
@@ -134,7 +160,7 @@ export class RdfStoreIndexNestedMapRecursive<E> implements IRdfStoreIndex<E> {
 
         const subMap = map.get(encodedTerm);
         if (subMap) {
-          count += this.countInner(index + 1, terms, <NestedMapActual<E>>subMap);
+          count += this.countInner(index + 1, terms, <NestedMapActual<E, V>>subMap);
         }
       }
     }
@@ -143,5 +169,5 @@ export class RdfStoreIndexNestedMapRecursive<E> implements IRdfStoreIndex<E> {
   }
 }
 
-export type NestedMap<E> = NestedMapActual<E> | true;
-export type NestedMapActual<E> = Map<E, NestedMap<E>>;
+export type NestedMap<E, V> = NestedMapActual<E, V> | V;
+export type NestedMapActual<E, V> = Map<E, NestedMap<E, V>>;

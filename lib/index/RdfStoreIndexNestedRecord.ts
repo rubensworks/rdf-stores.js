@@ -8,7 +8,7 @@ import type { IRdfStoreIndex } from './IRdfStoreIndex';
 /**
  * An RDF store index that is implemented using nested records.
  */
-export class RdfStoreIndexNestedRecord<E extends number> implements IRdfStoreIndex<E> {
+export class RdfStoreIndexNestedRecord<E extends number, V> implements IRdfStoreIndex<E, V> {
   private readonly dictionary: ITermDictionary<E>;
   private readonly nestedRecords: NestedRecordActual<E>;
 
@@ -17,7 +17,7 @@ export class RdfStoreIndexNestedRecord<E extends number> implements IRdfStoreInd
     this.nestedRecords = <any>{};
   }
 
-  public add(terms: EncodedQuadTerms<E>): boolean {
+  public set(terms: EncodedQuadTerms<E>, value: V): boolean {
     const map0 = this.nestedRecords;
     const map1 = map0[terms[0]] || (map0[terms[0]] = <any>{});
     const map2 = map1[terms[1]] || (map1[terms[1]] = <any>{});
@@ -25,7 +25,7 @@ export class RdfStoreIndexNestedRecord<E extends number> implements IRdfStoreInd
     if (map3[terms[3]]) {
       return false;
     }
-    map3[terms[3]] = true;
+    map3[terms[3]] = value;
     return true;
   }
 
@@ -60,6 +60,19 @@ export class RdfStoreIndexNestedRecord<E extends number> implements IRdfStoreInd
     }
 
     return true;
+  }
+
+  public get(key: QuadTerms): V | undefined {
+    const encoded = encodeOptionalTerms(<QuadPatternTerms> key, this.dictionary);
+    // eslint-disable-next-line unicorn/no-useless-undefined
+    if (!encoded || encoded.includes(undefined)) {
+      return undefined;
+    }
+    return this.getEncoded(<EncodedQuadTerms<E>> encoded);
+  }
+
+  public getEncoded(ids: EncodedQuadTerms<E>): V | undefined {
+    return this.nestedRecords[ids[0]]?.[ids[1]]?.[ids[2]]?.[ids[3]];
   }
 
   public * find(terms: QuadPatternTerms): IterableIterator<QuadTerms> {
