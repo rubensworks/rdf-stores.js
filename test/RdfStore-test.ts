@@ -3,8 +3,8 @@ import each from 'jest-each';
 import { DataFactory } from 'rdf-data-factory';
 import type { QuadTermName } from 'rdf-terms';
 import type { DatasetCoreWrapper } from '../lib/dataset/DatasetCoreWrapper';
-import { TermDictionaryNumberMap } from '../lib/dictionary/TermDictionaryNumberMap';
-import { RdfStoreIndexNestedMap } from '../lib/index/RdfStoreIndexNestedMap';
+import { TermDictionaryNumberRecordFullTerms } from '../lib/dictionary/TermDictionaryNumberRecordFullTerms';
+import { RdfStoreIndexNestedRecord } from '../lib/index/RdfStoreIndexNestedRecord';
 import { RdfStore } from '../lib/RdfStore';
 import 'jest-rdf';
 
@@ -50,8 +50,8 @@ describe('RdfStore', () => {
     beforeEach(() => {
       store = new RdfStore<number>({
         indexCombinations,
-        indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
-        dictionary: new TermDictionaryNumberMap(),
+        indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
+        dictionary: new TermDictionaryNumberRecordFullTerms(),
         dataFactory: new DataFactory(),
       });
     });
@@ -1059,8 +1059,8 @@ describe('RdfStore', () => {
     it('not no combinations', () => {
       expect(() => new RdfStore<number>({
         indexCombinations: [],
-        indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
-        dictionary: new TermDictionaryNumberMap(),
+        indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
+        dictionary: new TermDictionaryNumberRecordFullTerms(),
         dataFactory: new DataFactory(),
       })).toThrow(`At least one index combination is required`);
     });
@@ -1068,8 +1068,8 @@ describe('RdfStore', () => {
     it('not not enough components', () => {
       expect(() => new RdfStore<number>({
         indexCombinations: [[ 'subject', 'predicate' ]],
-        indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
-        dictionary: new TermDictionaryNumberMap(),
+        indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
+        dictionary: new TermDictionaryNumberRecordFullTerms(),
         dataFactory: new DataFactory(),
       })).toThrow(`Invalid index combination: subject,predicate`);
     });
