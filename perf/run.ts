@@ -4,6 +4,7 @@ import { TermDictionaryNumberMap } from '../lib/dictionary/TermDictionaryNumberM
 import { TermDictionaryNumberRecord } from '../lib/dictionary/TermDictionaryNumberRecord';
 import { TermDictionaryNumberRecordFullTerms } from '../lib/dictionary/TermDictionaryNumberRecordFullTerms';
 import { TermDictionaryQuoted } from '../lib/dictionary/TermDictionaryQuoted';
+import { TermDictionaryQuotedIndexed } from '../lib/dictionary/TermDictionaryQuotedIndexed';
 import { TermDictionarySymbol } from '../lib/dictionary/TermDictionarySymbol';
 import { RdfStoreIndexNestedMap } from '../lib/index/RdfStoreIndexNestedMap';
 import { RdfStoreIndexNestedMapQuoted } from '../lib/index/RdfStoreIndexNestedMapQuoted';
@@ -219,37 +220,67 @@ const test = new PerformanceTest([
     },
   },
   {
-    name: '3 Nested Map Recursive Quoted indexes with quoted dict (number)',
+    name: '3 Nested Map Recursive Quoted indexes with indexed quoted dict (number)',
     options: {
       type: 'rdfstore',
       options: {
         indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
         indexConstructor: subOptions => new RdfStoreIndexNestedMapRecursiveQuoted(subOptions),
-        dictionary: new TermDictionaryQuoted(new TermDictionaryNumberRecordFullTerms(), new DataFactory()),
+        dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms(), new DataFactory()),
         dataFactory: new DataFactory(),
       },
     },
   },
   {
-    name: '3 Nested Map Quoted indexes with quoted dict (number)',
+    name: '3 Nested Map Quoted indexes with separated quoted dict (number)',
     options: {
       type: 'rdfstore',
       options: {
         indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
         indexConstructor: subOptions => new RdfStoreIndexNestedMapQuoted(subOptions),
-        dictionary: new TermDictionaryQuoted(new TermDictionaryNumberRecordFullTerms(), new DataFactory()),
+        dictionary: new TermDictionaryQuoted(
+          new TermDictionaryNumberRecordFullTerms(),
+          new TermDictionaryNumberRecordFullTerms(),
+        ),
         dataFactory: new DataFactory(),
       },
     },
   },
   {
-    name: '3 Nested Record Quoted indexes with quoted dict (number)',
+    name: '3 Nested Record Quoted indexes with separated quoted dict (number)',
     options: {
       type: 'rdfstore',
       options: {
         indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
         indexConstructor: subOptions => new RdfStoreIndexNestedRecordQuoted(subOptions),
-        dictionary: new TermDictionaryQuoted(new TermDictionaryNumberRecordFullTerms(), new DataFactory()),
+        dictionary: new TermDictionaryQuoted(
+          new TermDictionaryNumberRecordFullTerms(),
+          new TermDictionaryNumberRecordFullTerms(),
+        ),
+        dataFactory: new DataFactory(),
+      },
+    },
+  },
+  {
+    name: '3 Nested Map Quoted indexes with indexed quoted dict (number)',
+    options: {
+      type: 'rdfstore',
+      options: {
+        indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+        indexConstructor: subOptions => new RdfStoreIndexNestedMapQuoted(subOptions),
+        dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms(), new DataFactory()),
+        dataFactory: new DataFactory(),
+      },
+    },
+  },
+  {
+    name: '3 Nested Record Quoted indexes with indexed quoted dict (number)',
+    options: {
+      type: 'rdfstore',
+      options: {
+        indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+        indexConstructor: subOptions => new RdfStoreIndexNestedRecordQuoted(subOptions),
+        dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms(), new DataFactory()),
         dataFactory: new DataFactory(),
       },
     },

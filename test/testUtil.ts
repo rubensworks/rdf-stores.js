@@ -3,6 +3,7 @@ import { TermDictionaryNumberMap } from '../lib/dictionary/TermDictionaryNumberM
 import { TermDictionaryNumberRecord } from '../lib/dictionary/TermDictionaryNumberRecord';
 import { TermDictionaryNumberRecordFullTerms } from '../lib/dictionary/TermDictionaryNumberRecordFullTerms';
 import { TermDictionaryQuoted } from '../lib/dictionary/TermDictionaryQuoted';
+import { TermDictionaryQuotedIndexed } from '../lib/dictionary/TermDictionaryQuotedIndexed';
 import type { IRdfStoreIndex } from '../lib/index/IRdfStoreIndex';
 import { RdfStoreIndexNestedMap } from '../lib/index/RdfStoreIndexNestedMap';
 import { RdfStoreIndexNestedMapQuoted } from '../lib/index/RdfStoreIndexNestedMapQuoted';
@@ -41,5 +42,9 @@ export const dictClazzToInstance: Record<string, () => ITermDictionary<number>> 
   TermDictionaryNumberMap: () => new TermDictionaryNumberMap(),
   TermDictionaryNumberRecord: () => new TermDictionaryNumberRecord(),
   TermDictionaryNumberRecordFullTerms: () => new TermDictionaryNumberRecordFullTerms(),
-  TermDictionaryQuoted: () => new TermDictionaryQuoted(new TermDictionaryNumberRecordFullTerms()),
+  TermDictionaryQuoted: () => new TermDictionaryQuoted(
+    new TermDictionaryNumberRecordFullTerms(),
+    new TermDictionaryNumberRecordFullTerms(),
+  ),
+  TermDictionaryQuotedIndexed: () => new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms()),
 };

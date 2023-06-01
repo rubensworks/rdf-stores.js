@@ -81,6 +81,13 @@ describe('TermDictionarySymbol', () => {
     });
   });
 
+  describe('encodings', () => {
+    it('throws an error', () => {
+      expect(() => dict.encodings())
+        .toThrow('encodings is not supported');
+    });
+  });
+
   describe('findQuotedTriples', () => {
     it('throws an error', () => {
       expect(() => dict.findQuotedTriples(DF.quad(DF.namedNode(''), DF.namedNode(''), DF.namedNode(''))))

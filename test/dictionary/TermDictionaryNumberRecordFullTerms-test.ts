@@ -146,6 +146,20 @@ describe('TermDictionaryNumberRecordFullTerms', () => {
     });
   });
 
+  describe('encodings', () => {
+    it('should be empty for an empty dictionary', () => {
+      expect([ ...dict.encodings() ]).toEqual([]);
+    });
+
+    it('should return for a non-empty dictionary', () => {
+      dict.encode(DF.namedNode('s'));
+      dict.encode(DF.blankNode('s'));
+      dict.encode(DF.literal('s'));
+
+      expect([ ...dict.encodings() ]).toEqual([ 0, 1, 2 ]);
+    });
+  });
+
   describe('findQuotedTriples', () => {
     it('throws an error', () => {
       expect(() => dict.findQuotedTriples(DF.quad(DF.namedNode(''), DF.namedNode(''), DF.namedNode(''))))

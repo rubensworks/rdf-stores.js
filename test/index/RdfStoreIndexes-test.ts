@@ -2,7 +2,7 @@ import each from 'jest-each';
 import { DataFactory } from 'rdf-data-factory';
 import type { ITermDictionary } from '../../lib/dictionary/ITermDictionary';
 import { TermDictionaryNumberMap } from '../../lib/dictionary/TermDictionaryNumberMap';
-import { TermDictionaryQuoted } from '../../lib/dictionary/TermDictionaryQuoted';
+import { TermDictionaryQuotedIndexed } from '../../lib/dictionary/TermDictionaryQuotedIndexed';
 import type { IRdfStoreIndex } from '../../lib/index/IRdfStoreIndex';
 import { indexClazzToInstance, indexSupportsQuotedTriples } from '../testUtil';
 
@@ -15,7 +15,7 @@ describe('RdfStoreIndexes', () => {
   each(indexSupportsQuotedTriples).describe('%s', (clazz, quotedTripleFiltering) => {
     describe('in SPOG order', () => {
       beforeEach(() => {
-        dictionary = new TermDictionaryQuoted(new TermDictionaryNumberMap());
+        dictionary = new TermDictionaryQuotedIndexed(new TermDictionaryNumberMap());
         index = indexClazzToInstance[clazz]({
           indexCombinations: [],
           indexConstructor: <any> undefined,
@@ -1947,7 +1947,7 @@ describe('RdfStoreIndexes', () => {
 
     describe('in GOPS order', () => {
       beforeEach(() => {
-        dictionary = new TermDictionaryQuoted(new TermDictionaryNumberMap());
+        dictionary = new TermDictionaryQuotedIndexed(new TermDictionaryNumberMap());
         index = indexClazzToInstance[clazz]({
           indexCombinations: [],
           indexConstructor: <any> undefined,

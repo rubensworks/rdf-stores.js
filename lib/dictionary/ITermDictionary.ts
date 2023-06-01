@@ -33,6 +33,10 @@ export interface ITermDictionary<E> {
    */
   decode: (encoding: E) => RDF.Term;
   /**
+   * Return all encoded terms.
+   */
+  encodings: () => IterableIterator<E>;
+  /**
    * Find all quoted triples in this dictionary that match with the given triple pattern.
    * @param quotedTriplePattern A triple pattern to match with quoted triples.
    */

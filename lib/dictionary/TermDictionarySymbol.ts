@@ -30,6 +30,10 @@ export class TermDictionarySymbol implements ITermDictionary<symbol> {
     return stringToTerm(string.slice(5), this.dataFactory);
   }
 
+  public encodings(): IterableIterator<symbol> {
+    throw new Error('encodings is not supported');
+  }
+
   public findQuotedTriples(quotedTriplePattern: RDF.Quad): IterableIterator<RDF.Term> {
     throw new Error('findQuotedTriples is not supported');
   }

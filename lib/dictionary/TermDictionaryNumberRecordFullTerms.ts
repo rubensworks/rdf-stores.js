@@ -43,6 +43,12 @@ export class TermDictionaryNumberRecordFullTerms implements ITermDictionary<numb
     return string;
   }
 
+  public * encodings(): IterableIterator<number> {
+    for (const key of Object.keys(this.reverseDictionary)) {
+      yield Number.parseInt(key, 10);
+    }
+  }
+
   public findQuotedTriples(quotedTriplePattern: RDF.Quad): IterableIterator<RDF.Term> {
     throw new Error('findQuotedTriples is not supported');
   }
