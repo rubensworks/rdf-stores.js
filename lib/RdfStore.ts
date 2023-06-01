@@ -11,7 +11,7 @@ import { TermDictionaryNumberRecordFullTerms } from './dictionary/TermDictionary
 import type { IRdfStoreIndex } from './index/IRdfStoreIndex';
 import { RdfStoreIndexNestedRecord } from './index/RdfStoreIndexNestedRecord';
 import type { IRdfStoreOptions } from './IRdfStoreOptions';
-import { getBestIndex, orderQuadComponents } from './OrderUtils';
+import { getBestIndex, orderQuadComponents, quadToPattern } from './OrderUtils';
 import type { EncodedQuadTerms, QuadPatternTerms } from './PatternTerm';
 
 /**
@@ -216,23 +216,13 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     object?: RDF.Term | null,
     graph?: RDF.Term | null,
   ): IterableIterator<Q> {
-    let requireQuotedTripleFiltering = false;
+    // Check if our dictionary and our indexes have quoted pattern support
+    const indexesSupportQuotedPatterns = Boolean(this.dictionary.features.quotedTriples) &&
+      Object.values(this.indexesWrapped).every(wrapped => wrapped.index.features.quotedTripleFiltering);
 
     // Construct a quad pattern array
-    const quadComponents: QuadPatternTerms = <QuadPatternTerms>
-      [ subject || undefined, predicate || undefined, object || undefined, graph || undefined ]
-        .map(term => {
-          if (term) {
-            if (term.termType === 'Variable') {
-              return;
-            }
-            if (term.termType === 'Quad') {
-              requireQuotedTripleFiltering = true;
-              return;
-            }
-          }
-          return term;
-        });
+    const [ quadComponents, requireQuotedTripleFiltering ] =
+      quadToPattern(subject, predicate, object, graph, indexesSupportQuotedPatterns);
 
     // Determine the best index for this pattern
     const indexWrapped = this.indexesWrapped[getBestIndex(this.indexesWrappedComponentOrders, quadComponents)];

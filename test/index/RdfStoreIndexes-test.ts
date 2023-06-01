@@ -2,50 +2,32 @@ import each from 'jest-each';
 import { DataFactory } from 'rdf-data-factory';
 import type { ITermDictionary } from '../../lib/dictionary/ITermDictionary';
 import { TermDictionaryNumberMap } from '../../lib/dictionary/TermDictionaryNumberMap';
+import { TermDictionaryQuoted } from '../../lib/dictionary/TermDictionaryQuoted';
 import type { IRdfStoreIndex } from '../../lib/index/IRdfStoreIndex';
-import { RdfStoreIndexNestedMap } from '../../lib/index/RdfStoreIndexNestedMap';
-import { RdfStoreIndexNestedMapRecursive } from '../../lib/index/RdfStoreIndexNestedMapRecursive';
-import { RdfStoreIndexNestedRecord } from '../../lib/index/RdfStoreIndexNestedRecord';
+import { clazzToInstance } from '../testUtil';
 
 const DF = new DataFactory();
 
-const clazzToInstance: Record<string, (dictionary: ITermDictionary<number>) => IRdfStoreIndex<number, boolean>> = {
-  RdfStoreIndexNestedMap:
-    (dictionary: ITermDictionary<number>) => new RdfStoreIndexNestedMap<number, boolean>({
-      indexCombinations: [],
-      indexConstructor: <any> undefined,
-      dictionary,
-      dataFactory: new DataFactory(),
-    }),
-  RdfStoreIndexNestedMapRecursive:
-    (dictionary: ITermDictionary<number>) => new RdfStoreIndexNestedMapRecursive<number, boolean>({
-      indexCombinations: [],
-      indexConstructor: <any> undefined,
-      dictionary,
-      dataFactory: new DataFactory(),
-    }),
-  RdfStoreIndexNestedRecord:
-    (dictionary: ITermDictionary<number>) => new RdfStoreIndexNestedRecord<number, boolean>({
-      indexCombinations: [],
-      indexConstructor: <any> undefined,
-      dictionary,
-      dataFactory: new DataFactory(),
-    }),
-};
-
 describe('RdfStoreIndexes', () => {
   let index: IRdfStoreIndex<number, boolean>;
-  let dictionary: TermDictionaryNumberMap;
+  let dictionary: ITermDictionary<number>;
 
   each([
-    [ 'RdfStoreIndexNestedMap' ],
-    [ 'RdfStoreIndexNestedMapRecursive' ],
-    [ 'RdfStoreIndexNestedRecord' ],
-  ]).describe('%s', clazz => {
+    [ 'RdfStoreIndexNestedMap', false ],
+    [ 'RdfStoreIndexNestedMapQuoted', true ],
+    [ 'RdfStoreIndexNestedMapRecursive', true ],
+    [ 'RdfStoreIndexNestedRecord', false ],
+    [ 'RdfStoreIndexNestedRecordQuoted', true ],
+  ]).describe('%s', (clazz, quotedTripleFiltering) => {
     describe('in SPOG order', () => {
       beforeEach(() => {
-        dictionary = new TermDictionaryNumberMap();
-        index = clazzToInstance[clazz](dictionary);
+        dictionary = new TermDictionaryQuoted(new TermDictionaryNumberMap());
+        index = clazzToInstance[clazz]({
+          indexCombinations: [],
+          indexConstructor: <any> undefined,
+          dictionary,
+          dataFactory: new DataFactory(),
+        });
       });
 
       describe('that is empty', () => {
@@ -69,6 +51,33 @@ describe('RdfStoreIndexes', () => {
               undefined,
             ]) ]).toEqual([]);
             expect([ ...index.find([
+              DF.namedNode('s'),
+              DF.namedNode('p'),
+              DF.namedNode('o'),
+              DF.namedNode('g'),
+            ]) ]).toEqual([]);
+          });
+        });
+
+        describe('findEncoded', () => {
+          it('should produce no results', () => {
+            expect([ ...index.findEncoded([
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+            ], [
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+            ]) ]).toEqual([]);
+            expect([ ...index.findEncoded([
+              dictionary.encode(DF.namedNode('s')),
+              dictionary.encode(DF.namedNode('p')),
+              dictionary.encode(DF.namedNode('o')),
+              dictionary.encode(DF.namedNode('g')),
+            ], [
               DF.namedNode('s'),
               DF.namedNode('p'),
               DF.namedNode('o'),
@@ -261,6 +270,97 @@ describe('RdfStoreIndexes', () => {
             ]) ]).toEqual([]);
 
             expect([ ...index.find([
+              DF.namedNode('s'),
+              DF.namedNode('p'),
+              DF.namedNode('o1'),
+              undefined,
+            ]) ]).toEqual([]);
+          });
+        });
+
+        describe('findEncoded', () => {
+          it('should produce 1 result for a variable pattern', () => {
+            expect([ ...index.findEncoded([
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+            ], [
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s')),
+                dictionary.encode(DF.namedNode('p')),
+                dictionary.encode(DF.namedNode('o')),
+                dictionary.encode(DF.namedNode('g')),
+              ],
+            ]);
+          });
+
+          it('should produce 1 result for an exact match', () => {
+            expect([ ...index.findEncoded([
+              dictionary.encode(DF.namedNode('s')),
+              dictionary.encode(DF.namedNode('p')),
+              dictionary.encode(DF.namedNode('o')),
+              dictionary.encode(DF.namedNode('g')),
+            ], [
+              DF.namedNode('s'),
+              DF.namedNode('p'),
+              DF.namedNode('o'),
+              DF.namedNode('g'),
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s')),
+                dictionary.encode(DF.namedNode('p')),
+                dictionary.encode(DF.namedNode('o')),
+                dictionary.encode(DF.namedNode('g')),
+              ],
+            ]);
+          });
+
+          it('should produce 1 result for a partial match', () => {
+            expect([ ...index.findEncoded([
+              undefined,
+              dictionary.encode(DF.namedNode('p')),
+              undefined,
+              dictionary.encode(DF.namedNode('g')),
+            ], [
+              undefined,
+              DF.namedNode('p'),
+              undefined,
+              DF.namedNode('g'),
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s')),
+                dictionary.encode(DF.namedNode('p')),
+                dictionary.encode(DF.namedNode('o')),
+                dictionary.encode(DF.namedNode('g')),
+              ],
+            ]);
+          });
+
+          it('should produce 0 results for a partial non-match', () => {
+            expect([ ...index.findEncoded([
+              undefined,
+              dictionary.encode(DF.namedNode('p1')),
+              undefined,
+              dictionary.encode(DF.namedNode('g')),
+            ], [
+              undefined,
+              DF.namedNode('p1'),
+              undefined,
+              DF.namedNode('g'),
+            ]) ]).toEqual([]);
+
+            expect([ ...index.findEncoded([
+              dictionary.encode(DF.namedNode('s')),
+              dictionary.encode(DF.namedNode('p')),
+              dictionary.encode(DF.namedNode('o1')),
+              undefined,
+            ], [
               DF.namedNode('s'),
               DF.namedNode('p'),
               DF.namedNode('o1'),
@@ -634,6 +734,297 @@ describe('RdfStoreIndexes', () => {
           });
         });
 
+        describe('findEncoded', () => {
+          it('should produce all results for a variable pattern', () => {
+            expect([ ...index.findEncoded([
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+            ], [
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('p1')),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('p2')),
+                dictionary.encode(DF.namedNode('o2')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('p1')),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('p2')),
+                dictionary.encode(DF.namedNode('o2')),
+                dictionary.encode(DF.namedNode('g2')),
+              ],
+            ]);
+          });
+
+          it('should produce 1 result for exact matches', () => {
+            expect([ ...index.findEncoded([
+              dictionary.encode(DF.namedNode('s1')),
+              dictionary.encode(DF.namedNode('p1')),
+              dictionary.encode(DF.namedNode('o1')),
+              dictionary.encode(DF.namedNode('g1')),
+            ], [
+              DF.namedNode('s1'),
+              DF.namedNode('p1'),
+              DF.namedNode('o1'),
+              DF.namedNode('g1'),
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('p1')),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+            ]);
+
+            expect([ ...index.findEncoded([
+              dictionary.encode(DF.namedNode('s1')),
+              dictionary.encode(DF.namedNode('p2')),
+              dictionary.encode(DF.namedNode('o2')),
+              dictionary.encode(DF.namedNode('g1')),
+            ], [
+              DF.namedNode('s1'),
+              DF.namedNode('p2'),
+              DF.namedNode('o2'),
+              DF.namedNode('g1'),
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('p2')),
+                dictionary.encode(DF.namedNode('o2')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+            ]);
+
+            expect([ ...index.findEncoded([
+              dictionary.encode(DF.namedNode('s2')),
+              dictionary.encode(DF.namedNode('p1')),
+              dictionary.encode(DF.namedNode('o1')),
+              dictionary.encode(DF.namedNode('g1')),
+            ], [
+              DF.namedNode('s2'),
+              DF.namedNode('p1'),
+              DF.namedNode('o1'),
+              DF.namedNode('g1'),
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('p1')),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+            ]);
+
+            expect([ ...index.findEncoded([
+              dictionary.encode(DF.namedNode('s2')),
+              dictionary.encode(DF.namedNode('p2')),
+              dictionary.encode(DF.namedNode('o2')),
+              dictionary.encode(DF.namedNode('g2')),
+            ], [
+              DF.namedNode('s2'),
+              DF.namedNode('p2'),
+              DF.namedNode('o2'),
+              DF.namedNode('g2'),
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('p2')),
+                dictionary.encode(DF.namedNode('o2')),
+                dictionary.encode(DF.namedNode('g2')),
+              ],
+            ]);
+          });
+
+          it('should produce results for partial matches', () => {
+            expect([ ...index.findEncoded([
+              dictionary.encode(DF.namedNode('s1')),
+              undefined,
+              undefined,
+              undefined,
+            ], [
+              DF.namedNode('s1'),
+              undefined,
+              undefined,
+              undefined,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('p1')),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('p2')),
+                dictionary.encode(DF.namedNode('o2')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+            ]);
+
+            expect([ ...index.findEncoded([
+              dictionary.encode(DF.namedNode('s2')),
+              undefined,
+              undefined,
+              undefined,
+            ], [
+              DF.namedNode('s2'),
+              undefined,
+              undefined,
+              undefined,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('p1')),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('p2')),
+                dictionary.encode(DF.namedNode('o2')),
+                dictionary.encode(DF.namedNode('g2')),
+              ],
+            ]);
+
+            expect([ ...index.findEncoded([
+              undefined,
+              dictionary.encode(DF.namedNode('p1')),
+              undefined,
+              undefined,
+            ], [
+              undefined,
+              DF.namedNode('p1'),
+              undefined,
+              undefined,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('p1')),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('p1')),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+            ]);
+
+            expect([ ...index.findEncoded([
+              dictionary.encode(DF.namedNode('s2')),
+              dictionary.encode(DF.namedNode('p1')),
+              undefined,
+              undefined,
+            ], [
+              DF.namedNode('s2'),
+              DF.namedNode('p1'),
+              undefined,
+              undefined,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('p1')),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+            ]);
+
+            expect([ ...index.findEncoded([
+              dictionary.encode(DF.namedNode('s2')),
+              undefined,
+              undefined,
+              dictionary.encode(DF.namedNode('g2')),
+            ], [
+              DF.namedNode('s2'),
+              undefined,
+              undefined,
+              DF.namedNode('g2'),
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('p2')),
+                dictionary.encode(DF.namedNode('o2')),
+                dictionary.encode(DF.namedNode('g2')),
+              ],
+            ]);
+
+            expect([ ...index.findEncoded([
+              dictionary.encode(DF.namedNode('s2')),
+              undefined,
+              undefined,
+              dictionary.encode(DF.namedNode('g3')),
+            ], [
+              DF.namedNode('s2'),
+              undefined,
+              undefined,
+              DF.namedNode('g3'),
+            ]) ]).toEqual([]);
+
+            expect([ ...index.findEncoded([
+              dictionary.encode(DF.namedNode('p1')),
+              undefined,
+              undefined,
+              undefined,
+            ], [
+              DF.namedNode('p1'),
+              undefined,
+              undefined,
+              undefined,
+            ]) ]).toEqual([]);
+            expect([ ...index.findEncoded([
+              dictionary.encode(DF.namedNode('s1')),
+              dictionary.encode(DF.namedNode('s1')),
+              undefined,
+              undefined,
+            ], [
+              DF.namedNode('s1'),
+              DF.namedNode('s1'),
+              undefined,
+              undefined,
+            ]) ]).toEqual([]);
+            expect([ ...index.findEncoded([
+              dictionary.encode(DF.namedNode('s1')),
+              dictionary.encode(DF.namedNode('p1')),
+              dictionary.encode(DF.namedNode('s1')),
+              undefined,
+            ], [
+              DF.namedNode('s1'),
+              DF.namedNode('p1'),
+              DF.namedNode('s1'),
+              undefined,
+            ]) ]).toEqual([]);
+            expect([ ...index.findEncoded([
+              dictionary.encode(DF.namedNode('s1')),
+              dictionary.encode(DF.namedNode('p1')),
+              dictionary.encode(DF.namedNode('o1')),
+              dictionary.encode(DF.namedNode('s1')),
+            ], [
+              DF.namedNode('s1'),
+              DF.namedNode('p1'),
+              DF.namedNode('o1'),
+              DF.namedNode('s1'),
+            ]) ]).toEqual([]);
+          });
+        });
+
         describe('count', () => {
           it('should return results for a variable pattern', () => {
             expect(index.count([
@@ -819,12 +1210,756 @@ describe('RdfStoreIndexes', () => {
           });
         });
       });
+
+      if (quotedTripleFiltering) {
+        describe('that has quoted quads', () => {
+          beforeEach(() => {
+            index.set([
+              dictionary.encode(DF.namedNode('Alice')),
+              dictionary.encode(DF.namedNode('says')),
+              dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
+              dictionary.encode(DF.namedNode('g1')),
+            ], true);
+            index.set([
+              dictionary.encode(DF.namedNode('Alice')),
+              dictionary.encode(DF.namedNode('says')),
+              dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue'))),
+              dictionary.encode(DF.namedNode('g1')),
+            ], true);
+            index.set([
+              dictionary.encode(DF.namedNode('Bob')),
+              dictionary.encode(DF.namedNode('says')),
+              dictionary.encode(DF.quad(
+                DF.namedNode('Alice'),
+                DF.namedNode('says'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+              )),
+              dictionary.encode(DF.namedNode('g1')),
+            ], true);
+          });
+
+          describe('get', () => {
+            it('should produce results', () => {
+              expect(index.get([
+                DF.namedNode('Alice'),
+                DF.namedNode('says'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+                DF.namedNode('g1'),
+              ])).toEqual(true);
+
+              expect(index.get([
+                DF.namedNode('Alice'),
+                DF.namedNode('says'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue')),
+                DF.namedNode('g1'),
+              ])).toEqual(true);
+
+              expect(index.get([
+                DF.namedNode('Bob'),
+                DF.namedNode('says'),
+                DF.quad(
+                  DF.namedNode('Alice'),
+                  DF.namedNode('says'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+                ),
+                DF.namedNode('g1'),
+              ])).toEqual(true);
+
+              expect(index.get([
+                DF.namedNode('sother'),
+                DF.namedNode('p'),
+                DF.namedNode('o'),
+                DF.namedNode('g'),
+              ])).toEqual(undefined);
+            });
+          });
+
+          describe('find', () => {
+            it('should produce all results for a variable pattern', () => {
+              expect([ ...index.find([
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+              ]) ]).toEqual([
+                [
+                  DF.namedNode('Alice'),
+                  DF.namedNode('says'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+                  DF.namedNode('g1'),
+                ],
+                [
+                  DF.namedNode('Alice'),
+                  DF.namedNode('says'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue')),
+                  DF.namedNode('g1'),
+                ],
+                [
+                  DF.namedNode('Bob'),
+                  DF.namedNode('says'),
+                  DF.quad(
+                    DF.namedNode('Alice'),
+                    DF.namedNode('says'),
+                    DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+                  ),
+                  DF.namedNode('g1'),
+                ],
+              ]);
+            });
+
+            it('should produce 1 result for exact matches', () => {
+              expect([ ...index.find([
+                DF.namedNode('Alice'),
+                DF.namedNode('says'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+                DF.namedNode('g1'),
+              ]) ]).toEqual([
+                [
+                  DF.namedNode('Alice'),
+                  DF.namedNode('says'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+                  DF.namedNode('g1'),
+                ],
+              ]);
+
+              expect([ ...index.find([
+                DF.namedNode('Alice'),
+                DF.namedNode('says'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue')),
+                DF.namedNode('g1'),
+              ]) ]).toEqual([
+                [
+                  DF.namedNode('Alice'),
+                  DF.namedNode('says'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue')),
+                  DF.namedNode('g1'),
+                ],
+              ]);
+
+              expect([ ...index.find([
+                DF.namedNode('Bob'),
+                DF.namedNode('says'),
+                DF.quad(
+                  DF.namedNode('Alice'),
+                  DF.namedNode('says'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+                ),
+                DF.namedNode('g1'),
+              ]) ]).toEqual([
+                [
+                  DF.namedNode('Bob'),
+                  DF.namedNode('says'),
+                  DF.quad(
+                    DF.namedNode('Alice'),
+                    DF.namedNode('says'),
+                    DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+                  ),
+                  DF.namedNode('g1'),
+                ],
+              ]);
+            });
+
+            it('should produce results for a variable', () => {
+              expect([ ...index.find([
+                undefined,
+                DF.namedNode('says'),
+                undefined,
+                DF.namedNode('g1'),
+              ]) ]).toEqual([
+                [
+                  DF.namedNode('Alice'),
+                  DF.namedNode('says'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+                  DF.namedNode('g1'),
+                ],
+                [
+                  DF.namedNode('Alice'),
+                  DF.namedNode('says'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue')),
+                  DF.namedNode('g1'),
+                ],
+                [
+                  DF.namedNode('Bob'),
+                  DF.namedNode('says'),
+                  DF.quad(
+                    DF.namedNode('Alice'),
+                    DF.namedNode('says'),
+                    DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+                  ),
+                  DF.namedNode('g1'),
+                ],
+              ]);
+            });
+
+            it('should produce results for a variable inside a quoted triple', () => {
+              expect([ ...index.find([
+                DF.namedNode('Alice'),
+                DF.namedNode('says'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+                DF.namedNode('g1'),
+              ]) ]).toEqual([
+                [
+                  DF.namedNode('Alice'),
+                  DF.namedNode('says'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+                  DF.namedNode('g1'),
+                ],
+                [
+                  DF.namedNode('Alice'),
+                  DF.namedNode('says'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue')),
+                  DF.namedNode('g1'),
+                ],
+              ]);
+            });
+
+            it('should produce results for a variable inside and outside a quoted triple', () => {
+              expect([ ...index.find([
+                undefined,
+                DF.namedNode('says'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+                DF.namedNode('g1'),
+              ]) ]).toEqual([
+                [
+                  DF.namedNode('Alice'),
+                  DF.namedNode('says'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+                  DF.namedNode('g1'),
+                ],
+                [
+                  DF.namedNode('Alice'),
+                  DF.namedNode('says'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue')),
+                  DF.namedNode('g1'),
+                ],
+              ]);
+            });
+
+            it('should produce results for a variable inside a quoted triple in subject position', () => {
+              index.set([
+                dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow'))),
+                dictionary.encode(DF.namedNode('says')),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ], true);
+
+              expect([ ...index.find([
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+                DF.namedNode('says'),
+                DF.namedNode('o1'),
+                DF.namedNode('g1'),
+              ]) ]).toEqual([
+                [
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+                  DF.namedNode('says'),
+                  DF.namedNode('o1'),
+                  DF.namedNode('g1'),
+                ],
+              ]);
+            });
+
+            it('should produce results for a variable inside a quoted triple in predicate position', () => {
+              index.set([
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow'))),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ], true);
+
+              expect([ ...index.find([
+                DF.namedNode('s1'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+                DF.namedNode('o1'),
+                DF.namedNode('g1'),
+              ]) ]).toEqual([
+                [
+                  DF.namedNode('s1'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+                  DF.namedNode('o1'),
+                  DF.namedNode('g1'),
+                ],
+              ]);
+            });
+
+            it('should produce results for a variable inside a quoted triple in graph position', () => {
+              index.set([
+                dictionary.encode(DF.namedNode('Alice')),
+                dictionary.encode(DF.namedNode('says')),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow'))),
+              ], true);
+
+              expect([ ...index.find([
+                DF.namedNode('Alice'),
+                DF.namedNode('says'),
+                DF.namedNode('o1'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+              ]) ]).toEqual([
+                [
+                  DF.namedNode('Alice'),
+                  DF.namedNode('says'),
+                  DF.namedNode('o1'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+                ],
+              ]);
+            });
+          });
+
+          describe('findEncoded', () => {
+            it('should produce all results for a variable pattern', () => {
+              expect([ ...index.findEncoded([
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+              ], [
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+              ]) ]).toEqual([
+                [
+                  dictionary.encode(DF.namedNode('Alice')),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.quad(
+                    DF.namedNode('Violets'),
+                    DF.namedNode('haveColor'),
+                    DF.namedNode('Blue'),
+                  )),
+                  dictionary.encode(DF.namedNode('g1')),
+                ],
+                [
+                  dictionary.encode(DF.namedNode('Alice')),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.quad(
+                    DF.namedNode('Violets'),
+                    DF.namedNode('haveColor'),
+                    DF.namedNode('DarkBlue'),
+                  )),
+                  dictionary.encode(DF.namedNode('g1')),
+                ],
+                [
+                  dictionary.encode(DF.namedNode('Bob')),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.quad(
+                    DF.namedNode('Alice'),
+                    DF.namedNode('says'),
+                    DF.quad(
+                      DF.namedNode('Violets'),
+                      DF.namedNode('haveColor'),
+                      DF.namedNode('Yellow'),
+                    ),
+                  )),
+                  dictionary.encode(DF.namedNode('g1')),
+                ],
+              ]);
+            });
+
+            it('should produce 1 result for exact matches', () => {
+              expect([ ...index.findEncoded([
+                dictionary.encode(DF.namedNode('Alice')),
+                dictionary.encode(DF.namedNode('says')),
+                dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
+                dictionary.encode(DF.namedNode('g1')),
+              ], [
+                DF.namedNode('Alice'),
+                DF.namedNode('says'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+                DF.namedNode('g1'),
+              ]) ]).toEqual([
+                [
+                  dictionary.encode(DF.namedNode('Alice')),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
+                  dictionary.encode(DF.namedNode('g1')),
+                ],
+              ]);
+
+              expect([ ...index.findEncoded([
+                dictionary.encode(DF.namedNode('Alice')),
+                dictionary.encode(DF.namedNode('says')),
+                dictionary.encode(DF.quad(
+                  DF.namedNode('Violets'),
+                  DF.namedNode('haveColor'),
+                  DF.namedNode('DarkBlue'),
+                )),
+                dictionary.encode(DF.namedNode('g1')),
+              ], [
+                DF.namedNode('Alice'),
+                DF.namedNode('says'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue')),
+                DF.namedNode('g1'),
+              ]) ]).toEqual([
+                [
+                  dictionary.encode(DF.namedNode('Alice')),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.quad(
+                    DF.namedNode('Violets'),
+                    DF.namedNode('haveColor'),
+                    DF.namedNode('DarkBlue'),
+                  )),
+                  dictionary.encode(DF.namedNode('g1')),
+                ],
+              ]);
+
+              expect([ ...index.findEncoded([
+                dictionary.encode(DF.namedNode('Bob')),
+                dictionary.encode(DF.namedNode('says')),
+                dictionary.encode(DF.quad(
+                  DF.namedNode('Alice'),
+                  DF.namedNode('says'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+                )),
+                dictionary.encode(DF.namedNode('g1')),
+              ], [
+                DF.namedNode('Bob'),
+                DF.namedNode('says'),
+                DF.quad(
+                  DF.namedNode('Alice'),
+                  DF.namedNode('says'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+                ),
+                DF.namedNode('g1'),
+              ]) ]).toEqual([
+                [
+                  dictionary.encode(DF.namedNode('Bob')),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.quad(
+                    DF.namedNode('Alice'),
+                    DF.namedNode('says'),
+                    DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+                  )),
+                  dictionary.encode(DF.namedNode('g1')),
+                ],
+              ]);
+            });
+
+            it('should produce results for a variable', () => {
+              expect([ ...index.findEncoded([
+                undefined,
+                dictionary.encode(DF.namedNode('says')),
+                undefined,
+                dictionary.encode(DF.namedNode('g1')),
+              ], [
+                undefined,
+                DF.namedNode('says'),
+                undefined,
+                DF.namedNode('g1'),
+              ]) ]).toEqual([
+                [
+                  dictionary.encode(DF.namedNode('Alice')),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.quad(
+                    DF.namedNode('Violets'),
+                    DF.namedNode('haveColor'),
+                    DF.namedNode('Blue'),
+                  )),
+                  dictionary.encode(DF.namedNode('g1')),
+                ],
+                [
+                  dictionary.encode(DF.namedNode('Alice')),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.quad(
+                    DF.namedNode('Violets'),
+                    DF.namedNode('haveColor'),
+                    DF.namedNode('DarkBlue'),
+                  )),
+                  dictionary.encode(DF.namedNode('g1')),
+                ],
+                [
+                  dictionary.encode(DF.namedNode('Bob')),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.quad(
+                    DF.namedNode('Alice'),
+                    DF.namedNode('says'),
+                    DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+                  )),
+                  dictionary.encode(DF.namedNode('g1')),
+                ],
+              ]);
+            });
+
+            it('should produce results for a variable inside a quoted triple', () => {
+              expect([ ...index.findEncoded([
+                dictionary.encode(DF.namedNode('Alice')),
+                dictionary.encode(DF.namedNode('says')),
+                dictionary.encode(DF.quad(
+                  DF.namedNode('Violets'),
+                  DF.namedNode('haveColor'),
+                  DF.variable('color'),
+                )),
+                dictionary.encode(DF.namedNode('g1')),
+              ], [
+                DF.namedNode('Alice'),
+                DF.namedNode('says'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+                DF.namedNode('g1'),
+              ]) ]).toEqual([
+                [
+                  dictionary.encode(DF.namedNode('Alice')),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.quad(
+                    DF.namedNode('Violets'),
+                    DF.namedNode('haveColor'),
+                    DF.namedNode('Blue'),
+                  )),
+                  dictionary.encode(DF.namedNode('g1')),
+                ],
+                [
+                  dictionary.encode(DF.namedNode('Alice')),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.quad(
+                    DF.namedNode('Violets'),
+                    DF.namedNode('haveColor'),
+                    DF.namedNode('DarkBlue'),
+                  )),
+                  dictionary.encode(DF.namedNode('g1')),
+                ],
+              ]);
+            });
+
+            it('should produce results for a variable inside and outside a quoted triple', () => {
+              expect([ ...index.findEncoded([
+                undefined,
+                dictionary.encode(DF.namedNode('says')),
+                dictionary.encode(DF.quad(
+                  DF.namedNode('Violets'),
+                  DF.namedNode('haveColor'),
+                  DF.variable('color'),
+                )),
+                dictionary.encode(DF.namedNode('g1')),
+              ], [
+                undefined,
+                DF.namedNode('says'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+                DF.namedNode('g1'),
+              ]) ]).toEqual([
+                [
+                  dictionary.encode(DF.namedNode('Alice')),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.quad(
+                    DF.namedNode('Violets'),
+                    DF.namedNode('haveColor'),
+                    DF.namedNode('Blue'),
+                  )),
+                  dictionary.encode(DF.namedNode('g1')),
+                ],
+                [
+                  dictionary.encode(DF.namedNode('Alice')),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.quad(
+                    DF.namedNode('Violets'),
+                    DF.namedNode('haveColor'),
+                    DF.namedNode('DarkBlue'),
+                  )),
+                  dictionary.encode(DF.namedNode('g1')),
+                ],
+              ]);
+            });
+          });
+
+          describe('count', () => {
+            it('should produce all results for a variable pattern', () => {
+              expect(index.count([
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+              ])).toEqual(3);
+            });
+
+            it('should produce 1 result for exact matches', () => {
+              expect(index.count([
+                DF.namedNode('Alice'),
+                DF.namedNode('says'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+                DF.namedNode('g1'),
+              ])).toEqual(1);
+
+              expect(index.count([
+                DF.namedNode('Alice'),
+                DF.namedNode('says'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue')),
+                DF.namedNode('g1'),
+              ])).toEqual(1);
+
+              expect(index.count([
+                DF.namedNode('Bob'),
+                DF.namedNode('says'),
+                DF.quad(
+                  DF.namedNode('Alice'),
+                  DF.namedNode('says'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+                ),
+                DF.namedNode('g1'),
+              ])).toEqual(1);
+            });
+
+            it('should produce results for a variable', () => {
+              expect(index.count([
+                undefined,
+                DF.namedNode('says'),
+                undefined,
+                DF.namedNode('g1'),
+              ])).toEqual(3);
+            });
+
+            it('should produce results for a variable inside a quoted triple', () => {
+              expect(index.count([
+                DF.namedNode('Alice'),
+                DF.namedNode('says'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+                DF.namedNode('g1'),
+              ])).toEqual(2);
+            });
+
+            it('should produce results for a variable inside and outside a quoted triple', () => {
+              expect(index.count([
+                undefined,
+                DF.namedNode('says'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+                DF.namedNode('g1'),
+              ])).toEqual(2);
+            });
+
+            it('should produce results for a variable inside a quoted triple in subject position', () => {
+              index.set([
+                dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow'))),
+                dictionary.encode(DF.namedNode('says')),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ], true);
+
+              expect(index.count([
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+                DF.namedNode('says'),
+                DF.namedNode('o1'),
+                DF.namedNode('g1'),
+              ])).toEqual(1);
+            });
+
+            it('should produce results for a variable inside a quoted triple in predicate position', () => {
+              index.set([
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow'))),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ], true);
+
+              expect(index.count([
+                DF.namedNode('s1'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+                DF.namedNode('o1'),
+                DF.namedNode('g1'),
+              ])).toEqual(1);
+            });
+
+            it('should produce results for a variable inside a quoted triple in graph position', () => {
+              index.set([
+                dictionary.encode(DF.namedNode('Alice')),
+                dictionary.encode(DF.namedNode('says')),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow'))),
+              ], true);
+
+              expect(index.count([
+                DF.namedNode('Alice'),
+                DF.namedNode('says'),
+                DF.namedNode('o1'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+              ])).toEqual(1);
+            });
+          });
+
+          describe('remove', () => {
+            it('should be able to remove existing quads', () => {
+              expect(index.remove([
+                dictionary.encode(DF.namedNode('Alice')),
+                dictionary.encode(DF.namedNode('says')),
+                dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
+                dictionary.encode(DF.namedNode('g1')),
+              ])).toEqual(true);
+              expect(index.remove([
+                dictionary.encode(DF.namedNode('Alice')),
+                dictionary.encode(DF.namedNode('says')),
+                dictionary.encode(DF.quad(
+                  DF.namedNode('Violets'),
+                  DF.namedNode('haveColor'),
+                  DF.namedNode('DarkBlue'),
+                )),
+                dictionary.encode(DF.namedNode('g1')),
+              ])).toEqual(true);
+              expect(index.remove([
+                dictionary.encode(DF.namedNode('Bob')),
+                dictionary.encode(DF.namedNode('says')),
+                dictionary.encode(DF.quad(
+                  DF.namedNode('Alice'),
+                  DF.namedNode('says'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+                )),
+                dictionary.encode(DF.namedNode('g1')),
+              ])).toEqual(true);
+            });
+
+            it('should be able to remove an existing quad only once', () => {
+              expect(index.remove([
+                dictionary.encode(DF.namedNode('Alice')),
+                dictionary.encode(DF.namedNode('says')),
+                dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
+                dictionary.encode(DF.namedNode('g1')),
+              ])).toEqual(true);
+
+              expect(index.remove([
+                dictionary.encode(DF.namedNode('Alice')),
+                dictionary.encode(DF.namedNode('says')),
+                dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
+                dictionary.encode(DF.namedNode('g1')),
+              ])).toEqual(false);
+            });
+
+            it('should be unable to remove non-existing quads', () => {
+              expect(index.remove([
+                dictionary.encode(DF.namedNode('s1-no')),
+                dictionary.encode(DF.namedNode('p1-no')),
+                dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
+                dictionary.encode(DF.namedNode('g1-no')),
+              ])).toEqual(false);
+
+              expect(index.remove([
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('p1-no')),
+                dictionary.encode(DF.namedNode('o1-no')),
+                dictionary.encode(DF.namedNode('g1-no')),
+              ])).toEqual(false);
+
+              expect(index.remove([
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('p1')),
+                dictionary.encode(DF.namedNode('o1-no')),
+                dictionary.encode(DF.namedNode('g1-no')),
+              ])).toEqual(false);
+
+              expect(index.remove([
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('p1')),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1-no')),
+              ])).toEqual(false);
+            });
+          });
+        });
+      }
     });
 
     describe('in GOPS order', () => {
       beforeEach(() => {
-        dictionary = new TermDictionaryNumberMap();
-        index = clazzToInstance[clazz](dictionary);
+        dictionary = new TermDictionaryQuoted(new TermDictionaryNumberMap());
+        index = clazzToInstance[clazz]({
+          indexCombinations: [],
+          indexConstructor: <any> undefined,
+          dictionary,
+          dataFactory: new DataFactory(),
+        });
       });
 
       describe('that is empty', () => {
@@ -848,6 +1983,33 @@ describe('RdfStoreIndexes', () => {
               undefined,
             ]) ]).toEqual([]);
             expect([ ...index.find([
+              DF.namedNode('g'),
+              DF.namedNode('o'),
+              DF.namedNode('p'),
+              DF.namedNode('s'),
+            ]) ]).toEqual([]);
+          });
+        });
+
+        describe('findEncoded', () => {
+          it('should produce no results', () => {
+            expect([ ...index.findEncoded([
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+            ], [
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+            ]) ]).toEqual([]);
+            expect([ ...index.findEncoded([
+              dictionary.encode(DF.namedNode('g')),
+              dictionary.encode(DF.namedNode('o')),
+              dictionary.encode(DF.namedNode('p')),
+              dictionary.encode(DF.namedNode('s')),
+            ], [
               DF.namedNode('g'),
               DF.namedNode('o'),
               DF.namedNode('p'),
@@ -943,7 +2105,521 @@ describe('RdfStoreIndexes', () => {
             ]) ]).toEqual([]);
           });
         });
+
+        describe('findEncoded', () => {
+          it('should produce 1 result for a variable pattern', () => {
+            expect([ ...index.findEncoded([
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+            ], [
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('g')),
+                dictionary.encode(DF.namedNode('o')),
+                dictionary.encode(DF.namedNode('p')),
+                dictionary.encode(DF.namedNode('s')),
+              ],
+            ]);
+          });
+
+          it('should produce 1 result for an exact match', () => {
+            expect([ ...index.findEncoded([
+              dictionary.encode(DF.namedNode('g')),
+              dictionary.encode(DF.namedNode('o')),
+              dictionary.encode(DF.namedNode('p')),
+              dictionary.encode(DF.namedNode('s')),
+            ], [
+              DF.namedNode('g'),
+              DF.namedNode('o'),
+              DF.namedNode('p'),
+              DF.namedNode('s'),
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('g')),
+                dictionary.encode(DF.namedNode('o')),
+                dictionary.encode(DF.namedNode('p')),
+                dictionary.encode(DF.namedNode('s')),
+              ],
+            ]);
+          });
+
+          it('should produce 1 result for a partial match', () => {
+            expect([ ...index.findEncoded([
+              dictionary.encode(DF.namedNode('g')),
+              undefined,
+              dictionary.encode(DF.namedNode('p')),
+              undefined,
+            ], [
+              DF.namedNode('g'),
+              undefined,
+              DF.namedNode('p'),
+              undefined,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('g')),
+                dictionary.encode(DF.namedNode('o')),
+                dictionary.encode(DF.namedNode('p')),
+                dictionary.encode(DF.namedNode('s')),
+              ],
+            ]);
+          });
+
+          it('should produce 0 results for a partial non-match', () => {
+            expect([ ...index.findEncoded([
+              dictionary.encode(DF.namedNode('g')),
+              undefined,
+              dictionary.encode(DF.namedNode('p1')),
+              undefined,
+            ], [
+              DF.namedNode('g'),
+              undefined,
+              DF.namedNode('p1'),
+              undefined,
+            ]) ]).toEqual([]);
+          });
+        });
       });
+
+      if (quotedTripleFiltering) {
+        describe('that has quoted quads', () => {
+          beforeEach(() => {
+            index.set([
+              dictionary.encode(DF.namedNode('g1')),
+              dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
+              dictionary.encode(DF.namedNode('says')),
+              dictionary.encode(DF.namedNode('Alice')),
+            ], true);
+            index.set([
+              dictionary.encode(DF.namedNode('g1')),
+              dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue'))),
+              dictionary.encode(DF.namedNode('says')),
+              dictionary.encode(DF.namedNode('Alice')),
+            ], true);
+            index.set([
+              dictionary.encode(DF.namedNode('g1')),
+              dictionary.encode(DF.quad(
+                DF.namedNode('Alice'),
+                DF.namedNode('says'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+              )),
+              dictionary.encode(DF.namedNode('says')),
+              dictionary.encode(DF.namedNode('Bob')),
+            ], true);
+          });
+
+          describe('get', () => {
+            it('should produce results', () => {
+              expect(index.get([
+                DF.namedNode('g1'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+                DF.namedNode('says'),
+                DF.namedNode('Alice'),
+              ])).toEqual(true);
+
+              expect(index.get([
+                DF.namedNode('sother'),
+                DF.namedNode('p'),
+                DF.namedNode('o'),
+                DF.namedNode('g'),
+              ])).toEqual(undefined);
+            });
+          });
+
+          describe('find', () => {
+            it('should produce all results for a variable pattern', () => {
+              expect([ ...index.find([
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+              ]) ]).toEqual([
+                [
+                  DF.namedNode('g1'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+                  DF.namedNode('says'),
+                  DF.namedNode('Alice'),
+                ],
+                [
+                  DF.namedNode('g1'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue')),
+                  DF.namedNode('says'),
+                  DF.namedNode('Alice'),
+                ],
+                [
+                  DF.namedNode('g1'),
+                  DF.quad(
+                    DF.namedNode('Alice'),
+                    DF.namedNode('says'),
+                    DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+                  ),
+                  DF.namedNode('says'),
+                  DF.namedNode('Bob'),
+                ],
+              ]);
+            });
+
+            it('should produce 1 result for exact matches', () => {
+              expect([ ...index.find([
+                DF.namedNode('g1'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+                DF.namedNode('says'),
+                DF.namedNode('Alice'),
+              ]) ]).toEqual([
+                [
+                  DF.namedNode('g1'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+                  DF.namedNode('says'),
+                  DF.namedNode('Alice'),
+                ],
+              ]);
+            });
+
+            it('should produce results for a variable', () => {
+              expect([ ...index.find([
+                DF.namedNode('g1'),
+                undefined,
+                DF.namedNode('says'),
+                undefined,
+              ]) ]).toEqual([
+                [
+                  DF.namedNode('g1'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+                  DF.namedNode('says'),
+                  DF.namedNode('Alice'),
+                ],
+                [
+                  DF.namedNode('g1'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue')),
+                  DF.namedNode('says'),
+                  DF.namedNode('Alice'),
+                ],
+                [
+                  DF.namedNode('g1'),
+                  DF.quad(
+                    DF.namedNode('Alice'),
+                    DF.namedNode('says'),
+                    DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+                  ),
+                  DF.namedNode('says'),
+                  DF.namedNode('Bob'),
+                ],
+              ]);
+            });
+
+            it('should produce results for a variable inside a quoted triple', () => {
+              expect([ ...index.find([
+                DF.namedNode('g1'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+                DF.namedNode('says'),
+                DF.namedNode('Alice'),
+              ]) ]).toEqual([
+                [
+                  DF.namedNode('g1'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+                  DF.namedNode('says'),
+                  DF.namedNode('Alice'),
+                ],
+                [
+                  DF.namedNode('g1'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue')),
+                  DF.namedNode('says'),
+                  DF.namedNode('Alice'),
+                ],
+              ]);
+            });
+
+            it('should produce results for a variable inside and outside a quoted triple', () => {
+              expect([ ...index.find([
+                DF.namedNode('g1'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+                DF.namedNode('says'),
+                undefined,
+              ]) ]).toEqual([
+                [
+                  DF.namedNode('g1'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+                  DF.namedNode('says'),
+                  DF.namedNode('Alice'),
+                ],
+                [
+                  DF.namedNode('g1'),
+                  DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue')),
+                  DF.namedNode('says'),
+                  DF.namedNode('Alice'),
+                ],
+              ]);
+            });
+          });
+
+          describe('findEncoded', () => {
+            it('should produce all results for a variable pattern', () => {
+              expect([ ...index.findEncoded([
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+              ], [
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+              ]) ]).toEqual([
+                [
+                  dictionary.encode(DF.namedNode('g1')),
+                  dictionary.encode(DF.quad(
+                    DF.namedNode('Violets'),
+                    DF.namedNode('haveColor'),
+                    DF.namedNode('Blue'),
+                  )),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.namedNode('Alice')),
+                ],
+                [
+                  dictionary.encode(DF.namedNode('g1')),
+                  dictionary.encode(DF.quad(
+                    DF.namedNode('Violets'),
+                    DF.namedNode('haveColor'),
+                    DF.namedNode('DarkBlue'),
+                  )),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.namedNode('Alice')),
+                ],
+                [
+                  dictionary.encode(DF.namedNode('g1')),
+                  dictionary.encode(DF.quad(
+                    DF.namedNode('Alice'),
+                    DF.namedNode('says'),
+                    DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+                  )),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.namedNode('Bob')),
+                ],
+              ]);
+            });
+
+            it('should produce 1 result for exact matches', () => {
+              expect([ ...index.findEncoded([
+                dictionary.encode(DF.namedNode('g1')),
+                dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
+                dictionary.encode(DF.namedNode('says')),
+                dictionary.encode(DF.namedNode('Alice')),
+              ], [
+                DF.namedNode('g1'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+                DF.namedNode('says'),
+                DF.namedNode('Alice'),
+              ]) ]).toEqual([
+                [
+                  dictionary.encode(DF.namedNode('g1')),
+                  dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.namedNode('Alice')),
+                ],
+              ]);
+            });
+
+            it('should produce results for a variable', () => {
+              expect([ ...index.findEncoded([
+                dictionary.encode(DF.namedNode('g1')),
+                undefined,
+                dictionary.encode(DF.namedNode('says')),
+                undefined,
+              ], [
+                DF.namedNode('g1'),
+                undefined,
+                DF.namedNode('says'),
+                undefined,
+              ]) ]).toEqual([
+                [
+                  dictionary.encode(DF.namedNode('g1')),
+                  dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.namedNode('Alice')),
+                ],
+                [
+                  dictionary.encode(DF.namedNode('g1')),
+                  dictionary.encode(DF.quad(
+                    DF.namedNode('Violets'),
+                    DF.namedNode('haveColor'),
+                    DF.namedNode('DarkBlue'),
+                  )),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.namedNode('Alice')),
+                ],
+                [
+                  dictionary.encode(DF.namedNode('g1')),
+                  dictionary.encode(DF.quad(
+                    DF.namedNode('Alice'),
+                    DF.namedNode('says'),
+                    DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+                  )),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.namedNode('Bob')),
+                ],
+              ]);
+            });
+
+            it('should produce results for a variable inside a quoted triple', () => {
+              expect([ ...index.findEncoded([
+                dictionary.encode(DF.namedNode('g1')),
+                dictionary.encode(DF.quad(
+                  DF.namedNode('Violets'),
+                  DF.namedNode('haveColor'),
+                  DF.variable('color'),
+                )),
+                dictionary.encode(DF.namedNode('says')),
+                dictionary.encode(DF.namedNode('Alice')),
+              ], [
+                DF.namedNode('g1'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+                DF.namedNode('says'),
+                DF.namedNode('Alice'),
+              ]) ]).toEqual([
+                [
+                  dictionary.encode(DF.namedNode('g1')),
+                  dictionary.encode(DF.quad(
+                    DF.namedNode('Violets'),
+                    DF.namedNode('haveColor'),
+                    DF.namedNode('Blue'),
+                  )),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.namedNode('Alice')),
+                ],
+                [
+                  dictionary.encode(DF.namedNode('g1')),
+                  dictionary.encode(DF.quad(
+                    DF.namedNode('Violets'),
+                    DF.namedNode('haveColor'),
+                    DF.namedNode('DarkBlue'),
+                  )),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.namedNode('Alice')),
+                ],
+              ]);
+            });
+
+            it('should produce results for a variable inside and outside a quoted triple', () => {
+              expect([ ...index.findEncoded([
+                dictionary.encode(DF.namedNode('g1')),
+                dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color'))),
+                dictionary.encode(DF.namedNode('says')),
+                undefined,
+              ], [
+                DF.namedNode('g1'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+                DF.namedNode('says'),
+                undefined,
+              ]) ]).toEqual([
+                [
+                  dictionary.encode(DF.namedNode('g1')),
+                  dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.namedNode('Alice')),
+                ],
+                [
+                  dictionary.encode(DF.namedNode('g1')),
+                  dictionary.encode(DF.quad(
+                    DF.namedNode('Violets'),
+                    DF.namedNode('haveColor'),
+                    DF.namedNode('DarkBlue'),
+                  )),
+                  dictionary.encode(DF.namedNode('says')),
+                  dictionary.encode(DF.namedNode('Alice')),
+                ],
+              ]);
+            });
+          });
+
+          describe('count', () => {
+            it('should produce all results for a variable pattern', () => {
+              expect(index.count([
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+              ])).toEqual(3);
+            });
+
+            it('should produce 1 result for exact matches', () => {
+              expect(index.count([
+                DF.namedNode('g1'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+                DF.namedNode('says'),
+                DF.namedNode('Alice'),
+              ])).toEqual(1);
+            });
+
+            it('should produce results for a variable', () => {
+              expect(index.count([
+                DF.namedNode('g1'),
+                undefined,
+                DF.namedNode('says'),
+                undefined,
+              ])).toEqual(3);
+            });
+
+            it('should produce results for a variable inside a quoted triple', () => {
+              expect(index.count([
+                DF.namedNode('g1'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+                DF.namedNode('says'),
+                DF.namedNode('Alice'),
+              ])).toEqual(2);
+            });
+
+            it('should produce results for a variable inside and outside a quoted triple', () => {
+              expect(index.count([
+                DF.namedNode('g1'),
+                DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+                DF.namedNode('says'),
+                undefined,
+              ])).toEqual(2);
+            });
+          });
+
+          describe('remove', () => {
+            it('should be able to remove existing quads', () => {
+              expect(index.remove([
+                dictionary.encode(DF.namedNode('g1')),
+                dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
+                dictionary.encode(DF.namedNode('says')),
+                dictionary.encode(DF.namedNode('Alice')),
+              ])).toEqual(true);
+            });
+
+            it('should be able to remove an existing quad only once', () => {
+              expect(index.remove([
+                dictionary.encode(DF.namedNode('g1')),
+                dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
+                dictionary.encode(DF.namedNode('says')),
+                dictionary.encode(DF.namedNode('Alice')),
+              ])).toEqual(true);
+
+              expect(index.remove([
+                dictionary.encode(DF.namedNode('g1')),
+                dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
+                dictionary.encode(DF.namedNode('says')),
+                dictionary.encode(DF.namedNode('Alice')),
+              ])).toEqual(false);
+            });
+
+            it('should be unable to remove non-existing quads', () => {
+              expect(index.remove([
+                dictionary.encode(DF.namedNode('g1-no')),
+                dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
+                dictionary.encode(DF.namedNode('p1-no')),
+                dictionary.encode(DF.namedNode('s1-no')),
+              ])).toEqual(false);
+            });
+          });
+        });
+      }
     });
   });
 });

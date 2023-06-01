@@ -3,10 +3,13 @@ import { hideBin } from 'yargs/helpers';
 import { TermDictionaryNumberMap } from '../lib/dictionary/TermDictionaryNumberMap';
 import { TermDictionaryNumberRecord } from '../lib/dictionary/TermDictionaryNumberRecord';
 import { TermDictionaryNumberRecordFullTerms } from '../lib/dictionary/TermDictionaryNumberRecordFullTerms';
+import { TermDictionaryQuoted } from '../lib/dictionary/TermDictionaryQuoted';
 import { TermDictionarySymbol } from '../lib/dictionary/TermDictionarySymbol';
 import { RdfStoreIndexNestedMap } from '../lib/index/RdfStoreIndexNestedMap';
+import { RdfStoreIndexNestedMapQuoted } from '../lib/index/RdfStoreIndexNestedMapQuoted';
 import { RdfStoreIndexNestedMapRecursive } from '../lib/index/RdfStoreIndexNestedMapRecursive';
 import { RdfStoreIndexNestedRecord } from '../lib/index/RdfStoreIndexNestedRecord';
+import { RdfStoreIndexNestedRecordQuoted } from '../lib/index/RdfStoreIndexNestedRecordQuoted';
 import { RdfStore } from '../lib/RdfStore';
 import type { IPerformanceTestApproach } from './PerformanceTest';
 import { PerformanceTest } from './PerformanceTest';
@@ -210,6 +213,42 @@ const test = new PerformanceTest([
         indexCombinations: [[ 'graph', 'subject', 'predicate', 'object' ]],
         indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
         dictionary: new TermDictionaryNumberRecordFullTerms(),
+        dataFactory: new DataFactory(),
+      },
+    },
+  },
+  {
+    name: '3 Nested Map Recursive indexes with quoted dict (number)',
+    options: {
+      type: 'rdfstore',
+      options: {
+        indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+        indexConstructor: subOptions => new RdfStoreIndexNestedMapRecursive(subOptions),
+        dictionary: new TermDictionaryQuoted(new TermDictionaryNumberRecordFullTerms(), new DataFactory()),
+        dataFactory: new DataFactory(),
+      },
+    },
+  },
+  {
+    name: '3 Nested Map Quoted indexes with quoted dict (number)',
+    options: {
+      type: 'rdfstore',
+      options: {
+        indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+        indexConstructor: subOptions => new RdfStoreIndexNestedMapQuoted(subOptions),
+        dictionary: new TermDictionaryQuoted(new TermDictionaryNumberRecordFullTerms(), new DataFactory()),
+        dataFactory: new DataFactory(),
+      },
+    },
+  },
+  {
+    name: '3 Nested Record Quoted indexes with quoted dict (number)',
+    options: {
+      type: 'rdfstore',
+      options: {
+        indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+        indexConstructor: subOptions => new RdfStoreIndexNestedRecordQuoted(subOptions),
+        dictionary: new TermDictionaryQuoted(new TermDictionaryNumberRecordFullTerms(), new DataFactory()),
         dataFactory: new DataFactory(),
       },
     },

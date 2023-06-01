@@ -1,7 +1,7 @@
 import type * as RDF from '@rdfjs/types';
 import type { ITermDictionary } from '../dictionary/ITermDictionary';
 import type { IRdfStoreOptions } from '../IRdfStoreOptions';
-import { encodeOptionalTerms } from '../OrderUtils';
+import { arePatternsQuoted, encodeOptionalTerms, quadHasVariables } from '../OrderUtils';
 import type { EncodedQuadTerms, PatternTerm, QuadPatternTerms, QuadTerms } from '../PatternTerm';
 import type { IRdfStoreIndex } from './IRdfStoreIndex';
 
@@ -12,6 +12,9 @@ import type { IRdfStoreIndex } from './IRdfStoreIndex';
 export class RdfStoreIndexNestedMapRecursive<E, V> implements IRdfStoreIndex<E, V> {
   private readonly dictionary: ITermDictionary<E>;
   private readonly nestedMap: NestedMapActual<E, V>;
+  public readonly features = {
+    quotedTripleFiltering: true,
+  };
 
   public constructor(options: IRdfStoreOptions<E>) {
     this.dictionary = options.dictionary;
@@ -92,34 +95,71 @@ export class RdfStoreIndexNestedMapRecursive<E, V> implements IRdfStoreIndex<E, 
   }
 
   public * find(terms: QuadPatternTerms): IterableIterator<QuadTerms> {
-    return yield * <IterableIterator<QuadTerms>> this.findInner(0, terms, this.nestedMap, []);
+    const ids = encodeOptionalTerms(terms, this.dictionary);
+    if (!ids) {
+      return;
+    }
+
+    for (const termsEncoded of this.findEncoded(<EncodedQuadTerms<E | undefined>> ids, terms)) {
+      yield [
+        ids[0] !== undefined ? terms[0]! : this.dictionary.decode(termsEncoded[0]),
+        ids[1] !== undefined ? terms[1]! : this.dictionary.decode(termsEncoded[1]),
+        ids[2] !== undefined ? terms[2]! : this.dictionary.decode(termsEncoded[2]),
+        ids[3] !== undefined ? terms[3]! : this.dictionary.decode(termsEncoded[3]),
+      ];
+    }
   }
 
-  protected * findInner(
+  public * findEncoded(
+    ids: EncodedQuadTerms<E | undefined>,
+    terms: QuadPatternTerms,
+  ): IterableIterator<EncodedQuadTerms<E>> {
+    return yield * <IterableIterator<EncodedQuadTerms<E>>> this
+      .findEncodedInner(0, ids, terms, arePatternsQuoted(terms), this.nestedMap, []);
+  }
+
+  protected * findEncodedInner(
     index: number,
-    terms: PatternTerm[],
+    ids: (E | undefined)[],
+    terms: QuadPatternTerms,
+    isQuotedPattern: boolean[],
     map: NestedMapActual<E, V>,
-    partialQuad: RDF.Term[],
-  ): IterableIterator<RDF.Term[]> {
-    if (index === terms.length) {
+    partialQuad: E[],
+  ): IterableIterator<E[]> {
+    if (index === ids.length) {
       yield [ ...partialQuad ];
     } else {
+      const id = ids[index];
       const currentTerm = terms[index];
 
       // If current term is undefined, iterate over all terms at this level.
       if (!currentTerm) {
         for (const [ key, subMap ] of map.entries()) {
-          partialQuad[index] = this.dictionary.decode(key);
-          yield * this.findInner(index + 1, terms, <NestedMapActual<E, V>>subMap, partialQuad);
+          partialQuad[index] = key;
+          yield * this
+            .findEncodedInner(index + 1, ids, terms, isQuotedPattern, <NestedMapActual<E, V>>subMap, partialQuad);
+        }
+      } else if (isQuotedPattern[index]) {
+        const quotedTriplesEncoded: IterableIterator<E> = this
+          .dictionary.findQuotedTriplesEncoded(<RDF.Quad>currentTerm);
+        // Below, we perform a type of inner (hash) join between quotedTriplesEncoded and map (with hash on map)
+        for (const quotedTripleEncoded of quotedTriplesEncoded) {
+          const subMap = map.get(quotedTripleEncoded);
+          if (subMap) {
+            partialQuad[index] = quotedTripleEncoded;
+            yield * this
+              .findEncodedInner(index + 1, ids, terms, isQuotedPattern, <NestedMapActual<E, V>>subMap, partialQuad);
+          }
         }
       } else {
         // If the current term is defined, find one matching map for the current term.
-        const encodedTerm = this.dictionary.encodeOptional(currentTerm);
+        const encodedTerm = id;
         if (encodedTerm !== undefined) {
           const subMap = map.get(encodedTerm);
           if (subMap) {
-            partialQuad[index] = currentTerm;
-            yield * this.findInner(index + 1, terms, <NestedMapActual<E, V>>subMap, partialQuad);
+            partialQuad[index] = <E> id;
+            yield * this
+              .findEncodedInner(index + 1, ids, terms, isQuotedPattern, <NestedMapActual<E, V>>subMap, partialQuad);
           }
         }
       }
@@ -146,6 +186,21 @@ export class RdfStoreIndexNestedMapRecursive<E, V> implements IRdfStoreIndex<E, 
 
       for (const subMap of map.values()) {
         count += this.countInner(index + 1, terms, <NestedMapActual<E, V>>subMap);
+      }
+    } else if (currentTerm.termType === 'Quad' && quadHasVariables(currentTerm)) {
+      const quotedTriplesEncoded: IterableIterator<E> = this.dictionary.findQuotedTriplesEncoded(currentTerm);
+      // Below, we perform a type of inner (hash) join between quotedTriplesEncoded and map (with hash on map)
+      for (const quotedTripleEncoded of quotedTriplesEncoded) {
+        if (index === terms.length - 1) {
+          if (map.has(quotedTripleEncoded)) {
+            count++;
+          }
+        } else {
+          const subMap = map.get(quotedTripleEncoded);
+          if (subMap) {
+            count += this.countInner(index + 1, terms, <NestedMapActual<E, V>>subMap);
+          }
+        }
       }
     } else {
       // If the current term is defined, find one matching map for the current term.
