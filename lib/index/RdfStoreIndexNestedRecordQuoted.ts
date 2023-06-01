@@ -17,10 +17,12 @@ export class RdfStoreIndexNestedRecordQuoted<E extends number, V> extends RdfSto
     super(options);
   }
 
-  protected getQuotedPatternKeys(map: NestedRecordActual<E>, term: PatternTerm): E[] {
-    return <E[]> [ ...this.dictionary.findQuotedTriplesEncoded(<RDF.Quad>term) ]
-      .map(quotedTripleEncoded => quotedTripleEncoded in map ? quotedTripleEncoded : undefined)
-      .filter(id => id !== undefined);
+  protected * getQuotedPatternKeys(map: NestedRecordActual<E>, term: PatternTerm): IterableIterator<E> {
+    for (const quotedTripleEncoded of this.dictionary.findQuotedTriplesEncoded(<RDF.Quad>term)) {
+      if (quotedTripleEncoded in map) {
+        yield quotedTripleEncoded;
+      }
+    }
   }
 
   public * findEncoded(
@@ -100,7 +102,7 @@ export class RdfStoreIndexNestedRecordQuoted<E extends number, V> extends RdfSto
           map3 = map2[<E>key3];
           if (term3 !== undefined) {
             if (quotedTerm3) {
-              count += this.getQuotedPatternKeys(map3, term3).length;
+              count += [ ...this.getQuotedPatternKeys(map3, term3) ].length;
             } else if (id3! in map3) {
               count++;
             }
