@@ -1,3 +1,8 @@
+import type { ITermDictionary } from '../lib/dictionary/ITermDictionary';
+import { TermDictionaryNumberMap } from '../lib/dictionary/TermDictionaryNumberMap';
+import { TermDictionaryNumberRecord } from '../lib/dictionary/TermDictionaryNumberRecord';
+import { TermDictionaryNumberRecordFullTerms } from '../lib/dictionary/TermDictionaryNumberRecordFullTerms';
+import { TermDictionaryQuoted } from '../lib/dictionary/TermDictionaryQuoted';
 import type { IRdfStoreIndex } from '../lib/index/IRdfStoreIndex';
 import { RdfStoreIndexNestedMap } from '../lib/index/RdfStoreIndexNestedMap';
 import { RdfStoreIndexNestedMapQuoted } from '../lib/index/RdfStoreIndexNestedMapQuoted';
@@ -6,7 +11,7 @@ import { RdfStoreIndexNestedRecord } from '../lib/index/RdfStoreIndexNestedRecor
 import { RdfStoreIndexNestedRecordQuoted } from '../lib/index/RdfStoreIndexNestedRecordQuoted';
 import type { IRdfStoreOptions } from '../lib/IRdfStoreOptions';
 
-export const clazzToInstance: Record<string, (subOptions: IRdfStoreOptions<number>) =>
+export const indexClazzToInstance: Record<string, (subOptions: IRdfStoreOptions<number>) =>
 IRdfStoreIndex<number, boolean>> = {
   RdfStoreIndexNestedMap:
     (subOptions: IRdfStoreOptions<number>) => new RdfStoreIndexNestedMap<number, boolean>(subOptions),
@@ -18,4 +23,11 @@ IRdfStoreIndex<number, boolean>> = {
     (subOptions: IRdfStoreOptions<number>) => new RdfStoreIndexNestedRecord<number, boolean>(subOptions),
   RdfStoreIndexNestedRecordQuoted:
     (subOptions: IRdfStoreOptions<number>) => new RdfStoreIndexNestedRecordQuoted<number, boolean>(subOptions),
+};
+
+export const dictClazzToInstance: Record<string, () => ITermDictionary<number>> = {
+  TermDictionaryNumberMap: () => new TermDictionaryNumberMap(),
+  TermDictionaryNumberRecord: () => new TermDictionaryNumberRecord(),
+  TermDictionaryNumberRecordFullTerms: () => new TermDictionaryNumberRecordFullTerms(),
+  TermDictionaryQuoted: () => new TermDictionaryQuoted(new TermDictionaryNumberRecordFullTerms()),
 };

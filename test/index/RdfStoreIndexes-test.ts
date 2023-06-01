@@ -4,7 +4,7 @@ import type { ITermDictionary } from '../../lib/dictionary/ITermDictionary';
 import { TermDictionaryNumberMap } from '../../lib/dictionary/TermDictionaryNumberMap';
 import { TermDictionaryQuoted } from '../../lib/dictionary/TermDictionaryQuoted';
 import type { IRdfStoreIndex } from '../../lib/index/IRdfStoreIndex';
-import { clazzToInstance } from '../testUtil';
+import { indexClazzToInstance } from '../testUtil';
 
 const DF = new DataFactory();
 
@@ -22,7 +22,7 @@ describe('RdfStoreIndexes', () => {
     describe('in SPOG order', () => {
       beforeEach(() => {
         dictionary = new TermDictionaryQuoted(new TermDictionaryNumberMap());
-        index = clazzToInstance[clazz]({
+        index = indexClazzToInstance[clazz]({
           indexCombinations: [],
           indexConstructor: <any> undefined,
           dictionary,
@@ -1954,7 +1954,7 @@ describe('RdfStoreIndexes', () => {
     describe('in GOPS order', () => {
       beforeEach(() => {
         dictionary = new TermDictionaryQuoted(new TermDictionaryNumberMap());
-        index = clazzToInstance[clazz]({
+        index = indexClazzToInstance[clazz]({
           indexCombinations: [],
           indexConstructor: <any> undefined,
           dictionary,

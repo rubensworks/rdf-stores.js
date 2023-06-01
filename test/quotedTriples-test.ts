@@ -4,26 +4,20 @@ import { DataFactory } from 'rdf-data-factory';
 import { TermDictionaryNumberRecordFullTerms } from '../lib/dictionary/TermDictionaryNumberRecordFullTerms';
 import { TermDictionaryQuoted } from '../lib/dictionary/TermDictionaryQuoted';
 import { RdfStore } from '../lib/RdfStore';
-import { clazzToInstance } from './testUtil';
+import { indexClazzToInstance } from './testUtil';
 
 const DF = new DataFactory();
 
 describe('Quoted triples', () => {
   let store: RdfStore<number>;
 
-  each([
-    [ 'RdfStoreIndexNestedMap' ],
-    [ 'RdfStoreIndexNestedMapQuoted' ],
-    [ 'RdfStoreIndexNestedMapRecursive' ],
-    [ 'RdfStoreIndexNestedRecord' ],
-    [ 'RdfStoreIndexNestedRecordQuoted' ],
-  ]).describe('%s', clazz => {
+  each(Object.keys(indexClazzToInstance)).describe('%s', clazz => {
   // Describe('RdfStoreIndexNestedMapQuoted', () => {
   //   let clazz = 'RdfStoreIndexNestedMapQuoted';
     beforeEach(() => {
       store = new RdfStore<number>({
         indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
-        indexConstructor: subOptions => clazzToInstance[clazz](subOptions),
+        indexConstructor: subOptions => indexClazzToInstance[clazz](subOptions),
         dictionary: new TermDictionaryQuoted(new TermDictionaryNumberRecordFullTerms(), DF),
         dataFactory: DF,
       });
