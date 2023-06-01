@@ -4,7 +4,7 @@ import type { ITermDictionary } from '../../lib/dictionary/ITermDictionary';
 import { TermDictionaryNumberMap } from '../../lib/dictionary/TermDictionaryNumberMap';
 import { TermDictionaryQuoted } from '../../lib/dictionary/TermDictionaryQuoted';
 import type { IRdfStoreIndex } from '../../lib/index/IRdfStoreIndex';
-import { indexClazzToInstance } from '../testUtil';
+import { indexClazzToInstance, indexSupportsQuotedTriples } from '../testUtil';
 
 const DF = new DataFactory();
 
@@ -12,14 +12,7 @@ describe('RdfStoreIndexes', () => {
   let index: IRdfStoreIndex<number, boolean>;
   let dictionary: ITermDictionary<number>;
 
-  each([
-    [ 'RdfStoreIndexNestedMap', false ],
-    [ 'RdfStoreIndexNestedMapQuoted', true ],
-    [ 'RdfStoreIndexNestedMapRecursive', false ],
-    [ 'RdfStoreIndexNestedMapRecursiveQuoted', true ],
-    [ 'RdfStoreIndexNestedRecord', false ],
-    [ 'RdfStoreIndexNestedRecordQuoted', true ],
-  ]).describe('%s', (clazz, quotedTripleFiltering) => {
+  each(indexSupportsQuotedTriples).describe('%s', (clazz, quotedTripleFiltering) => {
     describe('in SPOG order', () => {
       beforeEach(() => {
         dictionary = new TermDictionaryQuoted(new TermDictionaryNumberMap());

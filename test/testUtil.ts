@@ -28,6 +28,15 @@ IRdfStoreIndex<number, boolean>> = {
     (subOptions: IRdfStoreOptions<number>) => new RdfStoreIndexNestedRecordQuoted<number, boolean>(subOptions),
 };
 
+export const indexSupportsQuotedTriples: [ string, boolean ][] = [
+  [ 'RdfStoreIndexNestedMap', false ],
+  [ 'RdfStoreIndexNestedMapQuoted', true ],
+  [ 'RdfStoreIndexNestedMapRecursive', false ],
+  [ 'RdfStoreIndexNestedMapRecursiveQuoted', true ],
+  [ 'RdfStoreIndexNestedRecord', false ],
+  [ 'RdfStoreIndexNestedRecordQuoted', true ],
+];
+
 export const dictClazzToInstance: Record<string, () => ITermDictionary<number>> = {
   TermDictionaryNumberMap: () => new TermDictionaryNumberMap(),
   TermDictionaryNumberRecord: () => new TermDictionaryNumberRecord(),
