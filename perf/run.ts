@@ -8,6 +8,7 @@ import { TermDictionarySymbol } from '../lib/dictionary/TermDictionarySymbol';
 import { RdfStoreIndexNestedMap } from '../lib/index/RdfStoreIndexNestedMap';
 import { RdfStoreIndexNestedMapQuoted } from '../lib/index/RdfStoreIndexNestedMapQuoted';
 import { RdfStoreIndexNestedMapRecursive } from '../lib/index/RdfStoreIndexNestedMapRecursive';
+import { RdfStoreIndexNestedMapRecursiveQuoted } from '../lib/index/RdfStoreIndexNestedMapRecursiveQuoted';
 import { RdfStoreIndexNestedRecord } from '../lib/index/RdfStoreIndexNestedRecord';
 import { RdfStoreIndexNestedRecordQuoted } from '../lib/index/RdfStoreIndexNestedRecordQuoted';
 import { RdfStore } from '../lib/RdfStore';
@@ -218,12 +219,12 @@ const test = new PerformanceTest([
     },
   },
   {
-    name: '3 Nested Map Recursive indexes with quoted dict (number)',
+    name: '3 Nested Map Recursive Quoted indexes with quoted dict (number)',
     options: {
       type: 'rdfstore',
       options: {
         indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
-        indexConstructor: subOptions => new RdfStoreIndexNestedMapRecursive(subOptions),
+        indexConstructor: subOptions => new RdfStoreIndexNestedMapRecursiveQuoted(subOptions),
         dictionary: new TermDictionaryQuoted(new TermDictionaryNumberRecordFullTerms(), new DataFactory()),
         dataFactory: new DataFactory(),
       },

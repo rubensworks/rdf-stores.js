@@ -7,6 +7,7 @@ import type { IRdfStoreIndex } from '../lib/index/IRdfStoreIndex';
 import { RdfStoreIndexNestedMap } from '../lib/index/RdfStoreIndexNestedMap';
 import { RdfStoreIndexNestedMapQuoted } from '../lib/index/RdfStoreIndexNestedMapQuoted';
 import { RdfStoreIndexNestedMapRecursive } from '../lib/index/RdfStoreIndexNestedMapRecursive';
+import { RdfStoreIndexNestedMapRecursiveQuoted } from '../lib/index/RdfStoreIndexNestedMapRecursiveQuoted';
 import { RdfStoreIndexNestedRecord } from '../lib/index/RdfStoreIndexNestedRecord';
 import { RdfStoreIndexNestedRecordQuoted } from '../lib/index/RdfStoreIndexNestedRecordQuoted';
 import type { IRdfStoreOptions } from '../lib/IRdfStoreOptions';
@@ -19,6 +20,8 @@ IRdfStoreIndex<number, boolean>> = {
     (subOptions: IRdfStoreOptions<number>) => new RdfStoreIndexNestedMapQuoted<number, boolean>(subOptions),
   RdfStoreIndexNestedMapRecursive:
     (subOptions: IRdfStoreOptions<number>) => new RdfStoreIndexNestedMapRecursive<number, boolean>(subOptions),
+  RdfStoreIndexNestedMapRecursiveQuoted:
+    (subOptions: IRdfStoreOptions<number>) => new RdfStoreIndexNestedMapRecursiveQuoted<number, boolean>(subOptions),
   RdfStoreIndexNestedRecord:
     (subOptions: IRdfStoreOptions<number>) => new RdfStoreIndexNestedRecord<number, boolean>(subOptions),
   RdfStoreIndexNestedRecordQuoted:

@@ -15,7 +15,8 @@ describe('RdfStoreIndexes', () => {
   each([
     [ 'RdfStoreIndexNestedMap', false ],
     [ 'RdfStoreIndexNestedMapQuoted', true ],
-    [ 'RdfStoreIndexNestedMapRecursive', true ],
+    [ 'RdfStoreIndexNestedMapRecursive', false ],
+    [ 'RdfStoreIndexNestedMapRecursiveQuoted', true ],
     [ 'RdfStoreIndexNestedRecord', false ],
     [ 'RdfStoreIndexNestedRecordQuoted', true ],
   ]).describe('%s', (clazz, quotedTripleFiltering) => {
