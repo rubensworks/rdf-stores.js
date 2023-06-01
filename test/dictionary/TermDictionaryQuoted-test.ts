@@ -13,6 +13,14 @@ describe('TermDictionaryQuoted', () => {
     dict = new TermDictionaryQuoted(new TermDictionaryNumberRecordFullTerms());
   });
 
+  describe('features', () => {
+    it('contains the expected entries', () => {
+      expect(dict.features).toEqual({
+        quotedTriples: true,
+      });
+    });
+  });
+
   describe('encode', () => {
     it('should encode named nodes', () => {
       expect(dict.encode(DF.namedNode('ex:s1'))).toEqual(0);
@@ -317,6 +325,124 @@ describe('TermDictionaryQuoted', () => {
           ),
         ),
       ));
+    });
+  });
+
+  describe('findQuotedTriples', () => {
+    beforeEach(() => {
+      dict.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')));
+      dict.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue')));
+      dict.encode(DF.quad(
+        DF.namedNode('Alice'),
+        DF.namedNode('says'),
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+      ));
+      dict.encode(DF.quad(
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Brown')),
+        DF.namedNode('isSaidBy'),
+        DF.namedNode('Alice'),
+      ));
+    });
+
+    it('handles a pattern without matches', () => {
+      expect([ ...dict.findQuotedTriples(
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Red')),
+      ) ]).toEqual([]);
+      expect([ ...dict.findQuotedTriples(
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveThing'), DF.variable('color')),
+      ) ]).toEqual([]);
+    });
+
+    it('handles a one-level pattern with matches', () => {
+      expect([ ...dict.findQuotedTriples(
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+      ) ]).toEqual([
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue')),
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Brown')),
+      ]);
+
+      expect([ ...dict.findQuotedTriples(
+        DF.quad(DF.namedNode('Violets'), DF.variable('predicate'), DF.variable('color')),
+      ) ]).toEqual([
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue')),
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Brown')),
+      ]);
+
+      expect([ ...dict.findQuotedTriples(
+        DF.quad(DF.variable('thing'), DF.namedNode('haveColor'), DF.variable('color')),
+      ) ]).toEqual([
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue')),
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Brown')),
+      ]);
+
+      expect([ ...dict.findQuotedTriples(
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color'), DF.variable('graph')),
+      ) ]).toEqual([
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue')),
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+        DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Brown')),
+      ]);
+    });
+
+    it('handles a two-level pattern with matches', () => {
+      expect([ ...dict.findQuotedTriples(
+        DF.quad(
+          DF.namedNode('Alice'),
+          DF.namedNode('says'),
+          DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+        ),
+      ) ]).toEqual([
+        DF.quad(
+          DF.namedNode('Alice'),
+          DF.namedNode('says'),
+          DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
+        ),
+      ]);
+
+      expect([ ...dict.findQuotedTriples(
+        DF.quad(
+          DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+          DF.namedNode('isSaidBy'),
+          DF.namedNode('Alice'),
+        ),
+      ) ]).toEqual([
+        DF.quad(
+          DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Brown')),
+          DF.namedNode('isSaidBy'),
+          DF.namedNode('Alice'),
+        ),
+      ]);
+
+      expect([ ...dict.findQuotedTriples(
+        DF.quad(
+          DF.namedNode('Alice'),
+          <any> DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+          DF.namedNode('Dummy'),
+        ),
+      ) ]).toEqual([]);
+      expect([ ...dict.findQuotedTriples(
+        DF.quad(
+          DF.namedNode('Alice'),
+          DF.namedNode('says'),
+          DF.namedNode('Dummy'),
+          <any> DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
+        ),
+      ) ]).toEqual([]);
+      expect([ ...dict.findQuotedTriples(
+        DF.quad(
+          DF.namedNode('Alice'),
+          DF.namedNode('says'),
+          DF.namedNode('Dummy'),
+          DF.variable('graphs'),
+        ),
+      ) ]).toEqual([]);
     });
   });
 });

@@ -8,6 +8,7 @@ import type { ITermDictionary } from './ITermDictionary';
  */
 export class TermDictionarySymbol implements ITermDictionary<symbol> {
   private readonly dataFactory: RDF.DataFactory;
+  public readonly features = { quotedTriples: false };
 
   public constructor(dataFactory: RDF.DataFactory = new DataFactory()) {
     this.dataFactory = dataFactory;
@@ -27,5 +28,13 @@ export class TermDictionarySymbol implements ITermDictionary<symbol> {
       throw new Error(`The value ${String(encoding)} is not present in this dictionary`);
     }
     return stringToTerm(string.slice(5), this.dataFactory);
+  }
+
+  public findQuotedTriples(quotedTriplePattern: RDF.Quad): IterableIterator<RDF.Term> {
+    throw new Error('findQuotedTriples is not supported');
+  }
+
+  public findQuotedTriplesEncoded(quotedTriplePattern: RDF.Quad): IterableIterator<symbol> {
+    throw new Error('findQuotedTriplesEncoded is not supported');
   }
 }

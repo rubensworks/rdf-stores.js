@@ -11,6 +11,7 @@ export class TermDictionaryNumberMap implements ITermDictionary<number> {
   private readonly dictionary: Map<string, number> = new Map();
   private readonly reverseDictionary: Map<number, string> = new Map();
   private readonly dataFactory: RDF.DataFactory;
+  public readonly features = { quotedTriples: false };
 
   public constructor(dataFactory: RDF.DataFactory = new DataFactory()) {
     this.dataFactory = dataFactory;
@@ -38,5 +39,13 @@ export class TermDictionaryNumberMap implements ITermDictionary<number> {
       throw new Error(`The value ${encoding} is not present in this dictionary`);
     }
     return stringToTerm(string, this.dataFactory);
+  }
+
+  public findQuotedTriples(quotedTriplePattern: RDF.Quad): IterableIterator<RDF.Term> {
+    throw new Error('findQuotedTriples is not supported');
+  }
+
+  public findQuotedTriplesEncoded(quotedTriplePattern: RDF.Quad): IterableIterator<number> {
+    throw new Error('findQuotedTriplesEncoded is not supported');
   }
 }

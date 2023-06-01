@@ -12,6 +12,14 @@ describe('TermDictionaryNumberRecordFullTerms', () => {
     dict = new TermDictionaryNumberRecordFullTerms();
   });
 
+  describe('features', () => {
+    it('contains the expected entries', () => {
+      expect(dict.features).toEqual({
+        quotedTriples: false,
+      });
+    });
+  });
+
   describe('encode', () => {
     it('should encode named nodes', () => {
       expect(dict.encode(DF.namedNode('ex:s1'))).toEqual(0);
@@ -135,6 +143,20 @@ describe('TermDictionaryNumberRecordFullTerms', () => {
       expect(dict.decode(0)).toEqualRdfTerm(DF.namedNode('s'));
       expect(dict.decode(1)).toEqualRdfTerm(DF.blankNode('s'));
       expect(dict.decode(2)).toEqualRdfTerm(DF.literal('s'));
+    });
+  });
+
+  describe('findQuotedTriples', () => {
+    it('throws an error', () => {
+      expect(() => dict.findQuotedTriples(DF.quad(DF.namedNode(''), DF.namedNode(''), DF.namedNode(''))))
+        .toThrow('findQuotedTriples is not supported');
+    });
+  });
+
+  describe('findQuotedTriplesEncoded', () => {
+    it('throws an error', () => {
+      expect(() => dict.findQuotedTriplesEncoded(DF.quad(DF.namedNode(''), DF.namedNode(''), DF.namedNode(''))))
+        .toThrow('findQuotedTriplesEncoded is not supported');
     });
   });
 });

@@ -12,6 +12,14 @@ describe('TermDictionarySymbol', () => {
     dict = new TermDictionarySymbol();
   });
 
+  describe('features', () => {
+    it('contains the expected entries', () => {
+      expect(dict.features).toEqual({
+        quotedTriples: false,
+      });
+    });
+  });
+
   describe('encode', () => {
     it('should encode named nodes', () => {
       const s1 = dict.encode(DF.namedNode('ex:s1'));
@@ -70,6 +78,20 @@ describe('TermDictionarySymbol', () => {
       expect(dict.decode(s1)).toEqualRdfTerm(DF.namedNode('ex:s1'));
       expect(dict.decode(s2)).toEqualRdfTerm(DF.blankNode('ex:s1'));
       expect(dict.decode(s3)).toEqualRdfTerm(DF.literal('ex:s1'));
+    });
+  });
+
+  describe('findQuotedTriples', () => {
+    it('throws an error', () => {
+      expect(() => dict.findQuotedTriples(DF.quad(DF.namedNode(''), DF.namedNode(''), DF.namedNode(''))))
+        .toThrow('findQuotedTriples is not supported');
+    });
+  });
+
+  describe('findQuotedTriplesEncoded', () => {
+    it('throws an error', () => {
+      expect(() => dict.findQuotedTriplesEncoded(DF.quad(DF.namedNode(''), DF.namedNode(''), DF.namedNode(''))))
+        .toThrow('findQuotedTriplesEncoded is not supported');
     });
   });
 });

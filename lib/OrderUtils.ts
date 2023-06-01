@@ -1,3 +1,4 @@
+import type * as RDF from '@rdfjs/types';
 import type { QuadTermName } from 'rdf-terms';
 import { QUAD_TERM_NAMES } from 'rdf-terms';
 import type { ITermDictionary } from './dictionary/ITermDictionary';
@@ -79,6 +80,9 @@ export function encodeOptionalTerms<E>(
 ): (E | undefined)[] | undefined {
   const encodedTerms = terms.map(term => {
     if (term) {
+      if (term.termType === 'Quad' && quadHasVariables(term)) {
+        return;
+      }
       const encodedTerm = dictionary.encodeOptional(term);
       if (encodedTerm === undefined) {
         return 'none';
@@ -93,4 +97,66 @@ export function encodeOptionalTerms<E>(
   }
 
   return <(E | undefined)[]> encodedTerms;
+}
+
+/**
+ * Convert a quad patter to a `QuadPatternTerms` type.
+ * @param subject The subject.
+ * @param predicate The predicate.
+ * @param object The object.
+ * @param graph The graph.
+ * @param quotedPatterns If the index supports quoted triple filtering.
+ * @return Tuple A tuple of QuadPatternTerms
+ *               and a boolean indicating if post-filtering will be needed on quoted triples.
+ *               This boolean can only be true if `quotedPatterns` is false, and a quoted triple pattern was present.
+ */
+export function quadToPattern(
+  subject: RDF.Term | null | undefined,
+  predicate: RDF.Term | null | undefined,
+  object: RDF.Term | null | undefined,
+  graph: RDF.Term | null | undefined,
+  quotedPatterns: boolean,
+): [ QuadPatternTerms, boolean ] {
+  let requireQuotedTripleFiltering = false;
+  const quadPatternTerms = <QuadPatternTerms>
+    [ subject || undefined, predicate || undefined, object || undefined, graph || undefined ]
+      .map(term => {
+        if (term) {
+          if (term.termType === 'Variable') {
+            return;
+          }
+          if (term.termType === 'Quad') {
+            if (quotedPatterns) {
+              return term;
+            }
+            requireQuotedTripleFiltering = true;
+            return;
+          }
+        }
+        return term;
+      });
+
+  return [ quadPatternTerms, requireQuotedTripleFiltering ];
+}
+
+/**
+ * Check if the given quad contains variables, even in deeply nested quoted triples.
+ * @param currentTerm The quad pattern term.
+ */
+export function quadHasVariables(currentTerm: RDF.Quad): boolean {
+  for (const component of QUAD_TERM_NAMES) {
+    const subTerm = currentTerm[component];
+    if (subTerm.termType === 'Variable' || (subTerm.termType === 'Quad' && quadHasVariables(subTerm))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Create a boolean array indicating which terms are quoted triple patterns.
+ * @param terms An array of terms.
+ */
+export function arePatternsQuoted(terms: QuadPatternTerms): boolean[] {
+  return terms.map(term => term?.termType === 'Quad' && quadHasVariables(term));
 }

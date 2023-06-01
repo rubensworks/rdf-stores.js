@@ -1,8 +1,8 @@
 import type * as RDF from '@rdfjs/types';
 import { DataFactory } from 'rdf-data-factory';
 import { RdfStoreIndexNestedRecord } from '../index/RdfStoreIndexNestedRecord';
-import { encodeOptionalTerms } from '../OrderUtils';
-import type { EncodedQuadTerms, QuadPatternTerms } from '../PatternTerm';
+import { encodeOptionalTerms, quadToPattern } from '../OrderUtils';
+import type { EncodedQuadTerms, QuadPatternTerms, PatternTerm } from '../PatternTerm';
 import type { ITermDictionary } from './ITermDictionary';
 
 /**
@@ -18,6 +18,7 @@ export class TermDictionaryQuoted implements ITermDictionary<number> {
   private readonly quotedTriplesDictionary: number[][] = [];
   private readonly quotedTriplesReverseDictionary: RdfStoreIndexNestedRecord<number, number>;
   private readonly dataFactory: RDF.DataFactory;
+  public readonly features = { quotedTriples: true };
 
   public constructor(
     rawTermDictionary: ITermDictionary<number>,
@@ -28,7 +29,7 @@ export class TermDictionaryQuoted implements ITermDictionary<number> {
       indexCombinations: [[ 'subject', 'predicate', 'object' ]],
       // Not required
       indexConstructor: <any> undefined,
-      dictionary: this.plainTermDictionary,
+      dictionary: this,
       dataFactory,
     });
     this.dataFactory = dataFactory;
@@ -107,5 +108,63 @@ export class TermDictionaryQuoted implements ITermDictionary<number> {
 
     // Term comes from the plain terms dictionary
     return this.plainTermDictionary.decode(encoding);
+  }
+
+  public * findQuotedTriples(quotedTriplePattern: RDF.Quad): IterableIterator<RDF.Term> {
+    for (const termEncoded of this.findQuotedTriplesEncoded(quotedTriplePattern)) {
+      yield this.decode(termEncoded);
+    }
+  }
+
+  public * findQuotedTriplesEncoded(quotedTriplePattern: RDF.Quad): IterableIterator<number> {
+    const [ patternIn, requireQuotedTripleFiltering ] = quadToPattern(
+      quotedTriplePattern.subject,
+      quotedTriplePattern.predicate,
+      quotedTriplePattern.object,
+      quotedTriplePattern.graph,
+      true,
+    );
+
+    // Find all matching terms iteratively
+    for (const termS of this.patternToIterable(patternIn[0])) {
+      for (const termP of this.patternToIterable(patternIn[1])) {
+        for (const termO of this.patternToIterable(patternIn[2])) {
+          for (const termG of this.patternToIterable(patternIn[3])) {
+            // Find all terms matching the pattern from the reverse index
+            const pattern: EncodedQuadTerms<number | undefined> = [ termS, termP, termO, termG ];
+            for (const termEncoded of this.quotedTriplesReverseDictionary.findEncoded(pattern, patternIn)) {
+              yield TermDictionaryQuoted.BITMASK | this.quotedTriplesReverseDictionary.getEncoded(termEncoded)!;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Helper function to convert a term to an iterator over encoded terms.
+   * @param patternTerm A term.
+   * @protected
+   */
+  protected * patternToIterable(patternTerm: PatternTerm): IterableIterator<number | undefined> {
+    // If the term is another quoted quad, recursively find other quoted triples
+    if (patternTerm?.termType === 'Quad') {
+      yield * this.findQuotedTriplesEncoded(patternTerm);
+      return;
+    }
+
+    // Undefined terms indicate a variable
+    if (patternTerm === undefined) {
+      // eslint-disable-next-line unicorn/no-useless-undefined
+      yield undefined;
+      return;
+    }
+
+    // Defined terms indicate a precise match
+    const enc = this.encodeOptional(patternTerm);
+    if (enc === undefined) {
+      return;
+    }
+    yield enc;
   }
 }

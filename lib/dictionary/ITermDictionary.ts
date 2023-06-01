@@ -6,6 +6,15 @@ import type * as RDF from '@rdfjs/types';
  */
 export interface ITermDictionary<E> {
   /**
+   * A record indicating supported features of this index.
+   */
+  features: {
+    /**
+     * If true, this dictionary implements the `findQuotedTriples` method.
+     */
+    quotedTriples?: boolean;
+  };
+  /**
    * Encode the given RDF term.
    * Multiple invocations of this method with the same term MUST return the same value.
    * @param term An RDF term.
@@ -23,4 +32,14 @@ export interface ITermDictionary<E> {
    * @param encoding An encoded RDF term.
    */
   decode: (encoding: E) => RDF.Term;
+  /**
+   * Find all quoted triples in this dictionary that match with the given triple pattern.
+   * @param quotedTriplePattern A triple pattern to match with quoted triples.
+   */
+  findQuotedTriples: (quotedTriplePattern: RDF.Quad) => IterableIterator<RDF.Term>;
+  /**
+   * Find all encoded quoted triples in this dictionary that match with the given triple pattern.
+   * @param quotedTriplePattern A triple pattern to match with quoted triples.
+   */
+  findQuotedTriplesEncoded: (quotedTriplePattern: RDF.Quad) => IterableIterator<E>;
 }

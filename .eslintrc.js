@@ -13,5 +13,6 @@ module.exports = {
         '@typescript-eslint/no-extra-parens': 'off',
         'unicorn/no-for-loop': 'off',
         'no-bitwise': 'off',
+        'unicorn/no-nested-ternary': 'off',
     }
 };
