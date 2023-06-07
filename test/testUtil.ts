@@ -4,6 +4,7 @@ import { TermDictionaryNumberRecord } from '../lib/dictionary/TermDictionaryNumb
 import { TermDictionaryNumberRecordFullTerms } from '../lib/dictionary/TermDictionaryNumberRecordFullTerms';
 import { TermDictionaryQuoted } from '../lib/dictionary/TermDictionaryQuoted';
 import { TermDictionaryQuotedIndexed } from '../lib/dictionary/TermDictionaryQuotedIndexed';
+import { TermDictionaryQuotedReferential } from '../lib/dictionary/TermDictionaryQuotedReferential';
 import type { IRdfStoreIndex } from '../lib/index/IRdfStoreIndex';
 import { RdfStoreIndexNestedMap } from '../lib/index/RdfStoreIndexNestedMap';
 import { RdfStoreIndexNestedMapQuoted } from '../lib/index/RdfStoreIndexNestedMapQuoted';
@@ -46,5 +47,6 @@ export const dictClazzToInstance: Record<string, () => ITermDictionary<number>> 
     new TermDictionaryNumberRecordFullTerms(),
     new TermDictionaryNumberRecordFullTerms(),
   ),
+  TermDictionaryQuotedReferential: () => new TermDictionaryQuotedReferential(new TermDictionaryNumberRecordFullTerms()),
   TermDictionaryQuotedIndexed: () => new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms()),
 };
