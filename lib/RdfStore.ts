@@ -10,7 +10,7 @@ import type { ITermDictionary } from './dictionary/ITermDictionary';
 import { TermDictionaryNumberRecordFullTerms } from './dictionary/TermDictionaryNumberRecordFullTerms';
 import { TermDictionaryQuotedIndexed } from './dictionary/TermDictionaryQuotedIndexed';
 import type { IRdfStoreIndex } from './index/IRdfStoreIndex';
-import { RdfStoreIndexNestedRecord } from './index/RdfStoreIndexNestedRecord';
+import { RdfStoreIndexNestedMapQuoted } from './index/RdfStoreIndexNestedMapQuoted';
 import type { IRdfStoreOptions } from './IRdfStoreOptions';
 import { getBestIndex, orderQuadComponents, quadToPattern } from './OrderUtils';
 import type { EncodedQuadTerms, QuadPatternTerms } from './PatternTerm';
@@ -49,7 +49,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
   public static createDefault(): RdfStore<number> {
     return new RdfStore<number>({
       indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
-      indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
+      indexConstructor: subOptions => new RdfStoreIndexNestedMapQuoted(subOptions),
       dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms()),
       dataFactory: new DataFactory(),
     });

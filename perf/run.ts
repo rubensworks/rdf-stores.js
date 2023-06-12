@@ -187,6 +187,74 @@ const test = new PerformanceTest([
           },
         },
       },
+
+      // Quoted triples approaches
+      {
+        name: '3 Nested Map Recursive Quoted indexes with indexed quoted dict (number)',
+        options: {
+          type: 'rdfstore',
+          options: {
+            indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+            indexConstructor: subOptions => new RdfStoreIndexNestedMapRecursiveQuoted(subOptions),
+            dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms(), new DataFactory()),
+            dataFactory: new DataFactory(),
+          },
+        },
+      },
+      {
+        name: '3 Nested Map Quoted indexes with separated quoted dict (number)',
+        options: {
+          type: 'rdfstore',
+          options: {
+            indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+            indexConstructor: subOptions => new RdfStoreIndexNestedMapQuoted(subOptions),
+            dictionary: new TermDictionaryQuoted(
+              new TermDictionaryNumberRecordFullTerms(),
+              new TermDictionaryNumberRecordFullTerms(),
+            ),
+            dataFactory: new DataFactory(),
+          },
+        },
+      },
+      {
+        name: '3 Nested Record Quoted indexes with separated quoted dict (number)',
+        options: {
+          type: 'rdfstore',
+          options: {
+            indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+            indexConstructor: subOptions => new RdfStoreIndexNestedRecordQuoted(subOptions),
+            dictionary: new TermDictionaryQuoted(
+              new TermDictionaryNumberRecordFullTerms(),
+              new TermDictionaryNumberRecordFullTerms(),
+            ),
+            dataFactory: new DataFactory(),
+          },
+        },
+      },
+      {
+        name: '3 Nested Map Quoted indexes with separated referential quoted dict (number)',
+        options: {
+          type: 'rdfstore',
+          options: {
+            indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+            indexConstructor: subOptions => new RdfStoreIndexNestedMapQuoted(subOptions),
+            dictionary: new TermDictionaryQuotedReferential(new TermDictionaryNumberRecordFullTerms()),
+            dataFactory: new DataFactory(),
+          },
+        },
+      },
+      {
+        name: '3 Nested Record Quoted indexes with separated referential quoted dict (number)',
+        options: {
+          type: 'rdfstore',
+          options: {
+            indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+            indexConstructor: subOptions => new RdfStoreIndexNestedRecordQuoted(subOptions),
+            dictionary: new TermDictionaryQuotedReferential(new TermDictionaryNumberRecordFullTerms()),
+            dataFactory: new DataFactory(),
+          },
+        },
+      },
     ] :
     [],
 
@@ -197,7 +265,7 @@ const test = new PerformanceTest([
     },
   },
   {
-    name: '3 Record indexes (number) OPT',
+    name: '3 Record indexes (number) OPT-INGEST',
     options: {
       type: 'rdfstore',
       options: {
@@ -209,7 +277,7 @@ const test = new PerformanceTest([
     },
   },
   {
-    name: '1 Record indexes (number) OPT',
+    name: '1 Record indexes (number) OPT-INGEST',
     options: {
       type: 'rdfstore',
       options: {
@@ -221,90 +289,48 @@ const test = new PerformanceTest([
     },
   },
   {
-    name: '3 Nested Map Recursive Quoted indexes with indexed quoted dict (number)',
+    name: '3 Map indexes (number) OPT-QUERY',
     options: {
       type: 'rdfstore',
       options: {
         indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
-        indexConstructor: subOptions => new RdfStoreIndexNestedMapRecursiveQuoted(subOptions),
+        indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
+        dictionary: new TermDictionaryNumberRecordFullTerms(),
+        dataFactory: new DataFactory(),
+      },
+    },
+  },
+  {
+    name: '1 Map indexes (number) OPT-QUERY',
+    options: {
+      type: 'rdfstore',
+      options: {
+        indexCombinations: [[ 'graph', 'subject', 'predicate', 'object' ]],
+        indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
+        dictionary: new TermDictionaryNumberRecordFullTerms(),
+        dataFactory: new DataFactory(),
+      },
+    },
+  },
+  {
+    name: '3 Nested Record Quoted indexes with indexed quoted dict (number) OPT-INGEST',
+    options: {
+      type: 'rdfstore',
+      options: {
+        indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+        indexConstructor: subOptions => new RdfStoreIndexNestedRecordQuoted(subOptions),
         dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms(), new DataFactory()),
         dataFactory: new DataFactory(),
       },
     },
   },
   {
-    name: '3 Nested Map Quoted indexes with separated quoted dict (number)',
+    name: '3 Nested Map Quoted indexes with indexed quoted dict (number) OPT-QUERY',
     options: {
       type: 'rdfstore',
       options: {
         indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
         indexConstructor: subOptions => new RdfStoreIndexNestedMapQuoted(subOptions),
-        dictionary: new TermDictionaryQuoted(
-          new TermDictionaryNumberRecordFullTerms(),
-          new TermDictionaryNumberRecordFullTerms(),
-        ),
-        dataFactory: new DataFactory(),
-      },
-    },
-  },
-  {
-    name: '3 Nested Record Quoted indexes with separated quoted dict (number)',
-    options: {
-      type: 'rdfstore',
-      options: {
-        indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
-        indexConstructor: subOptions => new RdfStoreIndexNestedRecordQuoted(subOptions),
-        dictionary: new TermDictionaryQuoted(
-          new TermDictionaryNumberRecordFullTerms(),
-          new TermDictionaryNumberRecordFullTerms(),
-        ),
-        dataFactory: new DataFactory(),
-      },
-    },
-  },
-  {
-    name: '3 Nested Map Quoted indexes with separated referential quoted dict (number)',
-    options: {
-      type: 'rdfstore',
-      options: {
-        indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
-        indexConstructor: subOptions => new RdfStoreIndexNestedMapQuoted(subOptions),
-        dictionary: new TermDictionaryQuotedReferential(new TermDictionaryNumberRecordFullTerms()),
-        dataFactory: new DataFactory(),
-      },
-    },
-  },
-  {
-    name: '3 Nested Record Quoted indexes with separated referential quoted dict (number)',
-    options: {
-      type: 'rdfstore',
-      options: {
-        indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
-        indexConstructor: subOptions => new RdfStoreIndexNestedRecordQuoted(subOptions),
-        dictionary: new TermDictionaryQuotedReferential(new TermDictionaryNumberRecordFullTerms()),
-        dataFactory: new DataFactory(),
-      },
-    },
-  },
-  {
-    name: '3 Nested Map Quoted indexes with indexed quoted dict (number)',
-    options: {
-      type: 'rdfstore',
-      options: {
-        indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
-        indexConstructor: subOptions => new RdfStoreIndexNestedMapQuoted(subOptions),
-        dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms(), new DataFactory()),
-        dataFactory: new DataFactory(),
-      },
-    },
-  },
-  {
-    name: '3 Nested Record Quoted indexes with indexed quoted dict (number)',
-    options: {
-      type: 'rdfstore',
-      options: {
-        indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
-        indexConstructor: subOptions => new RdfStoreIndexNestedRecordQuoted(subOptions),
         dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms(), new DataFactory()),
         dataFactory: new DataFactory(),
       },
