@@ -3,6 +3,7 @@ import type { IRdfStoreOptions } from '../IRdfStoreOptions';
 import { encodeOptionalTerms } from '../OrderUtils';
 import type { EncodedQuadTerms, PatternTerm, QuadPatternTerms, QuadTerms } from '../PatternTerm';
 import type { IRdfStoreIndex } from './IRdfStoreIndex';
+import type { NestedMapActual } from './RdfStoreIndexNestedMap';
 
 /**
  * An RDF store index that is implemented using nested Maps,
@@ -194,6 +195,3 @@ export class RdfStoreIndexNestedMapRecursive<E, V> implements IRdfStoreIndex<E, 
     return count;
   }
 }
-
-export type NestedMap<E, V> = NestedMapActual<E, V> | V;
-export type NestedMapActual<E, V> = Map<E, NestedMap<E, V>>;

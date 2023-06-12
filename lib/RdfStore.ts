@@ -8,6 +8,7 @@ import { matchPattern, QUAD_TERM_NAMES } from 'rdf-terms';
 import { DatasetCoreWrapper } from './dataset/DatasetCoreWrapper';
 import type { ITermDictionary } from './dictionary/ITermDictionary';
 import { TermDictionaryNumberRecordFullTerms } from './dictionary/TermDictionaryNumberRecordFullTerms';
+import { TermDictionaryQuotedIndexed } from './dictionary/TermDictionaryQuotedIndexed';
 import type { IRdfStoreIndex } from './index/IRdfStoreIndex';
 import { RdfStoreIndexNestedRecord } from './index/RdfStoreIndexNestedRecord';
 import type { IRdfStoreOptions } from './IRdfStoreOptions';
@@ -49,7 +50,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     return new RdfStore<number>({
       indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
       indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
-      dictionary: new TermDictionaryNumberRecordFullTerms(),
+      dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms()),
       dataFactory: new DataFactory(),
     });
   }

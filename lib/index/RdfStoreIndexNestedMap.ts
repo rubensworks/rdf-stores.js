@@ -139,12 +139,7 @@ export class RdfStoreIndexNestedMap<E, V> implements IRdfStoreIndex<E, V> {
           map3 = <any>map2.get(key3);
           const map3Keys = id3 !== undefined ? (map3.has(id3) ? [ id3 ] : []) : map3.keys();
           for (const key4 of map3Keys) {
-            yield [
-              <E>Number.parseInt(<string>key1, 10),
-              <E>Number.parseInt(<string>key2, 10),
-              <E>Number.parseInt(<string>key3, 10),
-              <E>Number.parseInt(<string>key4, 10),
-            ];
+            yield [ <E> key1, <E> key2, <E> key3, <E> key4 ];
           }
         }
       }

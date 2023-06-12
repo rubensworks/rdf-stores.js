@@ -2,7 +2,7 @@ import type * as RDF from '@rdfjs/types';
 import type { IRdfStoreOptions } from '../IRdfStoreOptions';
 import { arePatternsQuoted, quadHasVariables } from '../OrderUtils';
 import type { EncodedQuadTerms, PatternTerm, QuadPatternTerms } from '../PatternTerm';
-import type { NestedMapActual } from './RdfStoreIndexNestedMapRecursive';
+import type { NestedMapActual } from './RdfStoreIndexNestedMap';
 import { RdfStoreIndexNestedMapRecursive } from './RdfStoreIndexNestedMapRecursive';
 
 /**
