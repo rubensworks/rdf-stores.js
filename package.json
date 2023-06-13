@@ -1,25 +1,30 @@
 {
-  "name": "rdf-store",
+  "name": "rdf-stores",
   "version": "1.0.0-beta.0",
   "description": "A TypeScript/JavaScript implementation of the RDF/JS store interface with support for quoted triples.",
   "keywords": [
     "rdf",
     "rdfjs",
     "store",
+    "stores",
+    "index",
+    "indexes",
     "nested",
     "quoted",
     "asserted",
     "triples",
-    "quads"
+    "quads",
+    "triple",
+    "quad"
   ],
   "main": "index.js",
   "typings": "index",
-  "repository": "git@github.com:rubensworks/rdf-store.js.git",
+  "repository": "git@github.com:rubensworks/rdf-stores.js.git",
   "author": "Ruben Taelman <rubensworks@gmail.com>",
   "bugs": {
-    "url": "https://github.com/rubensworks/rdf-store.js/issues"
+    "url": "https://github.com/rubensworks/rdf-stores.js/issues"
   },
-  "homepage": "https://github.com/rubensworks/rdf-store.js#readme",
+  "homepage": "https://github.com/rubensworks/rdf-stores.js#readme",
   "license": "MIT",
   "files": [
     "lib/**/*.d.ts",

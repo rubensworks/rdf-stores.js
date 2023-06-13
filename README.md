@@ -1,8 +1,8 @@
-# RDF Store
+# RDF Stores
 
-[![Build status](https://github.com/rubensworks/rdf-store.js/workflows/CI/badge.svg)](https://github.com/rubensworks/rdf-store.js/actions?query=workflow%3ACI)
-[![Coverage Status](https://coveralls.io/repos/github/rubensworks/rdf-store.js/badge.svg?branch=master)](https://coveralls.io/github/rubensworks/rdf-store.js?branch=master)
-[![npm version](https://badge.fury.io/js/rdf-store.svg)](https://www.npmjs.com/package/rdf-store)
+[![Build status](https://github.com/rubensworks/rdf-stores.js/workflows/CI/badge.svg)](https://github.com/rubensworks/rdf-stores.js/actions?query=workflow%3ACI)
+[![Coverage Status](https://coveralls.io/repos/github/rubensworks/rdf-stores.js/badge.svg?branch=master)](https://coveralls.io/github/rubensworks/rdf-stores.js?branch=master)
+[![npm version](https://badge.fury.io/js/rdf-stores.svg)](https://www.npmjs.com/package/rdf-stores)
 
 This package provides an in-memory triple/quad store with triple/quad pattern access.
 It allows you to configure indexes to tune performance for specific cases.
@@ -12,7 +12,7 @@ Main features:
 * 🧠 In-memory indexing
 * ⚙️ Full configurability of indexes and dictionaries
 * 🔮 Quoted triples support (RDF-star / RDF 1.2)
-* 🚀 Highly performant: [Fastest](#performance) in terms on ingestion and query speed
+* 🚀 Highly performant: [Fastest](#performance) JavaScript store in terms on ingestion and query speed
 * ✅ Extensively tested (39.331 unit tests)
 * 👥 Implements the [RDF/JS Store](https://rdf.js.org/stream-spec/#store-interface) and [RDF/JS DatasetCore](https://rdf.js.org/dataset-spec/#datasetcore-interface) interfaces
 
@@ -21,11 +21,11 @@ If using TypeScript, it is recommended to use this in conjunction with [`@rdfjs/
 ## Installation
 
 ```bash
-$ npm install rdf-store
+$ npm install rdf-stores
 ```
 or
 ```bash
-$ yarn add rdf-store
+$ yarn add rdf-stores
 ```
 
 This package also works out-of-the-box in browsers via tools such as [webpack](https://webpack.js.org/) and [browserify](http://browserify.org/).
@@ -36,7 +36,7 @@ The example below shows how to create a new store with default settings,
 adding two quads, and querying it.
 
 ```typescript
-import { RdfStore } from 'rdf-store';
+import { RdfStore } from 'rdf-stores';
 import { DataFactory } from 'rdf-data-factory';
 
 // Create a new store with default settings
