@@ -265,36 +265,24 @@ const test = new PerformanceTest([
     },
   },
   {
-    name: '3 Record indexes (number) OPT-INGEST',
-    options: {
-      type: 'rdfstore',
-      options: {
-        indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
-        indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
-        dictionary: new TermDictionaryNumberRecordFullTerms(),
-        dataFactory: new DataFactory(),
-      },
-    },
-  },
-  {
-    name: '1 Record indexes (number) OPT-INGEST',
-    options: {
-      type: 'rdfstore',
-      options: {
-        indexCombinations: [[ 'graph', 'subject', 'predicate', 'object' ]],
-        indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
-        dictionary: new TermDictionaryNumberRecordFullTerms(),
-        dataFactory: new DataFactory(),
-      },
-    },
-  },
-  {
     name: '3 Map indexes (number) OPT-QUERY',
     options: {
       type: 'rdfstore',
       options: {
         indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
         indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
+        dictionary: new TermDictionaryNumberRecordFullTerms(),
+        dataFactory: new DataFactory(),
+      },
+    },
+  },
+  {
+    name: '3 Record indexes (number) OPT-INGEST',
+    options: {
+      type: 'rdfstore',
+      options: {
+        indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+        indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
         dictionary: new TermDictionaryNumberRecordFullTerms(),
         dataFactory: new DataFactory(),
       },
@@ -313,13 +301,13 @@ const test = new PerformanceTest([
     },
   },
   {
-    name: '3 Nested Record Quoted indexes with indexed quoted dict (number) OPT-INGEST',
+    name: '1 Record indexes (number) OPT-INGEST',
     options: {
       type: 'rdfstore',
       options: {
-        indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
-        indexConstructor: subOptions => new RdfStoreIndexNestedRecordQuoted(subOptions),
-        dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms(), new DataFactory()),
+        indexCombinations: [[ 'graph', 'subject', 'predicate', 'object' ]],
+        indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
+        dictionary: new TermDictionaryNumberRecordFullTerms(),
         dataFactory: new DataFactory(),
       },
     },
@@ -331,6 +319,18 @@ const test = new PerformanceTest([
       options: {
         indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
         indexConstructor: subOptions => new RdfStoreIndexNestedMapQuoted(subOptions),
+        dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms(), new DataFactory()),
+        dataFactory: new DataFactory(),
+      },
+    },
+  },
+  {
+    name: '3 Nested Record Quoted indexes with indexed quoted dict (number) OPT-INGEST',
+    options: {
+      type: 'rdfstore',
+      options: {
+        indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+        indexConstructor: subOptions => new RdfStoreIndexNestedRecordQuoted(subOptions),
         dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms(), new DataFactory()),
         dataFactory: new DataFactory(),
       },
