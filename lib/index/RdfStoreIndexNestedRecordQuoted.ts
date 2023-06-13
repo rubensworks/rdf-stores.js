@@ -1,7 +1,7 @@
 import type * as RDF from '@rdfjs/types';
 import type { IRdfStoreOptions } from '../IRdfStoreOptions';
 import { arePatternsQuoted, encodeOptionalTerms } from '../OrderUtils';
-import type { QuadPatternTerms, EncodedQuadTerms, PatternTerm } from '../PatternTerm';
+import type { QuadPatternTerms, EncodedQuadTerms, PatternTerm, QuadTerms } from '../PatternTerm';
 import type { NestedRecordActual } from './RdfStoreIndexNestedRecord';
 import { RdfStoreIndexNestedRecord } from './RdfStoreIndexNestedRecord';
 
@@ -24,6 +24,58 @@ export class RdfStoreIndexNestedRecordQuoted<E extends number, V> extends RdfSto
       }
     }
   }
+
+  public * find(terms: QuadPatternTerms): IterableIterator<QuadTerms> {
+    const ids = encodeOptionalTerms(terms, this.dictionary);
+    if (!ids) {
+      return;
+    }
+
+    const [ id0, id1, id2, id3 ] = ids;
+    const [ term0, term1, term2, term3 ] = terms;
+    const [ quotedTerm0, quotedTerm1, quotedTerm2, quotedTerm3 ] = arePatternsQuoted(terms);
+
+    let partialQuad0: RDF.Term;
+    let partialQuad1: RDF.Term;
+    let partialQuad2: RDF.Term;
+    let partialQuad3: RDF.Term;
+
+    let map1: NestedRecordActual<E>;
+    let map2: NestedRecordActual<E>;
+    let map3: NestedRecordActual<E>;
+
+    const map0: NestedRecordActual<E> = this.nestedRecords;
+    const map0Keys = <E[] | string[] | IterableIterator<E>> (term0 !== undefined ?
+      (quotedTerm0 ? this.getQuotedPatternKeys(map0, term0) : (id0! in map0 ? [ id0 ] : [])) :
+      Object.keys(map0));
+    for (const key1 of map0Keys) {
+      map1 = map0[<E>key1];
+      partialQuad0 = !quotedTerm0 && term0 ? term0 : this.dictionary.decode(<E>Number.parseInt(<string>key1, 10));
+      const map1Keys = <E[] | string[] | IterableIterator<E>> (term1 !== undefined ?
+        (quotedTerm1 ? this.getQuotedPatternKeys(map1, term1) : (id1! in map1 ? [ id1 ] : [])) :
+        Object.keys(map1));
+      for (const key2 of map1Keys) {
+        map2 = map1[<E>key2];
+        partialQuad1 = !quotedTerm1 && term1 ? term1 : this.dictionary.decode(<E>Number.parseInt(<string>key2, 10));
+        const map2Keys = <E[] | string[] | IterableIterator<E>> (term2 !== undefined ?
+          (quotedTerm2 ? this.getQuotedPatternKeys(map2, term2) : (id2! in map2 ? [ id2 ] : [])) :
+          Object.keys(map2));
+        for (const key3 of map2Keys) {
+          map3 = map2[<E>key3];
+          partialQuad2 = !quotedTerm2 && term2 ? term2 : this.dictionary.decode(<E>Number.parseInt(<string>key3, 10));
+          const map3Keys = <E[] | string[] | IterableIterator<E>> (term3 !== undefined ?
+            (quotedTerm3 ? this.getQuotedPatternKeys(map3, term3) : (id3! in map3 ? [ id3 ] : [])) :
+            Object.keys(map3));
+          for (const key4 of map3Keys) {
+            partialQuad3 = !quotedTerm3 && term3 ? term3 : this.dictionary.decode(<E>Number.parseInt(<string>key4, 10));
+            yield <any>[ partialQuad0, partialQuad1, partialQuad2, partialQuad3 ];
+          }
+        }
+      }
+    }
+  }
+
+  // The code below is nearly identical. We duplicate because abstraction would result in a significant performance hit.
 
   public * findEncoded(
     ids: EncodedQuadTerms<E | undefined>,

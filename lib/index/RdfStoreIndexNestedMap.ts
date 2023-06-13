@@ -1,3 +1,4 @@
+import type * as RDF from '@rdfjs/types';
 import type { ITermDictionary } from '../dictionary/ITermDictionary';
 import type { IRdfStoreOptions } from '../IRdfStoreOptions';
 import { encodeOptionalTerms } from '../OrderUtils';
@@ -104,24 +105,48 @@ export class RdfStoreIndexNestedMap<E, V> implements IRdfStoreIndex<E, V> {
       return;
     }
 
-    for (const termsEncoded of this.findEncoded(<EncodedQuadTerms<E | undefined>> ids, terms)) {
-      yield [
-        ids[0] !== undefined ? terms[0]! : this.dictionary.decode(termsEncoded[0]),
-        ids[1] !== undefined ? terms[1]! : this.dictionary.decode(termsEncoded[1]),
-        ids[2] !== undefined ? terms[2]! : this.dictionary.decode(termsEncoded[2]),
-        ids[3] !== undefined ? terms[3]! : this.dictionary.decode(termsEncoded[3]),
-      ];
+    const [ id0, id1, id2, id3 ] = ids;
+    const [ term0, term1, term2, term3 ] = terms;
+
+    let partialQuad0: RDF.Term;
+    let partialQuad1: RDF.Term;
+    let partialQuad2: RDF.Term;
+    let partialQuad3: RDF.Term;
+
+    let map1: NestedMapActual<E, V>;
+    let map2: NestedMapActual<E, V>;
+    let map3: NestedMapActual<E, V>;
+
+    const map0: NestedMapActual<E, V> = this.nestedMap;
+    const map0Keys = id0 !== undefined ? (map0.has(id0) ? [ id0 ] : []) : map0.keys();
+    for (const key1 of map0Keys) {
+      map1 = <any>map0.get(key1);
+      partialQuad0 = term0 || this.dictionary.decode(key1);
+      const map1Keys = id1 !== undefined ? (map1.has(id1) ? [ id1 ] : []) : map1.keys();
+      for (const key2 of map1Keys) {
+        map2 = <any>map1.get(key2);
+        partialQuad1 = term1 || this.dictionary.decode(key2);
+        const map2Keys = id2 !== undefined ? (map2.has(id2) ? [ id2 ] : []) : map2.keys();
+        for (const key3 of map2Keys) {
+          map3 = <any>map2.get(key3);
+          partialQuad2 = term2 || this.dictionary.decode(key3);
+          const map3Keys = id3 !== undefined ? (map3.has(id3) ? [ id3 ] : []) : map3.keys();
+          for (const key4 of map3Keys) {
+            partialQuad3 = term3 || this.dictionary.decode(key4);
+            yield <any>[ partialQuad0, partialQuad1, partialQuad2, partialQuad3 ];
+          }
+        }
+      }
     }
   }
+
+  // The code below is nearly identical. We duplicate because abstraction would result in a significant performance hit.
 
   public * findEncoded(
     ids: EncodedQuadTerms<E | undefined>,
     terms: QuadPatternTerms,
   ): IterableIterator<EncodedQuadTerms<E>> {
-    const id0 = ids[0];
-    const id1 = ids[1];
-    const id2 = ids[2];
-    const id3 = ids[3];
+    const [ id0, id1, id2, id3 ] = ids;
 
     let map1: NestedMapActual<E, V>;
     let map2: NestedMapActual<E, V>;
