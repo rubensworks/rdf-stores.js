@@ -992,7 +992,7 @@ describe('RdfStore', () => {
               ]);
             });
 
-            it('should produce results for a quoted variable', () => {
+            it('should produce results for a quoted object variable', () => {
               expect(store.getQuads(
                 undefined,
                 DF.namedNode('ex:says'),
@@ -1018,6 +1018,28 @@ describe('RdfStore', () => {
                     DF.namedNode('ex:bob'),
                     DF.namedNode('ex:name'),
                     DF.literal('"NotBob"'),
+                  ),
+                ),
+              ]);
+            });
+
+            it('should produce results for a quoted predicate variable', () => {
+              expect(store.getQuads(
+                undefined,
+                DF.namedNode('ex:says'),
+                DF.quad(
+                  DF.namedNode('ex:bob'),
+                  DF.variable('name'),
+                  DF.literal('"Bob"'),
+                ),
+              )).toEqual([
+                DF.quad(
+                  DF.namedNode('ex:alice'),
+                  DF.namedNode('ex:says'),
+                  DF.quad(
+                    DF.namedNode('ex:bob'),
+                    DF.namedNode('ex:name'),
+                    DF.literal('"Bob"'),
                   ),
                 ),
               ]);

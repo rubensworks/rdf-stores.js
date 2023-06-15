@@ -1,6 +1,7 @@
 import type * as RDF from '@rdfjs/types';
 import { DataFactory } from 'rdf-data-factory';
 import { RdfStoreIndexNestedMap } from '../index/RdfStoreIndexNestedMap';
+import type { IRdfStoreOptions } from '../IRdfStoreOptions';
 import { encodeOptionalTerms, quadToPattern } from '../OrderUtils';
 import type { EncodedQuadTerms, QuadPatternTerms, PatternTerm } from '../PatternTerm';
 import type { ITermDictionary } from './ITermDictionary';
@@ -18,7 +19,8 @@ export class TermDictionaryQuotedIndexed implements ITermDictionary<number> {
 
   private readonly plainTermDictionary: ITermDictionary<number>;
   private readonly quotedTriplesDictionary: number[][] = [];
-  private readonly quotedTriplesReverseDictionary: RdfStoreIndexNestedMap<number, number>;
+  // The indexes below are sorted in SPO, POS, and OSP order
+  private readonly quotedTriplesReverseDictionaries: RdfStoreIndexNestedMap<number, number>[];
   private readonly dataFactory: RDF.DataFactory;
   public readonly features = { quotedTriples: true };
 
@@ -27,13 +29,19 @@ export class TermDictionaryQuotedIndexed implements ITermDictionary<number> {
     dataFactory: RDF.DataFactory = new DataFactory(),
   ) {
     this.plainTermDictionary = rawTermDictionary;
-    this.quotedTriplesReverseDictionary = new RdfStoreIndexNestedMap({
-      indexCombinations: [[ 'subject', 'predicate', 'object' ]],
+    const subIndexOpts: IRdfStoreOptions<number> = {
+      // Not required
+      indexCombinations: [],
       // Not required
       indexConstructor: <any> undefined,
       dictionary: this,
       dataFactory,
-    });
+    };
+    this.quotedTriplesReverseDictionaries = [
+      new RdfStoreIndexNestedMap(subIndexOpts),
+      new RdfStoreIndexNestedMap(subIndexOpts),
+      new RdfStoreIndexNestedMap(subIndexOpts),
+    ];
     this.dataFactory = dataFactory;
   }
 
@@ -59,7 +67,7 @@ export class TermDictionaryQuotedIndexed implements ITermDictionary<number> {
       this,
     );
     const id = encodedTripleOptional && encodedTripleOptional.every(encoded => encoded !== undefined) ?
-      this.quotedTriplesReverseDictionary.getEncoded(<EncodedQuadTerms<number>> encodedTripleOptional) :
+      this.quotedTriplesReverseDictionaries[0].getEncoded(<EncodedQuadTerms<number>> encodedTripleOptional) :
       undefined;
 
     // Return the encoding if we found one
@@ -77,9 +85,24 @@ export class TermDictionaryQuotedIndexed implements ITermDictionary<number> {
     ];
     const encodingBase = this.quotedTriplesDictionary.length + 1;
     this.quotedTriplesDictionary.push(encodedTriple);
-    this.quotedTriplesReverseDictionary.set(<EncodedQuadTerms<number>> [
-      ...encodedTriple,
-      this.encode(this.dataFactory.defaultGraph()),
+    const encodedGraph = this.encode(this.dataFactory.defaultGraph());
+    this.quotedTriplesReverseDictionaries[0].set(<EncodedQuadTerms<number>> [
+      encodedTriple[0],
+      encodedTriple[1],
+      encodedTriple[2],
+      encodedGraph,
+    ], encodingBase);
+    this.quotedTriplesReverseDictionaries[1].set(<EncodedQuadTerms<number>> [
+      encodedTriple[1],
+      encodedTriple[2],
+      encodedTriple[0],
+      encodedGraph,
+    ], encodingBase);
+    this.quotedTriplesReverseDictionaries[2].set(<EncodedQuadTerms<number>> [
+      encodedTriple[2],
+      encodedTriple[0],
+      encodedTriple[1],
+      encodedGraph,
     ], encodingBase);
 
     // Mask MSB to indicate that the encoding should refer to the quoted triples dictionary.
@@ -141,10 +164,29 @@ export class TermDictionaryQuotedIndexed implements ITermDictionary<number> {
       for (const termP of this.patternToIterable(patternIn[1])) {
         for (const termO of this.patternToIterable(patternIn[2])) {
           for (const termG of this.patternToIterable(patternIn[3])) {
-            // Find all terms matching the pattern from the reverse index
-            const pattern: EncodedQuadTerms<number | undefined> = [ termS, termP, termO, termG ];
-            for (const termEncoded of this.quotedTriplesReverseDictionary.findEncoded(pattern, patternIn)) {
-              yield TermDictionaryQuotedIndexed.BITMASK | this.quotedTriplesReverseDictionary.getEncoded(termEncoded)!;
+            // Find all terms matching the pattern from the reverse indexes
+            // We select the reverse index according to the current triple pattern
+            if ((termS && termP) || (!termP && !termO)) {
+              // SPO
+              const pattern: EncodedQuadTerms<number | undefined> = [ termS, termP, termO, termG ];
+              for (const termEncoded of this.quotedTriplesReverseDictionaries[0].findEncoded(pattern, patternIn)) {
+                yield TermDictionaryQuotedIndexed.BITMASK |
+                this.quotedTriplesReverseDictionaries[0].getEncoded(termEncoded)!;
+              }
+            } else if (!termS && termP) {
+              // POS
+              const pattern: EncodedQuadTerms<number | undefined> = [ termP, termO, termS, termG ];
+              for (const termEncoded of this.quotedTriplesReverseDictionaries[1].findEncoded(pattern, patternIn)) {
+                yield TermDictionaryQuotedIndexed.BITMASK |
+                this.quotedTriplesReverseDictionaries[1].getEncoded(termEncoded)!;
+              }
+            } else {
+              // OSP
+              const pattern: EncodedQuadTerms<number | undefined> = [ termO, termS, termP, termG ];
+              for (const termEncoded of this.quotedTriplesReverseDictionaries[2].findEncoded(pattern, patternIn)) {
+                yield TermDictionaryQuotedIndexed.BITMASK |
+                this.quotedTriplesReverseDictionaries[2].getEncoded(termEncoded)!;
+              }
             }
           }
         }
