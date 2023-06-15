@@ -1,6 +1,6 @@
 import type * as RDF from '@rdfjs/types';
 import { DataFactory } from 'rdf-data-factory';
-import { RdfStoreIndexNestedRecord } from '../index/RdfStoreIndexNestedRecord';
+import { RdfStoreIndexNestedMap } from '../index/RdfStoreIndexNestedMap';
 import { encodeOptionalTerms, quadToPattern } from '../OrderUtils';
 import type { EncodedQuadTerms, QuadPatternTerms, PatternTerm } from '../PatternTerm';
 import type { ITermDictionary } from './ITermDictionary';
@@ -18,7 +18,7 @@ export class TermDictionaryQuotedIndexed implements ITermDictionary<number> {
 
   private readonly plainTermDictionary: ITermDictionary<number>;
   private readonly quotedTriplesDictionary: number[][] = [];
-  private readonly quotedTriplesReverseDictionary: RdfStoreIndexNestedRecord<number, number>;
+  private readonly quotedTriplesReverseDictionary: RdfStoreIndexNestedMap<number, number>;
   private readonly dataFactory: RDF.DataFactory;
   public readonly features = { quotedTriples: true };
 
@@ -27,7 +27,7 @@ export class TermDictionaryQuotedIndexed implements ITermDictionary<number> {
     dataFactory: RDF.DataFactory = new DataFactory(),
   ) {
     this.plainTermDictionary = rawTermDictionary;
-    this.quotedTriplesReverseDictionary = new RdfStoreIndexNestedRecord({
+    this.quotedTriplesReverseDictionary = new RdfStoreIndexNestedMap({
       indexCombinations: [[ 'subject', 'predicate', 'object' ]],
       // Not required
       indexConstructor: <any> undefined,
