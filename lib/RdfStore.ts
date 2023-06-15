@@ -30,6 +30,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
   public readonly dictionary: ITermDictionary<E>;
   public readonly indexesWrapped: IRdfStoreIndexWrapped<E>[];
   private readonly indexesWrappedComponentOrders: QuadTermName[][];
+  public readonly features = { quotedTripleFiltering: true };
 
   private _size = 0;
 
