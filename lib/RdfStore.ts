@@ -297,15 +297,13 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     object?: RDF.Term | null,
     graph?: RDF.Term | null,
   ): number {
+    // Check if our dictionary and our indexes have quoted pattern support
+    const indexesSupportQuotedPatterns = Boolean(this.dictionary.features.quotedTriples) &&
+      Object.values(this.indexesWrapped).every(wrapped => wrapped.index.features.quotedTripleFiltering);
+
     // Construct a quad pattern array
-    const quadComponents: QuadPatternTerms = <QuadPatternTerms>
-      [ subject || undefined, predicate || undefined, object || undefined, graph || undefined ]
-        .map(term => {
-          if (term && (term.termType === 'Variable' || term.termType === 'Quad')) {
-            return;
-          }
-          return term;
-        });
+    const [ quadComponents ] =
+      quadToPattern(subject, predicate, object, graph, indexesSupportQuotedPatterns);
 
     // Optimize all-variables pattern
     if (quadComponents.every(quadComponent => quadComponent === undefined)) {

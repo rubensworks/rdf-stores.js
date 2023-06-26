@@ -1023,6 +1023,18 @@ describe('RdfStore', () => {
               ]);
             });
 
+            it('should count results for a quoted object variable', () => {
+              expect(store.countQuads(
+                undefined,
+                DF.namedNode('ex:says'),
+                DF.quad(
+                  DF.namedNode('ex:bob'),
+                  DF.namedNode('ex:name'),
+                  DF.variable('name'),
+                ),
+              )).toEqual(2);
+            });
+
             it('should produce results for a quoted predicate variable', () => {
               expect(store.getQuads(
                 undefined,
