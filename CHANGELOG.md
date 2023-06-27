@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+<a name="v1.0.0"></a>
+## [v1.0.0](https://github.com/rubensworks/rdf-stores.js/compare/v1.0.0-beta.2...v1.0.0) - 2023-06-27
+
+### Fixed
+* [Fix countQuads not being selective enough for quoted triples](https://github.com/rubensworks/rdf-stores.js/commit/060f27b0c04990e5d78912a6bd2cccc27ccc8b43)
+
 <a name="v1.0.0-beta.2"></a>
 ## [v1.0.0-beta.2](https://github.com/rubensworks/rdf-stores.js/compare/v1.0.0-beta.1...v1.0.0-beta.2) - 2023-06-15
 
