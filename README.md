@@ -67,6 +67,21 @@ dataset.add(DF.quad(DF.namedNode('ex:s1'), DF.namedNode('ex:p1'), DF.namedNode('
 console.log(dataset.has(DF.quad(DF.namedNode('ex:s1'), DF.namedNode('ex:p1'), DF.namedNode('ex:o1'))));
 ```
 
+Note that this library only focuses on triple storage and provide triple pattern query access.
+If you want to execute more complex queries over this store (such as SPARQL queries), engines such as [Comunica](https://comunica.dev/) may be used:
+
+```typescript
+import { QueryEngine } from '@comunica/query-sparql';
+
+const bindingsStream = await myEngine.queryBindings(`SELECT * WHERE { ?s ?p ?o }`, {
+  sources: [store],
+});
+bindingsStream.on('data', (binding) => {
+    console.log(binding.toString());
+});
+```
+Learn more about using Comunica: https://comunica.dev/docs/query/getting_started/query_app/
+
 ## Usage
 
 All public getters and methods of an `RdfStore` are illustrated below.
