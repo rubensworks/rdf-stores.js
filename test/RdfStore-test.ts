@@ -8,16 +8,15 @@ import { RdfStoreIndexNestedRecord } from '../lib/index/RdfStoreIndexNestedRecor
 import { RdfStore } from '../lib/RdfStore';
 import 'jest-rdf';
 import { dictClazzToInstance, indexClazzToInstance } from './testUtil';
-import { TermsCardinalitySet } from '../lib/index/TermsCardinalitySet';
 
 const streamifyArray = require('streamify-array');
 
 const DF = new DataFactory();
 
 // Test either with no cardinality sets, or with all cardinality sets
-const allTermsCardinalitySets:QuadTermName[][] = [
-    [],
-    ['subject', 'predicate', 'object', 'graph'],
+const allTermsCardinalitySets: QuadTermName[][] = [
+  [ 'subject' ],
+  [ 'subject', 'predicate', 'object', 'graph' ],
 ];
 const allComponentOrders: QuadTermName[][][][] = [
   [[[ 'subject', 'predicate', 'object', 'graph' ]]],
@@ -57,14 +56,14 @@ describe('RdfStore', () => {
   each(allComponentOrders).describe('with one index in %o order', indexCombinations => {
     each(Object.keys(indexClazzToInstance)).describe('for index type %s', indexClazz => {
       each(Object.keys(dictClazzToInstance)).describe('for dictionary type %s', dictClazz => {
-        each (allTermsCardinalitySets).describe('with a terms index', termsCardinalitySets => {
+        each(allTermsCardinalitySets).describe('with a terms index %o', termsCardinalitySets => {
           beforeEach(() => {
             store = new RdfStore<number>({
               indexCombinations,
               indexConstructor: subOptions => indexClazzToInstance[indexClazz](subOptions),
               dictionary: dictClazzToInstance[dictClazz](),
               dataFactory: new DataFactory(),
-              termsCardinalitySets: termsCardinalitySets
+              termsCardinalitySets,
             });
           });
 
@@ -134,25 +133,31 @@ describe('RdfStore', () => {
 
             describe('subject', () => {
               it('should be s only', () => {
-                expect(store.getSubjects()).toEqual([DF.namedNode('s')]);
+                expect(store.getSubjects()).toEqual([ DF.namedNode('s') ]);
               });
             });
 
             describe('predicate', () => {
               it('should be p only', () => {
-                expect(store.getPredicates()).toEqual([DF.namedNode('p')]);
+                expect(store.getPredicates()).toEqual([ DF.namedNode('p') ]);
               });
             });
 
             describe('object', () => {
               it('should be o only', () => {
-                expect(store.getObjects()).toEqual([DF.namedNode('o')]);
+                expect(store.getObjects()).toEqual([ DF.namedNode('o') ]);
               });
             });
 
+            /*describe('terms helper test', () => {
+              it('should be s only', () => {
+                expect(store.getTermsHelper('subject')).toEqual([ DF.namedNode('s') ]);
+              });
+            });*/
+
             describe('graph', () => {
               it('should be g only', () => {
-                expect(store.getGraphs()).toEqual([DF.namedNode('g')]);
+                expect(store.getGraphs()).toEqual([ DF.namedNode('g') ]);
               });
             });
 
