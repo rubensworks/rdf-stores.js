@@ -14,11 +14,13 @@ import { RdfStoreIndexNestedMapQuoted } from './index/RdfStoreIndexNestedMapQuot
 import type { IRdfStoreOptions } from './IRdfStoreOptions';
 import { getBestIndex, orderQuadComponents, quadToPattern } from './OrderUtils';
 import type { EncodedQuadTerms, QuadPatternTerms } from './PatternTerm';
+import { ITermsCardinalitySet } from './index/ITermsCardinalitySet';
+import { TermsCardinalitySet } from './index/TermsCardinalitySet';
 
 /**
  * An RDF store allows quads to be stored and fetched, based on one or more customizable indexes.
  */
-export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF.Store<Q> {
+export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF.Store<Q>{
   public static readonly DEFAULT_INDEX_COMBINATIONS: QuadTermName[][] = [
     [ 'graph', 'subject', 'predicate', 'object' ],
     [ 'graph', 'predicate', 'object', 'subject' ],
@@ -31,6 +33,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
   public readonly indexesWrapped: IRdfStoreIndexWrapped<E>[];
   private readonly indexesWrappedComponentOrders: QuadTermName[][];
   public readonly features = { quotedTripleFiltering: true };
+  public readonly termsCardinalitySets: ITermsCardinalitySet<E>[];
 
   private _size = 0;
 
@@ -40,6 +43,20 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     this.dictionary = options.dictionary;
     this.indexesWrapped = RdfStore.constructIndexesWrapped(options);
     this.indexesWrappedComponentOrders = this.indexesWrapped.map(indexThis => indexThis.componentOrder);
+    this.termsCardinalitySets = [];
+    if (options.termsCardinalitySets) {
+      for (let quadTermName of options.termsCardinalitySets) {
+        if (quadTermName === 'subject') {
+          this.termsCardinalitySets[0] = new TermsCardinalitySet();
+        } else if (quadTermName === 'predicate') {
+          this.termsCardinalitySets[1] = new TermsCardinalitySet();
+        } else if (quadTermName === 'object') {
+          this.termsCardinalitySets[2] = new TermsCardinalitySet();
+        } else if (quadTermName === 'graph') {
+          this.termsCardinalitySets[3] = new TermsCardinalitySet();
+        }
+      }
+    }
   }
 
   /**
@@ -53,6 +70,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
       indexConstructor: subOptions => new RdfStoreIndexNestedMapQuoted(subOptions),
       dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms()),
       dataFactory: new DataFactory(),
+      termsCardinalitySets: []
     });
   }
 
@@ -112,6 +130,20 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
       this.dictionary.encode(quad.object),
       this.dictionary.encode(quad.graph),
     ];
+    if (this.termsCardinalitySets[0]) {
+      this.termsCardinalitySets[0].add(quadEncoded[0]);
+    }
+    if (this.termsCardinalitySets[1]) {
+      this.termsCardinalitySets[1].add(quadEncoded[1]);
+    }
+    if (this.termsCardinalitySets[2]) {
+      this.termsCardinalitySets[2].add(quadEncoded[2]);
+
+    }
+    if (this.termsCardinalitySets[3]) {
+      this.termsCardinalitySets[3].add(quadEncoded[3]);
+    }
+
     let newQuad = false;
     for (const indexWrapped of this.indexesWrapped) {
       // Before sending the quad to the index, make sure its components are ordered corresponding to the index's order.
@@ -137,7 +169,18 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
       this.dictionary.encodeOptional(quad.object),
       this.dictionary.encodeOptional(quad.graph),
     ];
-
+    if (this.termsCardinalitySets[0] && quadEncoded[0]) {
+      this.termsCardinalitySets[0].remove(quadEncoded[0]);
+    }
+    if (this.termsCardinalitySets[1] && quadEncoded[1]) {
+      this.termsCardinalitySets[1].remove(quadEncoded[1]);
+    }
+    if (this.termsCardinalitySets[2] && quadEncoded[2]) {
+      this.termsCardinalitySets[2].remove(quadEncoded[2]);
+    }
+    if (this.termsCardinalitySets[3] && quadEncoded[3]) {
+      this.termsCardinalitySets[3].remove(quadEncoded[3]);
+    }
     // We can quickly return false if the quad is not present in the dictionary
     // eslint-disable-next-line unicorn/no-useless-undefined
     if (quadEncoded.includes(undefined)) {
@@ -326,6 +369,49 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
    */
   public asDataset(): DatasetCoreWrapper<E, Q> {
     return new DatasetCoreWrapper(this);
+  }
+
+  //Functions getting distinct arrays of terms in subject, predicate, object or graph position
+  public getSubjects():RDF.Term[] {
+    return this.getTermsHelper(0);
+  }
+
+  public getPredicates():RDF.Term[] {
+    return this.getTermsHelper(1);
+
+  }
+
+  public getObjects():RDF.Term[] {
+    return this.getTermsHelper(2);
+  }
+
+  public getGraphs():RDF.Term[] {
+    return this.getTermsHelper(3);
+  }
+
+  private getTermsHelper(index:number): RDF.Term[] {
+    if (this.termsCardinalitySets[index]) {
+      return this.termsCardinalitySets[index].getTerms().map((key) => {
+        return this.dictionary.decode(key);
+      });
+    } else {
+      //no index has been set, we must do this manually
+      return [ ... new Set(this.getQuads().map((quad) => {
+        if (index === 0) {
+          return quad.subject;
+        } else if (index === 1) {
+          return quad.predicate; 
+        } else if (index === 2) {
+          return quad.object;
+        } else if (index === 3) {
+          return quad.graph; 
+        } else {
+          //ugly hack to make typescript work... should fix by just using QuadTermName instead of 0-4
+          return this.dataFactory.blankNode();
+        }
+      }))];
+      
+    }
   }
 }
 

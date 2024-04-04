@@ -28,4 +28,8 @@ export interface IRdfStoreOptions<E, Q extends RDF.BaseQuad = RDF.Quad> {
    * The data factory for constructing terms and quads.
    */
   dataFactory: RDF.DataFactory<Q>;
+  /**
+   * Set what terms cardinality sets you’d like to maintain. subject, predicate, object and graph are possible.
+   */
+  termsCardinalitySets?: QuadTermName[];
 }
