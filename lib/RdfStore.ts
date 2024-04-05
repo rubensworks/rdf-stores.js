@@ -33,7 +33,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
   public readonly indexesWrapped: IRdfStoreIndexWrapped<E>[];
   private readonly indexesWrappedComponentOrders: QuadTermName[][];
   public readonly features = { quotedTripleFiltering: true };
-  public readonly termsCardinalitySets: Map<QuadTermName,ITermsCardinalitySet<E>>;
+  public readonly termsCardinalitySets: Map<QuadTermName, ITermsCardinalitySet<E>>;
 
   private _size = 0;
 
@@ -379,14 +379,16 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
       return [ ...new Set(this.getQuads().map(quad => {
         if (quadTermName === 'subject') {
           return quad.subject;
-        } else if (quadTermName === 'predicate') {
-          return quad.predicate;
-        } else if (quadTermName === 'object') {
-          return quad.object;
-        } else {//if (quadTermName === 'graph') {
-          return quad.graph;
         }
-      }))];
+        if (quadTermName === 'predicate') {
+          return quad.predicate;
+        }
+        if (quadTermName === 'object') {
+          return quad.object;
+        }
+        // If (quadTermName === 'graph') {
+        return quad.graph;
+      })) ];
     }
     return termsCardinalitySet.getTerms().map(key => this.dictionary.decode(key));
   }

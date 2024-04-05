@@ -149,11 +149,11 @@ describe('RdfStore', () => {
               });
             });
 
-            /*describe('terms helper test', () => {
-              it('should be s only', () => {
-                expect(store.getTermsHelper('subject')).toEqual([ DF.namedNode('s') ]);
-              });
-            });*/
+            // Describe('terms helper test', () => {
+            // it('should be s only', () => {
+            //     expect(store.getTermsHelper('subject')).toEqual([ DF.namedNode('s') ]);
+            // });
+            // });
 
             describe('graph', () => {
               it('should be g only', () => {
