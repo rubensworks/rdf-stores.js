@@ -47,6 +47,7 @@
     "test"
   ],
   "devDependencies": {
+    "@codspeed/tinybench-plugin": "^3.1.0",
     "@rubensworks/eslint-config": "^1.0.0",
     "@types/jest": "^29.0.0",
     "@types/n3": "^1.10.4",
@@ -68,6 +69,7 @@
     "n3": "^1.16.3",
     "pre-commit": "^1.2.2",
     "streamify-array": "^1.0.1",
+    "tinybench": "^2.8.0",
     "ts-jest": "^29.0.0",
     "typescript": "^5.0.0",
     "yargs": "^17.7.1"

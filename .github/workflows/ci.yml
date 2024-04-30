@@ -1,5 +1,13 @@
 name: CI
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - 'master' # or "master"
+  pull_request:
+  # `workflow_dispatch` allows CodSpeed to trigger backtest
+  # performance analysis in order to generate initial data.
+  workflow_dispatch:
+
 jobs:
 
   lint:
@@ -22,7 +30,6 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         node-version:
-          - 14.x
           - 16.x
           - 18.x
           - 20.x
@@ -61,3 +68,16 @@ jobs:
         with:
           github-token: ${{ secrets.github_token }}
           parallel-finished: true
+
+  benchmarks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: "actions/setup-node@v3"
+      - name: Install dependencies
+        run: yarn install
+      - name: Run benchmarks
+        uses: CodSpeedHQ/action@v2
+        with:
+          run: node perf/benchmark.js
+          token: ${{ secrets.CODSPEED_TOKEN }}
