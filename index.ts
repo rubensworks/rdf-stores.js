@@ -1,3 +1,5 @@
+export * from './lib/datafactory/DataFactoryDictionary';
+export * from './lib/datafactory/TermEncoded';
 export * from './lib/dataset/DatasetCoreWrapper';
 export * from './lib/dictionary/ITermDictionary';
 export * from './lib/dictionary/TermDictionaryNumberMap';

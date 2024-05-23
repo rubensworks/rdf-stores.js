@@ -14,6 +14,9 @@ import { RdfStoreIndexNestedRecord } from '../lib/index/RdfStoreIndexNestedRecor
 import { RdfStoreIndexNestedRecordQuoted } from '../lib/index/RdfStoreIndexNestedRecordQuoted';
 import { RdfStore } from '../lib/RdfStore';
 import type { IPerformanceTestApproach } from './PerformanceTest';
+import {
+  TermDictionaryNumberTermTypeRecordFullTerms
+} from '../lib/dictionary/TermDictionaryNumberTermTypeRecordFullTerms';
 
 export function makeTests(optimal: boolean): IPerformanceTestApproach[] {
   return [
@@ -248,6 +251,18 @@ export function makeTests(optimal: boolean): IPerformanceTestApproach[] {
           indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
           indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
           dictionary: new TermDictionaryNumberRecordFullTerms(),
+          dataFactory: new DataFactory(),
+        },
+      },
+    },
+    {
+      name: '3 Map indexes (number) OPT-QUERY-TT',
+      options: {
+        type: 'rdfstore',
+        options: {
+          indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+          indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
+          dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberTermTypeRecordFullTerms()),
           dataFactory: new DataFactory(),
         },
       },

@@ -13,6 +13,10 @@ import { RdfStoreIndexNestedMapRecursiveQuoted } from '../lib/index/RdfStoreInde
 import { RdfStoreIndexNestedRecord } from '../lib/index/RdfStoreIndexNestedRecord';
 import { RdfStoreIndexNestedRecordQuoted } from '../lib/index/RdfStoreIndexNestedRecordQuoted';
 import type { IRdfStoreOptions } from '../lib/IRdfStoreOptions';
+import { TermDictionaryWrapperTermEncoded } from '../lib/dictionary/TermDictionaryWrapperTermEncoded';
+import {
+  TermDictionaryNumberTermTypeRecordFullTerms
+} from '../lib/dictionary/TermDictionaryNumberTermTypeRecordFullTerms';
 
 export const indexClazzToInstance: Record<string, (subOptions: IRdfStoreOptions<number>) =>
 IRdfStoreIndex<number, boolean>> = {
@@ -43,10 +47,14 @@ export const dictClazzToInstance: Record<string, () => ITermDictionary<number>> 
   TermDictionaryNumberMap: () => new TermDictionaryNumberMap(),
   TermDictionaryNumberRecord: () => new TermDictionaryNumberRecord(),
   TermDictionaryNumberRecordFullTerms: () => new TermDictionaryNumberRecordFullTerms(),
+  TermDictionaryNumberTermTypeRecordFullTerms: () => new TermDictionaryNumberTermTypeRecordFullTerms(),
   TermDictionaryQuoted: () => new TermDictionaryQuoted(
     new TermDictionaryNumberRecordFullTerms(),
     new TermDictionaryNumberRecordFullTerms(),
   ),
   TermDictionaryQuotedReferential: () => new TermDictionaryQuotedReferential(new TermDictionaryNumberRecordFullTerms()),
   TermDictionaryQuotedIndexed: () => new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms()),
+  TermDictionaryWrapperTermEncoded: () => new TermDictionaryWrapperTermEncoded(
+    new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms()),
+  ),
 };

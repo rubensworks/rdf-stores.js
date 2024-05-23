@@ -5,10 +5,12 @@ import { wrap } from 'asynciterator';
 import { DataFactory } from 'rdf-data-factory';
 import type { QuadTermName } from 'rdf-terms';
 import { matchPattern, QUAD_TERM_NAMES } from 'rdf-terms';
+import { DataFactoryDictionary } from './datafactory/DataFactoryDictionary';
 import { DatasetCoreWrapper } from './dataset/DatasetCoreWrapper';
 import type { ITermDictionary } from './dictionary/ITermDictionary';
-import { TermDictionaryNumberRecordFullTerms } from './dictionary/TermDictionaryNumberRecordFullTerms';
+import { TermDictionaryNumberTermTypeRecordFullTerms } from './dictionary/TermDictionaryNumberTermTypeRecordFullTerms';
 import { TermDictionaryQuotedIndexed } from './dictionary/TermDictionaryQuotedIndexed';
+import { TermDictionaryWrapperTermEncoded } from './dictionary/TermDictionaryWrapperTermEncoded';
 import type { IRdfStoreIndex } from './index/IRdfStoreIndex';
 import { RdfStoreIndexNestedMapQuoted } from './index/RdfStoreIndexNestedMapQuoted';
 import type { IRdfStoreOptions } from './IRdfStoreOptions';
@@ -48,11 +50,35 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
    * and makes use of in-memory number dictionary encoding.
    */
   public static createDefault(): RdfStore<number> {
+    return RdfStore.createDefaultWithDataFactory(RdfStore.createDefaultDataFactory());
+
+    // return new RdfStore<number>({
+    //   indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+    //   indexConstructor: subOptions => new RdfStoreIndexNestedMapQuoted(subOptions),
+    //   dictionary: RdfStore.createDefaultDictionary(),
+    //   dataFactory: new DataFactory(),
+    // });
+  }
+
+  public static createDefaultWithDataFactory(dataFactory: DataFactoryDictionary<number>): RdfStore<number> {
     return new RdfStore<number>({
       indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
       indexConstructor: subOptions => new RdfStoreIndexNestedMapQuoted(subOptions),
-      dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms()),
-      dataFactory: new DataFactory(),
+      dictionary: new TermDictionaryWrapperTermEncoded(dataFactory.dictionary),
+      dataFactory,
+    });
+  }
+
+  public static createDefaultDictionary(): ITermDictionary<number> {
+    return new TermDictionaryQuotedIndexed(new TermDictionaryNumberTermTypeRecordFullTerms());
+  }
+
+  public static createDefaultDataFactory(
+    dictionary: ITermDictionary<number> = RdfStore.createDefaultDictionary(),
+  ): DataFactoryDictionary<number> {
+    return new DataFactoryDictionary({
+      dataFactoryDirect: new DataFactory(),
+      dictionary,
     });
   }
 
@@ -232,6 +258,38 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     // Re-order the quad pattern based on this best index's component order
     const quadComponentsOrdered = <QuadPatternTerms> orderQuadComponents(indexWrapped.componentOrder, quadComponents);
 
+    // If the dictionary supports returning encoded quads, use it for better performance.
+    // Otherwise, decode terms and use the regular quad factory method.
+    // if ('quadEncoded' in this.dataFactory) {
+    //   // TODO: not needed, just the dict wrapper is enough?
+    //   // Decode terms
+    //   const quadComponentsOrderedEncoded = <EncodedQuadTerms<E | undefined>>
+    //     encodeOptionalTerms(quadComponentsOrdered, this.dictionary);
+    //
+    //   // Call the best index's find method.
+    //   for (const decomposedQuadEncoded of indexWrapped.index
+    //     .findEncoded(quadComponentsOrderedEncoded, quadComponentsOrdered)) {
+    //     // De-order the resulting quad components into the normal SPOG order for quad creation.
+    //     const quad = (<DataFactoryDictionary<E, Q>> this.dataFactory).quadEncoded(
+    //       decomposedQuadEncoded[indexWrapped.componentOrderInverse.subject],
+    //       decomposedQuadEncoded[indexWrapped.componentOrderInverse.predicate],
+    //       decomposedQuadEncoded[indexWrapped.componentOrderInverse.object],
+    //       decomposedQuadEncoded[indexWrapped.componentOrderInverse.graph],
+    //       quadComponentsOrdered[indexWrapped.componentOrderInverse.subject],
+    //       quadComponentsOrdered[indexWrapped.componentOrderInverse.predicate],
+    //       quadComponentsOrdered[indexWrapped.componentOrderInverse.object],
+    //       quadComponentsOrdered[indexWrapped.componentOrderInverse.graph],
+    //     );
+    //     if (requireQuotedTripleFiltering) {
+    //       // TODO: optimize this? may already work as expected by using .equals.
+    //       if (matchPattern(quad, subject!, predicate!, object!, graph!)) {
+    //         yield quad;
+    //       }
+    //     } else {
+    //       yield quad;
+    //     }
+    //   }
+    // } else {
     // Call the best index's find method.
     // eslint-disable-next-line unicorn/no-array-callback-reference
     for (const decomposedQuad of indexWrapped.index.find(quadComponentsOrdered)) {
@@ -250,6 +308,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
         yield quad;
       }
     }
+    // }
   }
 
   /**
