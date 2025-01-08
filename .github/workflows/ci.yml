@@ -77,7 +77,7 @@ jobs:
       - name: Install dependencies
         run: yarn install
       - name: Run benchmarks
-        uses: CodSpeedHQ/action@v2
+        uses: CodSpeedHQ/action@v3
         with:
           run: node perf/benchmark.js
           token: ${{ secrets.CODSPEED_TOKEN }}
