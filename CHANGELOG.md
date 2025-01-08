@@ -1,6 +1,14 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+<a name="v2.0.0"></a>
+## [v2.0.0](https://github.com/rubensworks/rdf-stores.js/compare/v1.0.0...v2.0.0) - 2025-01-08
+
+### BREAKING CHANGES
+* [Update to rdf-data-factory v2](https://github.com/rubensworks/rdf-stores.js/commit/83ca4776c2f1eb0ef0d6adee94bc2abb88dadb80)
+    This includes a bump to @rdfjs/types@2.0.0, which requires TypeScript 5 and Node 14+.
+    This allows literals with a different base direction to be properly stored and queried.
+
 <a name="v1.0.0"></a>
 ## [v1.0.0](https://github.com/rubensworks/rdf-stores.js/compare/v1.0.0-beta.2...v1.0.0) - 2023-06-27
 
