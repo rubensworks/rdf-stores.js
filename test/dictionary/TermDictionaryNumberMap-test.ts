@@ -45,10 +45,14 @@ describe('TermDictionaryNumberMap', () => {
       expect(dict.encode(DF.literal('abc'))).toEqual(0);
       expect(dict.encode(DF.literal('def'))).toEqual(1);
       expect(dict.encode(DF.literal('abc', DF.namedNode('ex:d')))).toEqual(2);
+      expect(dict.encode(DF.literal('abc', { language: 'en_us', direction: 'ltr' }))).toEqual(3);
+      expect(dict.encode(DF.literal('abc', { language: 'en_us', direction: 'rtl' }))).toEqual(4);
 
       expect(dict.encode(DF.literal('abc'))).toEqual(0);
       expect(dict.encode(DF.literal('def'))).toEqual(1);
       expect(dict.encode(DF.literal('abc', DF.namedNode('ex:d')))).toEqual(2);
+      expect(dict.encode(DF.literal('abc', { language: 'en_us', direction: 'ltr' }))).toEqual(3);
+      expect(dict.encode(DF.literal('abc', { language: 'en_us', direction: 'rtl' }))).toEqual(4);
     });
 
     it('should encode variables', () => {
@@ -139,10 +143,14 @@ describe('TermDictionaryNumberMap', () => {
       expect(dict.encode(DF.namedNode('s'))).toEqual(0);
       expect(dict.encode(DF.blankNode('s'))).toEqual(1);
       expect(dict.encode(DF.literal('s'))).toEqual(2);
+      expect(dict.encode(DF.literal('abc', { language: 'en_us', direction: 'ltr' }))).toEqual(3);
+      expect(dict.encode(DF.literal('abc', { language: 'en_us', direction: 'rtl' }))).toEqual(4);
 
       expect(dict.decode(0)).toEqualRdfTerm(DF.namedNode('s'));
       expect(dict.decode(1)).toEqualRdfTerm(DF.blankNode('s'));
       expect(dict.decode(2)).toEqualRdfTerm(DF.literal('s'));
+      expect(dict.decode(3)).toEqualRdfTerm(DF.literal('abc', { language: 'en_us', direction: 'ltr' }));
+      expect(dict.decode(4)).toEqualRdfTerm(DF.literal('abc', { language: 'en_us', direction: 'rtl' }));
     });
   });
 

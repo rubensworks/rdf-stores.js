@@ -49,10 +49,14 @@ describe('TermDictionaryQuoted', () => {
       expect(dict.encode(DF.literal('abc'))).toEqual(0);
       expect(dict.encode(DF.literal('def'))).toEqual(1);
       expect(dict.encode(DF.literal('abc', DF.namedNode('ex:d')))).toEqual(2);
+      expect(dict.encode(DF.literal('abc', { language: 'en_us', direction: 'ltr' }))).toEqual(3);
+      expect(dict.encode(DF.literal('abc', { language: 'en_us', direction: 'rtl' }))).toEqual(4);
 
       expect(dict.encode(DF.literal('abc'))).toEqual(0);
       expect(dict.encode(DF.literal('def'))).toEqual(1);
       expect(dict.encode(DF.literal('abc', DF.namedNode('ex:d')))).toEqual(2);
+      expect(dict.encode(DF.literal('abc', { language: 'en_us', direction: 'ltr' }))).toEqual(3);
+      expect(dict.encode(DF.literal('abc', { language: 'en_us', direction: 'rtl' }))).toEqual(4);
     });
 
     it('should encode variables', () => {
