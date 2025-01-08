@@ -39,11 +39,10 @@
     "index.js"
   ],
   "dependencies": {
-    "@rdfjs/types": "*",
     "asynciterator": "^3.8.0",
-    "rdf-data-factory": "^1.1.1",
-    "rdf-string": "^1.6.2",
-    "rdf-terms": "^1.9.1"
+    "rdf-data-factory": "^2.0.1",
+    "rdf-string": "^2.0.0",
+    "rdf-terms": "^2.0.0"
   },
   "pre-commit": [
     "build",
@@ -68,7 +67,7 @@
     "eslint-plugin-unused-imports": "^1.0.0",
     "jest": "^29.0.0",
     "jest-each": "^29.4.1",
-    "jest-rdf": "^1.5.0",
+    "jest-rdf": "^2.0.0",
     "manual-git-changelog": "^1.0.0",
     "n3": "^1.16.3",
     "pre-commit": "^1.2.2",
@@ -110,7 +109,5 @@
     "prepare": "npm run build",
     "version": "manual-git-changelog onversion"
   },
-  "resolutions": {
-    "@types/rdf-js": "4.0.1"
-  }
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
