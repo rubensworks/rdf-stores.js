@@ -88,8 +88,10 @@ All public getters and methods of an `RdfStore` are illustrated below.
 The examples assume the following imports and objects:
 ```typescript
 import { DataFactory } from 'rdf-data-factory';
+import { BindingsFactory } from '@comunica/utils-bindings-factory'; // Only necessary when requesting bindings
 const streamifyArray = require('streamify-array');
 const DF = new DataFactory();
+const BF = new BindingsFactory(DF);
 ```
 
 ### `size`
@@ -198,6 +200,42 @@ const stream = store.match(DF.namedNode('ex:s1'), undefined, DF.namedNode('ex:o1
 
 stream.on('data', (quad) => {
   console.log(quad);
+});
+stream.on('end', () => {
+  console.log('Done!');
+});
+```
+
+### `readBindings`
+
+Returns an iterable iterator producing all [bindings](https://rdf.js.org/query-spec/#bindings-interface) matching the given pattern:
+
+```typescript
+for (const bindings of store.readBindings(BF, DF.namedNode('ex:s1'), DF.variable('p'), DF.namedNode('ex:o1'), DF.variable('g'))) {
+  console.log(bindings.toString());
+  console.log(bindings.get('p'));
+  console.log(bindings.get('g'));
+}
+```
+
+### `getBindings`
+
+Returns an array containing all bindings matching the given pattern:
+
+```typescript
+const array = store.getBindings(BF, DF.namedNode('ex:s1'), DF.variable('p'), DF.namedNode('ex:o1'), DF.variable('g'));
+console.log(array);
+```
+
+### `matchBindings`
+
+Returns a stream producing all bindings matching the given pattern:
+
+```typescript
+const stream = store.match(DF.namedNode('ex:s1'), DF.variable('p'), DF.namedNode('ex:o1'), DF.variable('g'));
+
+stream.on('data', (bindings) => {
+  console.log(bindings.toString());
 });
 stream.on('end', () => {
   console.log('Done!');

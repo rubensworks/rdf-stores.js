@@ -1,3 +1,4 @@
+import { BindingsFactory } from '@comunica/utils-bindings-factory';
 import arrayifyStream from 'arrayify-stream';
 import each from 'jest-each';
 import { DataFactory } from 'rdf-data-factory';
@@ -7,11 +8,13 @@ import { TermDictionaryNumberRecordFullTerms } from '../lib/dictionary/TermDicti
 import { RdfStoreIndexNestedRecord } from '../lib/index/RdfStoreIndexNestedRecord';
 import { RdfStore } from '../lib/RdfStore';
 import 'jest-rdf';
+import '@comunica/utils-jest';
 import { dictClazzToInstance, indexClazzToInstance } from './testUtil';
 
 const streamifyArray = require('streamify-array');
 
 const DF = new DataFactory();
+const BF = new BindingsFactory(DF);
 const allComponentOrders: QuadTermName[][][][] = [
   [[[ 'subject', 'predicate', 'object', 'graph' ]]],
   [[[ 'predicate', 'subject', 'object', 'graph' ]]],
@@ -50,6 +53,11 @@ describe('RdfStore', () => {
   each(allComponentOrders).describe('with one index in %o order', indexCombinations => {
     each(Object.keys(indexClazzToInstance)).describe('for index type %s', indexClazz => {
       each(Object.keys(dictClazzToInstance)).describe('for dictionary type %s', dictClazz => {
+        // Uncomment the following and comment the three above to disable test combinations
+        // describe('with one index in %o order', () => { const indexCombinations: any = allComponentOrders[0][0];
+        //   describe('for index type %s', () => { const indexClazz: any = Object.keys(indexClazzToInstance)[1];
+        //     describe('for dictionary type %s', () => { const dictClazz: any = Object.keys(dictClazzToInstance)[3];
+
         beforeEach(() => {
           store = new RdfStore<number>({
             indexCombinations,
@@ -63,6 +71,18 @@ describe('RdfStore', () => {
           describe('find', () => {
             it('should produce no results', async() => {
               expect(await arrayifyStream(store.match())).toEqual([]);
+            });
+          });
+
+          describe('matchBindings', () => {
+            it('should produce no results', async() => {
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.variable('s'),
+                DF.variable('p'),
+                DF.variable('o'),
+                DF.variable('g'),
+              ))).toEqual([]);
             });
           });
         });
@@ -173,6 +193,81 @@ describe('RdfStore', () => {
                 undefined,
                 DF.namedNode('g'),
               ))).toEqual([]);
+            });
+          });
+
+          describe('matchBindings', () => {
+            it('should produce 1 result for a variable pattern', async() => {
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.variable('s'),
+                DF.variable('p'),
+                DF.variable('o'),
+                DF.variable('g'),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({
+                  s: DF.namedNode('s'),
+                  p: DF.namedNode('p'),
+                  o: DF.namedNode('o'),
+                  g: DF.namedNode('g'),
+                }),
+              ]);
+            });
+
+            it('should produce 1 result for an exact match', async() => {
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.namedNode('s'),
+                DF.namedNode('p'),
+                DF.namedNode('o'),
+                DF.namedNode('g'),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({}),
+              ]);
+            });
+
+            it('should produce 1 result for a partial match', async() => {
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.variable('s'),
+                DF.namedNode('p'),
+                DF.variable('o'),
+                DF.namedNode('g'),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({
+                  s: DF.namedNode('s'),
+                  o: DF.namedNode('o'),
+                }),
+              ]);
+            });
+
+            it('should produce 0 results for a partial non-match', async() => {
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.variable('s'),
+                DF.namedNode('p1'),
+                DF.variable('o'),
+                DF.namedNode('g'),
+              ))).toEqualBindingsArray([]);
+            });
+          });
+
+          describe('getBindings', () => {
+            it('should produce 1 result for a variable pattern', () => {
+              expect(store.getBindings(
+                BF,
+                DF.variable('s'),
+                DF.variable('p'),
+                DF.variable('o'),
+                DF.variable('g'),
+              )).toEqualBindingsArray([
+                BF.fromRecord({
+                  s: DF.namedNode('s'),
+                  p: DF.namedNode('p'),
+                  o: DF.namedNode('o'),
+                  g: DF.namedNode('g'),
+                }),
+              ]);
             });
           });
 
@@ -476,6 +571,191 @@ describe('RdfStore', () => {
                 undefined,
                 DF.namedNode('g3'),
               ))).toEqual([]);
+            });
+          });
+
+          describe('matchBindings', () => {
+            it('should produce all results for a variable pattern', async() => {
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.variable('s'),
+                DF.variable('p'),
+                DF.variable('o'),
+                DF.variable('g'),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({
+                  s: DF.namedNode('s1'),
+                  p: DF.namedNode('p1'),
+                  o: DF.namedNode('o1'),
+                  g: DF.namedNode('g1'),
+                }),
+                BF.fromRecord({
+                  s: DF.namedNode('s1'),
+                  p: DF.namedNode('p2'),
+                  o: DF.namedNode('o2'),
+                  g: DF.namedNode('g1'),
+                }),
+                BF.fromRecord({
+                  s: DF.namedNode('s2'),
+                  p: DF.namedNode('p1'),
+                  o: DF.namedNode('o1'),
+                  g: DF.namedNode('g1'),
+                }),
+                BF.fromRecord({
+                  s: DF.namedNode('s2'),
+                  p: DF.namedNode('p2'),
+                  o: DF.namedNode('o2'),
+                  g: DF.namedNode('g2'),
+                }),
+              ], true);
+            });
+
+            it('should produce 1 result for exact matches', async() => {
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.namedNode('s1'),
+                DF.namedNode('p1'),
+                DF.namedNode('o1'),
+                DF.namedNode('g1'),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({}),
+              ]);
+
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.namedNode('s1'),
+                DF.namedNode('p2'),
+                DF.namedNode('o2'),
+                DF.namedNode('g1'),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({}),
+              ]);
+
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.namedNode('s2'),
+                DF.namedNode('p1'),
+                DF.namedNode('o1'),
+                DF.namedNode('g1'),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({}),
+              ]);
+
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.namedNode('s2'),
+                DF.namedNode('p2'),
+                DF.namedNode('o2'),
+                DF.namedNode('g2'),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({}),
+              ]);
+            });
+
+            it('should produce results for partial matches', async() => {
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.namedNode('s1'),
+                DF.variable('p'),
+                DF.variable('o'),
+                DF.variable('g'),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({
+                  p: DF.namedNode('p1'),
+                  o: DF.namedNode('o1'),
+                  g: DF.namedNode('g1'),
+                }),
+                BF.fromRecord({
+                  p: DF.namedNode('p2'),
+                  o: DF.namedNode('o2'),
+                  g: DF.namedNode('g1'),
+                }),
+              ], true);
+
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.namedNode('s2'),
+                DF.variable('p'),
+                DF.variable('o'),
+                DF.variable('g'),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({
+                  p: DF.namedNode('p1'),
+                  o: DF.namedNode('o1'),
+                  g: DF.namedNode('g1'),
+                }),
+                BF.fromRecord({
+                  p: DF.namedNode('p2'),
+                  o: DF.namedNode('o2'),
+                  g: DF.namedNode('g2'),
+                }),
+              ], true);
+
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.variable('s'),
+                DF.namedNode('p1'),
+                DF.variable('o'),
+                DF.variable('g'),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({
+                  s: DF.namedNode('s1'),
+                  o: DF.namedNode('o1'),
+                  g: DF.namedNode('g1'),
+                }),
+                BF.fromRecord({
+                  s: DF.namedNode('s2'),
+                  o: DF.namedNode('o1'),
+                  g: DF.namedNode('g1'),
+                }),
+              ], true);
+
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.namedNode('s2'),
+                DF.namedNode('p1'),
+                DF.variable('o'),
+                DF.variable('g'),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({
+                  o: DF.namedNode('o1'),
+                  g: DF.namedNode('g1'),
+                }),
+              ], true);
+
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.namedNode('s2'),
+                DF.variable('p'),
+                DF.variable('o'),
+                DF.namedNode('g2'),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({
+                  p: DF.namedNode('p2'),
+                  o: DF.namedNode('o2'),
+                }),
+              ], true);
+
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.namedNode('s2'),
+                DF.variable('v1'),
+                DF.variable('v2'),
+                DF.namedNode('g2'),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({
+                  v1: DF.namedNode('p2'),
+                  v2: DF.namedNode('o2'),
+                }),
+              ], true);
+
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.namedNode('s2'),
+                DF.variable('p'),
+                DF.variable('o'),
+                DF.namedNode('g3'),
+              ))).toEqualBindingsArray([], true);
             });
           });
 
@@ -918,6 +1198,128 @@ describe('RdfStore', () => {
           });
         });
 
+        describe('that has reused terms across triple positions', () => {
+          beforeEach(async() => {
+            const ret = store.import(streamifyArray([
+              DF.quad(
+                DF.namedNode('t1'),
+                DF.namedNode('t1'),
+                DF.namedNode('t1'),
+                DF.namedNode('t1'),
+              ),
+              DF.quad(
+                DF.namedNode('t1'),
+                DF.namedNode('t1'),
+                DF.namedNode('t2'),
+                DF.namedNode('t1'),
+              ),
+              DF.quad(
+                DF.namedNode('t1'),
+                DF.namedNode('t2'),
+                DF.namedNode('t1'),
+                DF.namedNode('t1'),
+              ),
+              DF.quad(
+                DF.namedNode('t1'),
+                DF.namedNode('t2'),
+                DF.namedNode('t2'),
+                DF.namedNode('t1'),
+              ),
+              DF.quad(
+                DF.namedNode('t2'),
+                DF.namedNode('t1'),
+                DF.namedNode('t1'),
+                DF.namedNode('t1'),
+              ),
+              DF.quad(
+                DF.namedNode('t2'),
+                DF.namedNode('t1'),
+                DF.namedNode('t2'),
+                DF.namedNode('t1'),
+              ),
+              DF.quad(
+                DF.namedNode('t2'),
+                DF.namedNode('t2'),
+                DF.namedNode('t1'),
+                DF.namedNode('t1'),
+              ),
+              DF.quad(
+                DF.namedNode('t2'),
+                DF.namedNode('t2'),
+                DF.namedNode('t2'),
+                DF.namedNode('t1'),
+              ),
+            ]));
+            await new Promise(resolve => ret.on('end', resolve));
+          });
+
+          describe('matchBindings', () => {
+            it('should match a subset', async() => {
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.namedNode('t1'),
+                DF.variable('p'),
+                DF.variable('o'),
+                DF.variable('g'),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({
+                  p: DF.namedNode('t1'),
+                  o: DF.namedNode('t1'),
+                  g: DF.namedNode('t1'),
+                }),
+                BF.fromRecord({
+                  p: DF.namedNode('t1'),
+                  o: DF.namedNode('t2'),
+                  g: DF.namedNode('t1'),
+                }),
+                BF.fromRecord({
+                  p: DF.namedNode('t2'),
+                  o: DF.namedNode('t1'),
+                  g: DF.namedNode('t1'),
+                }),
+                BF.fromRecord({
+                  p: DF.namedNode('t2'),
+                  o: DF.namedNode('t2'),
+                  g: DF.namedNode('t1'),
+                }),
+              ], true);
+            });
+
+            it('should for all reused variables', async() => {
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.variable('t'),
+                DF.variable('t'),
+                DF.variable('t'),
+                DF.variable('t'),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({
+                  t: DF.namedNode('t1'),
+                }),
+              ], true);
+            });
+
+            it('should for all some reused variables', async() => {
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.variable('ta'),
+                DF.variable('tb'),
+                DF.variable('ta'),
+                DF.variable('tb'),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({
+                  ta: DF.namedNode('t1'),
+                  tb: DF.namedNode('t1'),
+                }),
+                BF.fromRecord({
+                  ta: DF.namedNode('t2'),
+                  tb: DF.namedNode('t1'),
+                }),
+              ], true);
+            });
+          });
+        });
+
         describe('that has quoted quads', () => {
           beforeEach(async() => {
             const ret = store.import(streamifyArray([
@@ -1076,6 +1478,114 @@ describe('RdfStore', () => {
                     DF.literal('"Bob"'),
                   ),
                 ),
+              ]);
+            });
+          });
+
+          describe('matchBindings', () => {
+            it('should produce results for a top-level pattern', async() => {
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.variable('s'),
+                DF.namedNode('ex:says'),
+                DF.variable('o'),
+                DF.defaultGraph(),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({
+                  s: DF.namedNode('ex:alice'),
+                  o: DF.quad(
+                    DF.namedNode('ex:bob'),
+                    DF.namedNode('ex:name'),
+                    DF.literal('"Bob"'),
+                  ),
+                }),
+                BF.fromRecord({
+                  s: DF.namedNode('ex:carol'),
+                  o: DF.quad(
+                    DF.namedNode('ex:bob'),
+                    DF.namedNode('ex:name'),
+                    DF.literal('"NotBob"'),
+                  ),
+                }),
+              ], true);
+            });
+
+            it('should produce results for a quoted triple', async() => {
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.variable('s'),
+                DF.namedNode('ex:says'),
+                DF.quad(
+                  DF.namedNode('ex:bob'),
+                  DF.namedNode('ex:name'),
+                  DF.literal('"Bob"'),
+                ),
+                DF.defaultGraph(),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({
+                  s: DF.namedNode('ex:alice'),
+                }),
+              ]);
+            });
+
+            it('should produce results for a quoted object variable', async() => {
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.variable('s'),
+                DF.namedNode('ex:says'),
+                DF.quad(
+                  DF.namedNode('ex:bob'),
+                  DF.namedNode('ex:name'),
+                  DF.variable('name'),
+                ),
+                DF.defaultGraph(),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({
+                  s: DF.namedNode('ex:alice'),
+                  name: DF.literal('"Bob"'),
+                }),
+                BF.fromRecord({
+                  s: DF.namedNode('ex:carol'),
+                  name: DF.literal('"NotBob"'),
+                }),
+              ]);
+            });
+
+            it('should produce results for a quoted predicate variable', async() => {
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.variable('s'),
+                DF.namedNode('ex:says'),
+                DF.quad(
+                  DF.namedNode('ex:bob'),
+                  DF.variable('name'),
+                  DF.literal('"Bob"'),
+                ),
+                DF.defaultGraph(),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({
+                  s: DF.namedNode('ex:alice'),
+                  name: DF.namedNode('ex:name'),
+                }),
+              ]);
+            });
+
+            it('should produce results for a quoted variable with partial match', async() => {
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.variable('s'),
+                DF.namedNode('ex:says'),
+                DF.quad(
+                  DF.variable('person'),
+                  DF.namedNode('ex:name'),
+                  DF.literal('"Bob"'),
+                ),
+                DF.defaultGraph(),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({
+                  s: DF.namedNode('ex:alice'),
+                  person: DF.namedNode('ex:bob'),
+                }),
               ]);
             });
           });

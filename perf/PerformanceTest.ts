@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 import * as assert from 'assert';
+import { BindingsFactory } from '@comunica/utils-bindings-factory';
 import type * as RDF from '@rdfjs/types';
 import arrayifyStream from 'arrayify-stream';
 import { Store } from 'n3';
@@ -17,6 +18,7 @@ export class PerformanceTest {
     public readonly dimension = 256,
     public readonly prefix = 'http://example.org/#',
     public readonly dataFactory: RDF.DataFactory = new DataFactory(),
+    public readonly bindingsFactory: RDF.BindingsFactory = new BindingsFactory(<any> this.dataFactory),
   ) {}
 
   public async run(scope: 'all' | 'triples' | 'quads' | 'quoted'): Promise<void> {
@@ -29,6 +31,9 @@ export class PerformanceTest {
         this.findTriplesNoVariables(this.dimension, store);
         this.findTriples1Variable(this.dimension, store);
         this.findTriples2Variables(this.dimension, store);
+        if (approach.options.type !== 'n3') {
+          this.findBindings2Variables(this.dimension, <any> store);
+        }
         await this.findTriples1VariableStream(this.dimension, <any>store);
         this.countTriples1Variable(this.dimension, store);
         console.log();
@@ -117,6 +122,21 @@ export class PerformanceTest {
     }
     for (let kCount = 0; kCount < dimension; kCount++) {
       assert.equal(store.getQuads(null, null, this.dataFactory.namedNode(`${this.prefix}${kCount}`), this.dataFactory.defaultGraph()).length, dimension * dimension);
+    }
+    console.timeEnd(TEST);
+  }
+
+  public findBindings2Variables(dimension: number, store: RdfStore): void {
+    const TEST = `- Finding all ${dimension * dimension * dimension} triples as bindings in the default graph ${dimension * 3} times (2 variables)`;
+    console.time(TEST);
+    for (let i = 0; i < dimension; i++) {
+      assert.equal(store.getBindings(this.bindingsFactory, this.dataFactory.namedNode(`${this.prefix}${i}`), this.dataFactory.variable!('p'), this.dataFactory.variable!('o'), this.dataFactory.defaultGraph()).length, dimension * dimension);
+    }
+    for (let j = 0; j < dimension; j++) {
+      assert.equal(store.getBindings(this.bindingsFactory, this.dataFactory.variable!('s'), this.dataFactory.namedNode(`${this.prefix}${j}`), this.dataFactory.variable!('o'), this.dataFactory.defaultGraph()).length, dimension * dimension);
+    }
+    for (let kCount = 0; kCount < dimension; kCount++) {
+      assert.equal(store.getBindings(this.bindingsFactory, this.dataFactory.variable!('s'), this.dataFactory.variable!('p'), this.dataFactory.namedNode(`${this.prefix}${kCount}`), this.dataFactory.defaultGraph()).length, dimension * dimension);
     }
     console.timeEnd(TEST);
   }

@@ -4,7 +4,11 @@ import type { AsyncIterator } from 'asynciterator';
 import { wrap } from 'asynciterator';
 import { DataFactory } from 'rdf-data-factory';
 import type { QuadTermName } from 'rdf-terms';
-import { matchPattern, QUAD_TERM_NAMES } from 'rdf-terms';
+import {
+  matchPattern,
+  matchPatternMappings,
+  QUAD_TERM_NAMES,
+} from 'rdf-terms';
 import { DatasetCoreWrapper } from './dataset/DatasetCoreWrapper';
 import type { ITermDictionary } from './dictionary/ITermDictionary';
 import { TermDictionaryNumberRecordFullTerms } from './dictionary/TermDictionaryNumberRecordFullTerms';
@@ -12,7 +16,7 @@ import { TermDictionaryQuotedIndexed } from './dictionary/TermDictionaryQuotedIn
 import type { IRdfStoreIndex } from './index/IRdfStoreIndex';
 import { RdfStoreIndexNestedMapQuoted } from './index/RdfStoreIndexNestedMapQuoted';
 import type { IRdfStoreOptions } from './IRdfStoreOptions';
-import { getBestIndex, orderQuadComponents, quadToPattern } from './OrderUtils';
+import { encodeOptionalTerms, getBestIndex, orderQuadComponents, quadToPattern } from './OrderUtils';
 import type { EncodedQuadTerms, QuadPatternTerms } from './PatternTerm';
 
 /**
@@ -282,6 +286,152 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     graph?: RDF.Term | null,
   ): RDF.Stream<Q> & AsyncIterator<Q> {
     return wrap(this.readQuads(subject, predicate, object, graph));
+  }
+
+  /**
+   * Returns a generator producing all quads matching the pattern.
+   * @param subject The subject, which can be a variable.
+   * @param predicate The predicate, which can be a variable.
+   * @param object The object, which can be a variable.
+   * @param graph The graph, which can be a variable.
+   */
+  public * readBindings(
+    bindingsFactory: RDF.BindingsFactory,
+    subject: RDF.Term,
+    predicate: RDF.Term,
+    object: RDF.Term,
+    graph: RDF.Term,
+  ): IterableIterator<RDF.Bindings> {
+    // Check if our dictionary and our indexes have quoted pattern support
+    const indexesSupportQuotedPatterns = Boolean(this.dictionary.features.quotedTriples) &&
+      Object.values(this.indexesWrapped).every(wrapped => wrapped.index.features.quotedTripleFiltering);
+
+    // Construct a quad pattern array
+    const [ quadComponents, requireQuotedTripleFiltering ] =
+      quadToPattern(subject, predicate, object, graph, indexesSupportQuotedPatterns);
+
+    // Determine the best index for this pattern
+    const indexWrapped = this.indexesWrapped[getBestIndex(this.indexesWrappedComponentOrders, quadComponents)];
+
+    // Re-order the quad pattern based on this best index's component order
+    const quadComponentsOrdered = <QuadPatternTerms> orderQuadComponents(indexWrapped.componentOrder, quadComponents);
+    const ids = encodeOptionalTerms(quadComponentsOrdered, this.dictionary);
+
+    // Abort if any of the terms does not exist in the dictionary
+    if (!ids) {
+      return;
+    }
+
+    // Collect variables to bind
+    const terms = orderQuadComponents(indexWrapped.componentOrder, [ subject, predicate, object, graph ]);
+    const variableIndexes: number[] = [];
+    for (let i = 0; i < terms.length; i++) {
+      if (terms[i].termType === 'Variable' || terms[i].termType === 'Quad') {
+        variableIndexes.push(i);
+      }
+    }
+
+    // Check if we need to do post-filtering for overlapping variables
+    let shouldFilterIndexes = false;
+    const filterIndexes = terms.map((variable, i) => {
+      const equalVariables = [];
+      for (let j = i + 1; j < terms.length; j++) {
+        if (variable.equals(terms[j])) {
+          equalVariables.push(j);
+          shouldFilterIndexes = true;
+        }
+      }
+      return equalVariables;
+    });
+
+    // Call the best index's find method.
+    for (const decomposedQuadEncoded of indexWrapped.index
+      .findEncoded(<EncodedQuadTerms<E | undefined>> ids, quadComponentsOrdered)) {
+      let skipBinding = false;
+      const bindingsEntries: [RDF.Variable, RDF.Term][] = [];
+      for (const i of variableIndexes) {
+        // If we had overlapping variables, potentially exclude this binding if values for variable are unequal
+        if (shouldFilterIndexes) {
+          const filterI = filterIndexes[i];
+          if (filterI) {
+            for (const j of filterI) {
+              if (decomposedQuadEncoded[i] !== decomposedQuadEncoded[j]) {
+                skipBinding = true;
+                break;
+              }
+            }
+          }
+          if (skipBinding) {
+            break;
+          }
+        }
+
+        const decodedTerm = this.dictionary.decode(decomposedQuadEncoded[i]);
+
+        // Handle quoted triples
+        // TODO: it may be possible to implement a more efficient of findEncoded if requireQuotedTripleFiltering is
+        //  false that would return bindings instead of quads. The following could then be skipped.
+        //  variableIndexes would also need to be changed to check requireQuotedTripleFiltering (see readQuads).
+        if (terms[i].termType === 'Quad') {
+          if (decodedTerm.termType === 'Quad') {
+            // If the term is a quad, it may also contain nested variables,
+            // so we need to extract those additional bindings.
+            const additionalBindings = matchPatternMappings(decodedTerm, terms[i], { returnMappings: true });
+            if (additionalBindings) {
+              for (const [ key, value ] of Object.entries(additionalBindings)) {
+                bindingsEntries.push([ this.dataFactory.variable!(key), value ]);
+              }
+              continue;
+            }
+          }
+          skipBinding = true;
+          break;
+        }
+
+        bindingsEntries.push([ <RDF.Variable> terms[i], decodedTerm ]);
+      }
+
+      if (!skipBinding) {
+        // Create and yield the bindings object
+        yield bindingsFactory.bindings(bindingsEntries);
+      }
+    }
+  }
+
+  /**
+   * Returns an array containing all bindings matching the pattern.
+   * @param bindingsFactory The factory that will be used to create bindings.
+   * @param subject The subject, which can be a variable.
+   * @param predicate The predicate, which can be a variable.
+   * @param object The object, which can be a variable.
+   * @param graph The graph, which can be a variable.
+   */
+  public getBindings(
+    bindingsFactory: RDF.BindingsFactory,
+    subject: RDF.Term,
+    predicate: RDF.Term,
+    object: RDF.Term,
+    graph: RDF.Term,
+  ): RDF.Bindings[] {
+    return [ ...this.readBindings(bindingsFactory, subject, predicate, object, graph) ];
+  }
+
+  /**
+   * Returns a stream that produces all quads matching the pattern.
+   * @param bindingsFactory The factory that will be used to create bindings.
+   * @param subject The subject, which can be a variable.
+   * @param predicate The predicate, which can be a variable.
+   * @param object The object, which can be a variable.
+   * @param graph The graph, which can be a variable.
+   */
+  public matchBindings(
+    bindingsFactory: RDF.BindingsFactory,
+    subject: RDF.Term,
+    predicate: RDF.Term,
+    object: RDF.Term,
+    graph: RDF.Term,
+  ): AsyncIterator<RDF.Bindings> {
+    return wrap(this.readBindings(bindingsFactory, subject, predicate, object, graph));
   }
 
   /**
