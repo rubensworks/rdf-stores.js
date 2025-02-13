@@ -348,6 +348,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     for (const decomposedQuadEncoded of indexWrapped.index
       .findEncoded(<EncodedQuadTerms<E | undefined>> ids, quadComponentsOrdered)) {
       let skipBinding = false;
+      let checkForBindingConflicts = false;
       const bindingsEntries: [RDF.Variable, RDF.Term][] = [];
       for (const i of variableIndexes) {
         // If we had overlapping variables, potentially exclude this binding if values for variable are unequal
@@ -378,12 +379,28 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
             // so we need to extract those additional bindings.
             const additionalBindings = matchPatternMappings(decodedTerm, terms[i], { returnMappings: true });
             if (additionalBindings) {
+              checkForBindingConflicts = true;
               for (const [ key, value ] of Object.entries(additionalBindings)) {
-                bindingsEntries.push([ this.dataFactory.variable!(key), value ]);
+                const variable = this.dataFactory.variable!(key);
+                if (bindingsEntries.some(entry => entry[0].equals(variable) && !entry[1].equals(value))) {
+                  // Skip this binding if we find conflicting variable bindings
+                  skipBinding = true;
+                  break;
+                }
+                bindingsEntries.push([ variable, value ]);
               }
               continue;
             }
           }
+          skipBinding = true;
+          break;
+        }
+
+        // If for the current bindings object, we previously found a quoted quad term that bound variables within it,
+        // make sure that later bindings to this variable from other terms don't conflict.
+        if (checkForBindingConflicts && bindingsEntries
+          .some(entry => entry[0].equals(terms[i]) && !entry[1].equals(decodedTerm))) {
+          // Skip this binding if we find conflicting variable bindings
           skipBinding = true;
           break;
         }

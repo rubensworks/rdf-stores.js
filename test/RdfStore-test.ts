@@ -54,9 +54,9 @@ describe('RdfStore', () => {
     each(Object.keys(indexClazzToInstance)).describe('for index type %s', indexClazz => {
       each(Object.keys(dictClazzToInstance)).describe('for dictionary type %s', dictClazz => {
         // Uncomment the following and comment the three above to disable test combinations
-        // describe('with one index in %o order', () => { const indexCombinations: any = allComponentOrders[0][0];
-        //   describe('for index type %s', () => { const indexClazz: any = Object.keys(indexClazzToInstance)[1];
-        //     describe('for dictionary type %s', () => { const dictClazz: any = Object.keys(dictClazzToInstance)[3];
+        // describe('with one index in %o order', () => { const indexCombinations: any = allComponentOrders[2][0];
+        //   describe('for index type %s', () => { const indexClazz: any = Object.keys(indexClazzToInstance)[0];
+        //     describe('for dictionary type %s', () => { const dictClazz: any = Object.keys(dictClazzToInstance)[0];
 
         beforeEach(() => {
           store = new RdfStore<number>({
@@ -1341,6 +1341,15 @@ describe('RdfStore', () => {
                   DF.literal('"NotBob"'),
                 ),
               ),
+              DF.quad(
+                DF.namedNode('ex:carol'),
+                DF.namedNode('ex:thinks'),
+                DF.quad(
+                  DF.namedNode('ex:carol'),
+                  DF.namedNode('ex:name'),
+                  DF.literal('"Carol"'),
+                ),
+              ),
             ]));
             await new Promise(resolve => ret.on('end', resolve));
           });
@@ -1585,6 +1594,26 @@ describe('RdfStore', () => {
                 BF.fromRecord({
                   s: DF.namedNode('ex:alice'),
                   person: DF.namedNode('ex:bob'),
+                }),
+              ]);
+            });
+
+            it('should produce results for reused variables in quoted triple', async() => {
+              expect(await arrayifyStream(store.matchBindings(
+                BF,
+                DF.variable('s'),
+                DF.variable('p'),
+                DF.quad(
+                  DF.variable('s'),
+                  DF.namedNode('ex:name'),
+                  DF.variable('name'),
+                ),
+                DF.defaultGraph(),
+              ))).toEqualBindingsArray([
+                BF.fromRecord({
+                  s: DF.namedNode('ex:carol'),
+                  p: DF.namedNode('ex:thinks'),
+                  name: DF.literal('"Carol"'),
                 }),
               ]);
             });
