@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+<a name="v2.1.0"></a>
+## [v2.1.0](https://github.com/rubensworks/rdf-stores.js/compare/v2.0.0...v2.1.0) - 2025-02-13
+
+### Added
+* [Add methods for bindings-based reading](https://github.com/rubensworks/rdf-stores.js/commit/06f9dc0a9ecdf1eec082da2ccf09ad9b9a808771)
+
 <a name="v2.0.0"></a>
 ## [v2.0.0](https://github.com/rubensworks/rdf-stores.js/compare/v1.0.0...v2.0.0) - 2025-01-08
 
