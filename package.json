@@ -1,6 +1,6 @@
 {
   "name": "rdf-stores",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "A TypeScript/JavaScript implementation of the RDF/JS store interface with support for quoted triples.",
   "funding": {
     "type": "individual",

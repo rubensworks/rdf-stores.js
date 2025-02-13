@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+<a name="v2.1.1"></a>
+## [v2.1.1](https://github.com/rubensworks/rdf-stores.js/compare/v2.1.0...v2.1.1) - 2025-02-13
+
+### Fixed
+* [Fix handling of reused variables across quoted patterns in matchBindings](https://github.com/rubensworks/rdf-stores.js/commit/405824aad64e4882409fd560f0acca4f6de911a2)
+
 <a name="v2.1.0"></a>
 ## [v2.1.0](https://github.com/rubensworks/rdf-stores.js/compare/v2.0.0...v2.1.0) - 2025-02-13
 
