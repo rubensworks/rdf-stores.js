@@ -74,7 +74,7 @@
     "n3": "^1.16.3",
     "pre-commit": "^1.2.2",
     "streamify-array": "^1.0.1",
-    "tinybench": "^2.8.0",
+    "tinybench": "^3.0.0",
     "ts-jest": "^29.0.0",
     "typescript": "5.5.4",
     "yargs": "^17.7.1"
