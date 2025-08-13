@@ -5132,10 +5132,10 @@ through2@^4.0.0:
   dependencies:
     readable-stream "3"
 
-tinybench@^2.8.0:
-  version "2.9.0"
-  resolved "https://registry.yarnpkg.com/tinybench/-/tinybench-2.9.0.tgz#103c9f8ba6d7237a47ab6dd1dcff77251863426b"
-  integrity sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==
+tinybench@^4.0.0:
+  version "4.1.0"
+  resolved "https://registry.yarnpkg.com/tinybench/-/tinybench-4.1.0.tgz#090118e51159eb105f3cc2ef5cf371f3f8adc7bf"
+  integrity sha512-8JZoQRJgWWEIIeAmpiNmMHIREmUY3oGX8GRmlmNapLr/qtgMe+K76vM2qabh85hNScnE2lqTVTajVETjuD9Ixg==
 
 tmpl@1.0.5:
   version "1.0.5"
