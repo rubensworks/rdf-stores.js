@@ -299,22 +299,22 @@
   resolved "https://registry.yarnpkg.com/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz#75a2e8b51cb758a7553d6804a5932d7aace75c39"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
-"@codspeed/core@^3.1.1":
-  version "3.1.1"
-  resolved "https://registry.yarnpkg.com/@codspeed/core/-/core-3.1.1.tgz#8fe9de8cd0ebe01adc3c78cc3510c2bb766ab0f8"
-  integrity sha512-ONhERVDAtkm0nc+FYPivDozoMOlNUP2BWRBFDJYATGA18Iap5Kd2mZ1/Lwz54RB5+g+3YDOpsvotHa4hd3Q+7Q==
+"@codspeed/core@^4.0.1":
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/@codspeed/core/-/core-4.0.1.tgz#91049cce17b8c1d1b4b6cbc481f5ddc1145d6e1e"
+  integrity sha512-fJ53arfgtzCDZa8DuGJhpTZ3Ll9A1uW5nQ2jSJnfO4Hl5MRD2cP8P4vPvIUAGbdbjwCxR1jat6cW8OloMJkJXw==
   dependencies:
     axios "^1.4.0"
     find-up "^6.3.0"
     form-data "^4.0.0"
     node-gyp-build "^4.6.0"
 
-"@codspeed/tinybench-plugin@^3.1.0":
-  version "3.1.1"
-  resolved "https://registry.yarnpkg.com/@codspeed/tinybench-plugin/-/tinybench-plugin-3.1.1.tgz#5ca7e0528ed5bd16be762bcbfdda18e2811e58bd"
-  integrity sha512-LVF4End0kDU9V7CzuwAcmngSPJNnpduPnr+csOKvcG++FsYwfUuBJ1rvLPtv6yTkvxpUmUEsj6VA7/AEIBGZVw==
+"@codspeed/tinybench-plugin@^4.0.0":
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/@codspeed/tinybench-plugin/-/tinybench-plugin-4.0.1.tgz#b0e27a963c03e6ca84c99685ee86abdbd3aa5c9f"
+  integrity sha512-hga1xif6XU8p/FZqTHzUrDPrBSLqxc3NuxMX8m4P8AIdhORsPrvgSNe09uVYlVOtD6jG7kPsmx5DZscez4wKrQ==
   dependencies:
-    "@codspeed/core" "^3.1.1"
+    "@codspeed/core" "^4.0.1"
     stack-trace "1.0.0-pre2"
 
 "@comunica/bus-merge-bindings-context@^4.1.0":
