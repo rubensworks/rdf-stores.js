@@ -77,7 +77,7 @@
     "tinybench": "^2.8.0",
     "ts-jest": "^29.0.0",
     "typescript": "5.5.4",
-    "yargs": "^17.7.1"
+    "yargs": "^18.0.0"
   },
   "jest": {
     "transform": {
