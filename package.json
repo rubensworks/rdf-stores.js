@@ -71,7 +71,7 @@
     "jest-each": "^29.4.1",
     "jest-rdf": "^2.0.0",
     "manual-git-changelog": "^1.0.0",
-    "n3": "^1.16.3",
+    "n3": "^2.0.0",
     "pre-commit": "^1.2.2",
     "streamify-array": "^1.0.1",
     "tinybench": "^2.8.0",
