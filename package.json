@@ -51,8 +51,8 @@
   ],
   "devDependencies": {
     "@codspeed/tinybench-plugin": "^3.1.0",
-    "@comunica/utils-bindings-factory": "^4.1.0",
-    "@comunica/utils-jest": "^4.1.0",
+    "@comunica/utils-bindings-factory": "^5.0.0",
+    "@comunica/utils-jest": "^5.0.0",
     "@rubensworks/eslint-config": "^1.0.0",
     "@types/jest": "^29.0.0",
     "@types/n3": "^1.10.4",
