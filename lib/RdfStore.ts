@@ -3,6 +3,7 @@ import type * as RDF from '@rdfjs/types';
 import type { AsyncIterator } from 'asynciterator';
 import { wrap } from 'asynciterator';
 import { DataFactory } from 'rdf-data-factory';
+import { termToString } from 'rdf-string';
 import type { QuadTermName } from 'rdf-terms';
 import {
   matchPattern,
@@ -16,7 +17,14 @@ import { TermDictionaryQuotedIndexed } from './dictionary/TermDictionaryQuotedIn
 import type { IRdfStoreIndex } from './index/IRdfStoreIndex';
 import { RdfStoreIndexNestedMapQuoted } from './index/RdfStoreIndexNestedMapQuoted';
 import type { IRdfStoreOptions } from './IRdfStoreOptions';
-import { encodeOptionalTerms, getBestIndex, orderQuadComponents, quadToPattern } from './OrderUtils';
+import {
+  encodeOptionalTerms,
+  getBestIndex,
+  getBestIndexTerms,
+  getIndexMatchTermsPath,
+  orderQuadComponents,
+  quadToPattern,
+} from './OrderUtils';
 import type { EncodedQuadTerms, QuadPatternTerms } from './PatternTerm';
 
 /**
@@ -445,6 +453,100 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     graph: RDF.Term,
   ): AsyncIterator<RDF.Bindings> {
     return wrap(this.readBindings(bindingsFactory, subject, predicate, object, graph));
+  }
+
+  /**
+   * Returns a generator producing distinct arrays of terms that exist in the store.
+   * Each returned array corresponds to the terms specified by given quad term names.
+   *
+   * For example, when requesting the terms `[ 'subject', 'predicate' ]`,
+   * a produced array could be `[ 'ex:s', 'ex:p' ]`,
+   *
+   * @param terms An array of quad term names
+   */
+  public * readDistinctTerms(
+    terms: QuadTermName[],
+  ): IterableIterator<RDF.Term[]> {
+    // Determine the best index for this pattern
+    const bestIndex = getBestIndexTerms(this.indexesWrappedComponentOrders, terms);
+    const indexWrapped = this.indexesWrapped[bestIndex];
+
+    // Order terms, and keep index for fast inverse ordering during decoding
+    const termOrderInToIndex: number[] = [];
+    for (let i = 0; i < terms.length; i++) {
+      termOrderInToIndex[i] = indexWrapped.componentOrder.indexOf(terms[i]);
+    }
+    const termsOrderedUnfiltered: (QuadTermName | undefined)[] = [ undefined, undefined, undefined, undefined ];
+    for (let i = 0; i < terms.length; i++) {
+      termsOrderedUnfiltered[termOrderInToIndex[i]] = terms[i];
+    }
+    const termsOrdered: QuadTermName[] = termsOrderedUnfiltered.filter(t => t !== undefined);
+    const termOrderOrderedToIn: number[] = [];
+    for (let i = 0; i < termsOrdered.length; i++) {
+      termOrderOrderedToIn[i] = terms.indexOf(termsOrdered[i]);
+    }
+
+    // Determine path of terms to follow in the index
+    const matchTerms = getIndexMatchTermsPath(indexWrapped.componentOrder, termsOrdered);
+
+    // Ensure distinctness (this can only occur when insufficient indexes are available)
+    let distinctTerms: Set<string> | undefined;
+    if (matchTerms.includes(false)) {
+      distinctTerms = new Set<string>();
+    }
+
+    // Call the best index's find method
+    for (const readTerms of indexWrapped.index.findTerms(matchTerms)) {
+      // Inverse term ordering
+      const readTermsInversed: E[] = [];
+      for (let i = 0; i < readTerms.length; i++) {
+        readTermsInversed[termOrderOrderedToIn[i]] = readTerms[i];
+      }
+
+      // Decode terms
+      const decodedTerms = readTermsInversed.map(t => this.dictionary.decode(t));
+
+      // Filter to ensure distinct terms are returned
+      if (distinctTerms) {
+        const decodedTermsId = decodedTerms.map(element => termToString(element)).join(',');
+        if (distinctTerms.has(decodedTermsId)) {
+          continue;
+        }
+        distinctTerms.add(decodedTermsId);
+      }
+
+      yield decodedTerms;
+    }
+  }
+
+  /**
+   * Returns an array with distinct arrays of terms that exist in the store.
+   * Each returned array corresponds to the terms specified by given quad term names.
+   *
+   * For example, when requesting the terms `[ 'subject', 'predicate' ]`,
+   * a produced array could be `[ 'ex:s', 'ex:p' ]`,
+   *
+   * @param terms An array of quad term names
+   */
+  public getDistinctTerms(
+    terms: QuadTermName[],
+  ): RDF.Term[][] {
+    return [ ...this.readDistinctTerms(terms) ];
+  }
+
+  /**
+   * Returns a stream with distinct arrays of terms that exist in the store.
+   * Each returned array corresponds to the terms specified by given quad term names.
+   *
+   * For example, when requesting the terms `[ 'subject', 'predicate' ]`,
+   * a produced array could be `[ 'ex:s', 'ex:p' ]`,
+   *
+   * @param terms An array of quad term names
+   */
+  public matchDistinctTerms(
+    terms: QuadTermName[],
+  ): AsyncIterator<RDF.Term[]> {
+    return wrap(this.readDistinctTerms(terms));
   }
 
   /**

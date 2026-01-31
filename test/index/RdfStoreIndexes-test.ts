@@ -1019,6 +1019,401 @@ describe('RdfStoreIndexes', () => {
           });
         });
 
+        describe('findTerms', () => {
+          it('should produce all subjects', () => {
+            expect([ ...index.findTerms([
+              true,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+              ],
+            ]);
+
+            expect([ ...index.findTerms([
+              true,
+              false,
+              false,
+              false,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+              ],
+            ]);
+          });
+
+          it('should produce all subjects and predicates', () => {
+            expect([ ...index.findTerms([
+              true,
+              true,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('p1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('p2')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('p1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('p2')),
+              ],
+            ]);
+          });
+
+          it('should produce all subjects and predicates and objects', () => {
+            expect([ ...index.findTerms([
+              true,
+              true,
+              true,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('p1')),
+                dictionary.encode(DF.namedNode('o1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('p2')),
+                dictionary.encode(DF.namedNode('o2')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('p1')),
+                dictionary.encode(DF.namedNode('o1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('p2')),
+                dictionary.encode(DF.namedNode('o2')),
+              ],
+            ]);
+          });
+
+          it('should produce all subjects and predicates and objects and graphs', () => {
+            expect([ ...index.findTerms([
+              true,
+              true,
+              true,
+              true,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('p1')),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('p2')),
+                dictionary.encode(DF.namedNode('o2')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('p1')),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('p2')),
+                dictionary.encode(DF.namedNode('o2')),
+                dictionary.encode(DF.namedNode('g2')),
+              ],
+            ]);
+          });
+
+          it('should produce all subjects and objects', () => {
+            expect([ ...index.findTerms([
+              true,
+              false,
+              true,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('o1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('o2')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('o1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('o2')),
+              ],
+            ]);
+
+            expect([ ...index.findTerms([
+              true,
+              false,
+              true,
+              false,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('o1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('o2')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('o1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('o2')),
+              ],
+            ]);
+          });
+
+          it('should produce all subjects and objects and graphs', () => {
+            expect([ ...index.findTerms([
+              true,
+              false,
+              true,
+              true,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('o2')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('o2')),
+                dictionary.encode(DF.namedNode('g2')),
+              ],
+            ]);
+          });
+
+          it('should produce all subjects and graphs', () => {
+            expect([ ...index.findTerms([
+              true,
+              false,
+              false,
+              true,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('g2')),
+              ],
+            ]);
+          });
+
+          it('should produce all predicates', () => {
+            expect([ ...index.findTerms([
+              false,
+              true,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('p1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('p2')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('p1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('p2')),
+              ],
+            ]);
+          });
+
+          it('should produce all predicates and objects', () => {
+            expect([ ...index.findTerms([
+              false,
+              true,
+              true,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('p1')),
+                dictionary.encode(DF.namedNode('o1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('p2')),
+                dictionary.encode(DF.namedNode('o2')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('p1')),
+                dictionary.encode(DF.namedNode('o1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('p2')),
+                dictionary.encode(DF.namedNode('o2')),
+              ],
+            ]);
+          });
+
+          it('should produce all predicates and objects and graphs', () => {
+            expect([ ...index.findTerms([
+              false,
+              true,
+              true,
+              true,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('p1')),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('p2')),
+                dictionary.encode(DF.namedNode('o2')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('p1')),
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('p2')),
+                dictionary.encode(DF.namedNode('o2')),
+                dictionary.encode(DF.namedNode('g2')),
+              ],
+            ]);
+          });
+
+          it('should produce all objects', () => {
+            expect([ ...index.findTerms([
+              false,
+              false,
+              true,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('o1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('o2')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('o1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('o2')),
+              ],
+            ]);
+
+            expect([ ...index.findTerms([
+              true,
+              false,
+              true,
+              false,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('o1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s1')),
+                dictionary.encode(DF.namedNode('o2')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('o1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('s2')),
+                dictionary.encode(DF.namedNode('o2')),
+              ],
+            ]);
+          });
+
+          it('should produce all objects and graphs', () => {
+            expect([ ...index.findTerms([
+              false,
+              false,
+              true,
+              true,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('o2')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('o1')),
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('o2')),
+                dictionary.encode(DF.namedNode('g2')),
+              ],
+            ]);
+          });
+
+          it('should produce all graphs', () => {
+            expect([ ...index.findTerms([
+              false,
+              false,
+              false,
+              true,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('g1')),
+              ],
+              [
+                dictionary.encode(DF.namedNode('g2')),
+              ],
+            ]);
+          });
+        });
+
         describe('count', () => {
           it('should return results for a variable pattern', () => {
             expect(index.count([
@@ -2266,6 +2661,38 @@ describe('RdfStoreIndexes', () => {
               DF.namedNode('p1'),
               undefined,
             ]) ]).toEqual([]);
+          });
+        });
+
+        describe('findTerms', () => {
+          it('should produce all graphs and objects and predicates and subjects', () => {
+            expect([ ...index.findTerms([
+              true,
+              true,
+              true,
+              true,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('g')),
+                dictionary.encode(DF.namedNode('o')),
+                dictionary.encode(DF.namedNode('p')),
+                dictionary.encode(DF.namedNode('s')),
+              ],
+            ]);
+          });
+
+          it('should produce all graphs and subjects', () => {
+            expect([ ...index.findTerms([
+              true,
+              false,
+              false,
+              true,
+            ]) ]).toEqual([
+              [
+                dictionary.encode(DF.namedNode('g')),
+                dictionary.encode(DF.namedNode('s')),
+              ],
+            ]);
           });
         });
       });

@@ -39,6 +39,56 @@ export function getBestIndex(
 }
 
 /**
+ * Determine the best suitable order's index among the given orders for the given terms.
+ * @param componentOrders Possible orders of quad components.
+ * @param terms The quad term names to lookup.
+ */
+export function getBestIndexTerms(
+  componentOrders: QuadTermName[][],
+  terms: QuadTermName[],
+): number {
+  if (componentOrders.length === 1) {
+    return 0;
+  }
+
+  // Score indexes by how well they match to the index
+  const scoredIndexes = componentOrders.map((componentOrder, index) => {
+    const score = getComponentOrderScore(componentOrder, terms);
+    return { score, index };
+  });
+
+  // Sort the indexes, and pick the first one
+  return scoredIndexes.sort((scoredLeft, scoredRight) => scoredRight.score - scoredLeft.score)[0].index;
+}
+
+/**
+ * Construct the path to follow within the given index's component order for the given terms.
+ * This returns a boolean[] indicating the path of terms to match within the index.
+ * @param componentOrder The index's component order.
+ * @param terms The terms to find.
+ */
+export function getIndexMatchTermsPath(
+  componentOrder: QuadTermName[],
+  terms: QuadTermName[],
+): boolean[] {
+  const matchTerms: boolean[] = [];
+  let termsI = 0;
+  for (let i = 0; i < componentOrder.length; i += 1) {
+    if (componentOrder[i] === terms[termsI]) {
+      termsI++;
+      matchTerms[i] = true;
+      if (termsI === terms.length) {
+        // Break early to produce shorter optimized paths.
+        break;
+      }
+    } else {
+      matchTerms[i] = false;
+    }
+  }
+  return matchTerms;
+}
+
+/**
  * Determine the score of the given partial component order in the given component order.
  * @param componentOrder A quad component order.
  * @param partialComponentOrder A partial quad component order that originates from a quad pattern.

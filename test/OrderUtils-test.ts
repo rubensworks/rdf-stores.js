@@ -4,7 +4,7 @@ import type { ITermDictionary } from '../lib/dictionary/ITermDictionary';
 import { TermDictionaryNumberRecordFullTerms } from '../lib/dictionary/TermDictionaryNumberRecordFullTerms';
 import {
   encodeOptionalTerms,
-  getBestIndex, getComponentOrderScore,
+  getBestIndex, getBestIndexTerms, getComponentOrderScore, getIndexMatchTermsPath,
   orderQuadComponents, quadHasVariables, quadToPattern,
 } from '../lib/OrderUtils';
 
@@ -132,6 +132,149 @@ describe('OrderUtils', () => {
         undefined,
       ]))
         .toEqual(0);
+    });
+  });
+
+  describe('getBestIndexTerms', () => {
+    it('determines the best index for 3 different orders', () => {
+      const orders: QuadTermName[][] = [
+        [ 'graph', 'subject', 'predicate', 'object' ],
+        [ 'graph', 'predicate', 'object', 'subject' ],
+        [ 'graph', 'object', 'subject', 'predicate' ],
+      ];
+
+      expect(getBestIndexTerms(orders, [
+        'graph',
+      ])).toEqual(0);
+      expect(getBestIndexTerms(orders, [
+        'graph',
+        'subject',
+      ])).toEqual(0);
+      expect(getBestIndexTerms(orders, [
+        'graph',
+        'subject',
+        'predicate',
+      ])).toEqual(0);
+      expect(getBestIndexTerms(orders, [
+        'graph',
+        'subject',
+        'predicate',
+        'object',
+      ])).toEqual(0);
+
+      expect(getBestIndexTerms(orders, [
+        'graph',
+        'predicate',
+      ])).toEqual(1);
+      expect(getBestIndexTerms(orders, [
+        'graph',
+        'predicate',
+        'object',
+      ])).toEqual(1);
+      expect(getBestIndexTerms(orders, [
+        'graph',
+        'predicate',
+        'object',
+        'subject',
+      ])).toEqual(0);
+
+      expect(getBestIndexTerms(orders, [
+        'graph',
+        'object',
+      ])).toEqual(2);
+      expect(getBestIndexTerms(orders, [
+        'graph',
+        'object',
+        'subject',
+      ])).toEqual(2);
+      expect(getBestIndexTerms(orders, [
+        'graph',
+        'object',
+        'subject',
+        'predicate',
+      ])).toEqual(0);
+
+      expect(getBestIndexTerms(orders, [
+        'subject',
+      ])).toEqual(0);
+      expect(getBestIndexTerms(orders, [
+        'subject',
+        'predicate',
+      ])).toEqual(0);
+
+      expect(getBestIndexTerms(orders, [
+        'predicate',
+        'object',
+      ])).toEqual(1);
+      expect(getBestIndexTerms(orders, [
+        'predicate',
+      ])).toEqual(1);
+      expect(getBestIndexTerms(orders, [
+        'predicate',
+        'object',
+        'subject',
+      ])).toEqual(0);
+
+      expect(getBestIndexTerms(orders, [
+        'object',
+      ])).toEqual(2);
+      expect(getBestIndexTerms(orders, [
+        'object',
+        'subject',
+      ])).toEqual(2);
+      expect(getBestIndexTerms(orders, [
+        'object',
+        'subject',
+        'predicate',
+      ])).toEqual(0);
+      expect(getBestIndexTerms(orders, [
+        'object',
+        'predicate',
+      ])).toEqual(1);
+    });
+  });
+
+  describe('getIndexMatchTermsPath', () => {
+    it('determines match terms for an exact match', () => {
+      expect(getIndexMatchTermsPath(
+        [ 'graph', 'subject', 'predicate', 'object' ],
+        [ 'graph' ],
+      )).toEqual([ true ]);
+      expect(getIndexMatchTermsPath(
+        [ 'graph', 'subject', 'predicate', 'object' ],
+        [ 'graph', 'subject' ],
+      )).toEqual([ true, true ]);
+      expect(getIndexMatchTermsPath(
+        [ 'graph', 'subject', 'predicate', 'object' ],
+        [ 'graph', 'subject', 'predicate' ],
+      )).toEqual([ true, true, true ]);
+      expect(getIndexMatchTermsPath(
+        [ 'graph', 'subject', 'predicate', 'object' ],
+        [ 'graph', 'subject', 'predicate', 'object' ],
+      )).toEqual([ true, true, true, true ]);
+    });
+
+    it('determines match terms for a non-exact match', () => {
+      expect(getIndexMatchTermsPath(
+        [ 'graph', 'subject', 'predicate', 'object' ],
+        [ 'subject' ],
+      )).toEqual([ false, true ]);
+      expect(getIndexMatchTermsPath(
+        [ 'graph', 'subject', 'predicate', 'object' ],
+        [ 'subject', 'predicate' ],
+      )).toEqual([ false, true, true ]);
+      expect(getIndexMatchTermsPath(
+        [ 'graph', 'subject', 'predicate', 'object' ],
+        [ 'subject', 'predicate', 'object' ],
+      )).toEqual([ false, true, true, true ]);
+      expect(getIndexMatchTermsPath(
+        [ 'graph', 'subject', 'predicate', 'object' ],
+        [ 'object' ],
+      )).toEqual([ false, false, false, true ]);
+      expect(getIndexMatchTermsPath(
+        [ 'graph', 'subject', 'predicate', 'object' ],
+        [ 'subject', 'object' ],
+      )).toEqual([ false, true, false, true ]);
     });
   });
 

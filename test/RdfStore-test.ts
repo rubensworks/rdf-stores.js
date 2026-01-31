@@ -9,7 +9,7 @@ import { RdfStoreIndexNestedRecord } from '../lib/index/RdfStoreIndexNestedRecor
 import { RdfStore } from '../lib/RdfStore';
 import 'jest-rdf';
 import '@comunica/utils-jest';
-import { dictClazzToInstance, indexClazzToInstance } from './testUtil';
+import { dictClazzToInstance, expectToEqualTerms, indexClazzToInstance } from './testUtil';
 
 const streamifyArray = require('streamify-array');
 
@@ -49,7 +49,6 @@ const allComponentOrders: QuadTermName[][][][] = [
 
 describe('RdfStore', () => {
   let store: RdfStore<number>;
-
   each(allComponentOrders).describe('with one index in %o order', indexCombinations => {
     each(Object.keys(indexClazzToInstance)).describe('for index type %s', indexClazz => {
       each(Object.keys(dictClazzToInstance)).describe('for dictionary type %s', dictClazz => {
@@ -83,6 +82,88 @@ describe('RdfStore', () => {
                 DF.variable('o'),
                 DF.variable('g'),
               ))).toEqual([]);
+            });
+          });
+
+          describe('getDistinctTerms', () => {
+            it('should return distinct subjects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'subject' ]), []);
+            });
+
+            it('should return distinct subjects and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'subject', 'object' ]), []);
+            });
+
+            it('should return distinct subjects and objects and predicates', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'subject', 'object', 'predicate' ]), []);
+            });
+
+            it('should return distinct subjects and predicates and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'subject', 'predicate', 'object' ]), []);
+            });
+
+            it('should return distinct subjects and graphs and predicates and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'subject', 'graph', 'predicate', 'object' ]), []);
+            });
+
+            it('should return distinct predicates', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'predicate' ]), []);
+            });
+
+            it('should return distinct predicates and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'predicate', 'object' ]), []);
+            });
+
+            it('should return distinct predicates and objects and subjects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'predicate', 'object', 'subject' ]), []);
+            });
+
+            it('should return distinct predicates and subjects and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'predicate', 'subject', 'object' ]), []);
+            });
+
+            it('should return distinct predicates and objects and subjects and graphs', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'predicate', 'object', 'subject', 'graph' ]), []);
+            });
+
+            it('should return distinct predicates and subjects and graphs and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'predicate', 'subject', 'graph', 'object' ]), []);
+            });
+
+            it('should return distinct objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'object' ]), []);
+            });
+
+            it('should return distinct objects and graphs', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'object', 'graph' ]), []);
+            });
+
+            it('should return distinct objects and predicates and graphs', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'object', 'predicate', 'graph' ]), []);
+            });
+
+            it('should return distinct objects and graphs and predicates', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'object', 'graph', 'predicate' ]), []);
+            });
+
+            it('should return distinct objects and predicates and graphs and subjects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'object', 'predicate', 'graph', 'subject' ]), []);
+            });
+
+            it('should return distinct graphs', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'graph' ]), []);
+            });
+
+            it('should return distinct graphs and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'graph', 'object' ]), []);
+            });
+
+            it('should return distinct graphs and objects and subjects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'graph', 'object', 'subject' ]), []);
+            });
+
+            it('should return distinct graphs and objects and subjects and predicates', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'graph', 'object', 'subject', 'predicate' ]), []);
             });
           });
         });
@@ -343,6 +424,128 @@ describe('RdfStore', () => {
               // Store should be changed
               expect(store.size).toEqual(0);
               expect(await arrayifyStream(store.match())).toEqual([]);
+            });
+          });
+
+          describe('getDistinctTerms', () => {
+            it('should return distinct subjects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'subject' ]), [
+                [ DF.namedNode('s') ],
+              ]);
+            });
+
+            it('should return distinct subjects and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'subject', 'object' ]), [
+                [ DF.namedNode('s'), DF.namedNode('o') ],
+              ]);
+            });
+
+            it('should return distinct subjects and objects and predicates', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'subject', 'object', 'predicate' ]), [
+                [ DF.namedNode('s'), DF.namedNode('o'), DF.namedNode('p') ],
+              ]);
+            });
+
+            it('should return distinct subjects and predicates and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'subject', 'predicate', 'object' ]), [
+                [ DF.namedNode('s'), DF.namedNode('p'), DF.namedNode('o') ],
+              ]);
+            });
+
+            it('should return distinct subjects and graphs and predicates and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'subject', 'graph', 'predicate', 'object' ]), [
+                [ DF.namedNode('s'), DF.namedNode('g'), DF.namedNode('p'), DF.namedNode('o') ],
+              ]);
+            });
+
+            it('should return distinct predicates', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'predicate' ]), [
+                [ DF.namedNode('p') ],
+              ]);
+            });
+
+            it('should return distinct predicates and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'predicate', 'object' ]), [
+                [ DF.namedNode('p'), DF.namedNode('o') ],
+              ]);
+            });
+
+            it('should return distinct predicates and objects and subjects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'predicate', 'object', 'subject' ]), [
+                [ DF.namedNode('p'), DF.namedNode('o'), DF.namedNode('s') ],
+              ]);
+            });
+
+            it('should return distinct predicates and subjects and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'predicate', 'subject', 'object' ]), [
+                [ DF.namedNode('p'), DF.namedNode('s'), DF.namedNode('o') ],
+              ]);
+            });
+
+            it('should return distinct predicates and objects and subjects and graphs', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'predicate', 'object', 'subject', 'graph' ]), [
+                [ DF.namedNode('p'), DF.namedNode('o'), DF.namedNode('s'), DF.namedNode('g') ],
+              ]);
+            });
+
+            it('should return distinct predicates and subjects and graphs and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'predicate', 'subject', 'graph', 'object' ]), [
+                [ DF.namedNode('p'), DF.namedNode('s'), DF.namedNode('g'), DF.namedNode('o') ],
+              ]);
+            });
+
+            it('should return distinct objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'object' ]), [
+                [ DF.namedNode('o') ],
+              ]);
+            });
+
+            it('should return distinct objects and graphs', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'object', 'graph' ]), [
+                [ DF.namedNode('o'), DF.namedNode('g') ],
+              ]);
+            });
+
+            it('should return distinct objects and predicates and graphs', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'object', 'predicate', 'graph' ]), [
+                [ DF.namedNode('o'), DF.namedNode('p'), DF.namedNode('g') ],
+              ]);
+            });
+
+            it('should return distinct objects and graphs and predicates', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'object', 'graph', 'predicate' ]), [
+                [ DF.namedNode('o'), DF.namedNode('g'), DF.namedNode('p') ],
+              ]);
+            });
+
+            it('should return distinct objects and predicates and graphs and subjects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'object', 'predicate', 'graph', 'subject' ]), [
+                [ DF.namedNode('o'), DF.namedNode('p'), DF.namedNode('g'), DF.namedNode('s') ],
+              ]);
+            });
+
+            it('should return distinct graphs', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'graph' ]), [
+                [ DF.namedNode('g') ],
+              ]);
+            });
+
+            it('should return distinct graphs and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'graph', 'object' ]), [
+                [ DF.namedNode('g'), DF.namedNode('o') ],
+              ]);
+            });
+
+            it('should return distinct graphs and objects and subjects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'graph', 'object', 'subject' ]), [
+                [ DF.namedNode('g'), DF.namedNode('o'), DF.namedNode('s') ],
+              ]);
+            });
+
+            it('should return distinct graphs and objects and subjects and predicates', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'graph', 'object', 'subject', 'predicate' ]), [
+                [ DF.namedNode('g'), DF.namedNode('o'), DF.namedNode('s'), DF.namedNode('p') ],
+              ]);
             });
           });
         });
@@ -1046,6 +1249,183 @@ describe('RdfStore', () => {
                   DF.namedNode('o2'),
                   DF.namedNode('g2'),
                 ),
+              ]);
+            });
+          });
+
+          describe('getDistinctTerms', () => {
+            it('should return distinct subjects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'subject' ]), [
+                [ DF.namedNode('s1') ],
+                [ DF.namedNode('s2') ],
+              ]);
+            });
+
+            it('should return distinct subjects and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'subject', 'object' ]), [
+                [ DF.namedNode('s1'), DF.namedNode('o1') ],
+                [ DF.namedNode('s2'), DF.namedNode('o1') ],
+                [ DF.namedNode('s1'), DF.namedNode('o2') ],
+                [ DF.namedNode('s2'), DF.namedNode('o2') ],
+              ]);
+            });
+
+            it('should return distinct subjects and objects and predicates', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'subject', 'object', 'predicate' ]), [
+                [ DF.namedNode('s1'), DF.namedNode('o1'), DF.namedNode('p1') ],
+                [ DF.namedNode('s2'), DF.namedNode('o1'), DF.namedNode('p1') ],
+                [ DF.namedNode('s1'), DF.namedNode('o2'), DF.namedNode('p2') ],
+                [ DF.namedNode('s2'), DF.namedNode('o2'), DF.namedNode('p2') ],
+              ]);
+            });
+
+            it('should return distinct subjects and predicates and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'subject', 'predicate', 'object' ]), [
+                [ DF.namedNode('s1'), DF.namedNode('p1'), DF.namedNode('o1') ],
+                [ DF.namedNode('s2'), DF.namedNode('p1'), DF.namedNode('o1') ],
+                [ DF.namedNode('s1'), DF.namedNode('p2'), DF.namedNode('o2') ],
+                [ DF.namedNode('s2'), DF.namedNode('p2'), DF.namedNode('o2') ],
+              ]);
+            });
+
+            it('should return distinct subjects and graphs and predicates and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'subject', 'graph', 'predicate', 'object' ]), [
+                [ DF.namedNode('s1'), DF.namedNode('g1'), DF.namedNode('p1'), DF.namedNode('o1') ],
+                [ DF.namedNode('s2'), DF.namedNode('g1'), DF.namedNode('p1'), DF.namedNode('o1') ],
+                [ DF.namedNode('s1'), DF.namedNode('g1'), DF.namedNode('p2'), DF.namedNode('o2') ],
+                [ DF.namedNode('s2'), DF.namedNode('g2'), DF.namedNode('p2'), DF.namedNode('o2') ],
+              ]);
+            });
+
+            it('should return distinct predicates', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'predicate' ]), [
+                [ DF.namedNode('p1') ],
+                [ DF.namedNode('p2') ],
+              ]);
+            });
+
+            it('should return distinct predicates and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'predicate', 'object' ]), [
+                [ DF.namedNode('p1'), DF.namedNode('o1') ],
+                [ DF.namedNode('p2'), DF.namedNode('o2') ],
+              ]);
+            });
+
+            it('should return distinct predicates and objects and subjects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'predicate', 'object', 'subject' ]), [
+                [ DF.namedNode('p1'), DF.namedNode('o1'), DF.namedNode('s1') ],
+                [ DF.namedNode('p2'), DF.namedNode('o2'), DF.namedNode('s1') ],
+                [ DF.namedNode('p1'), DF.namedNode('o1'), DF.namedNode('s2') ],
+                [ DF.namedNode('p2'), DF.namedNode('o2'), DF.namedNode('s2') ],
+              ]);
+            });
+
+            it('should return distinct predicates and subjects and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'predicate', 'subject', 'object' ]), [
+                [ DF.namedNode('p1'), DF.namedNode('s1'), DF.namedNode('o1') ],
+                [ DF.namedNode('p2'), DF.namedNode('s1'), DF.namedNode('o2') ],
+                [ DF.namedNode('p1'), DF.namedNode('s2'), DF.namedNode('o1') ],
+                [ DF.namedNode('p2'), DF.namedNode('s2'), DF.namedNode('o2') ],
+              ]);
+            });
+
+            it('should return distinct predicates and objects and subjects and graphs', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'predicate', 'object', 'subject', 'graph' ]), [
+                [ DF.namedNode('p1'), DF.namedNode('o1'), DF.namedNode('s1'), DF.namedNode('g1') ],
+                [ DF.namedNode('p2'), DF.namedNode('o2'), DF.namedNode('s1'), DF.namedNode('g1') ],
+                [ DF.namedNode('p1'), DF.namedNode('o1'), DF.namedNode('s2'), DF.namedNode('g1') ],
+                [ DF.namedNode('p2'), DF.namedNode('o2'), DF.namedNode('s2'), DF.namedNode('g2') ],
+              ]);
+            });
+
+            it('should return distinct predicates and subjects and graphs and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'predicate', 'subject', 'graph', 'object' ]), [
+                [ DF.namedNode('p1'), DF.namedNode('s1'), DF.namedNode('g1'), DF.namedNode('o1') ],
+                [ DF.namedNode('p2'), DF.namedNode('s1'), DF.namedNode('g1'), DF.namedNode('o2') ],
+                [ DF.namedNode('p1'), DF.namedNode('s2'), DF.namedNode('g1'), DF.namedNode('o1') ],
+                [ DF.namedNode('p2'), DF.namedNode('s2'), DF.namedNode('g2'), DF.namedNode('o2') ],
+              ]);
+            });
+
+            it('should return distinct objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'object' ]), [
+                [ DF.namedNode('o1') ],
+                [ DF.namedNode('o2') ],
+              ]);
+            });
+
+            it('should return distinct objects and graphs', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'object', 'graph' ]), [
+                [ DF.namedNode('o1'), DF.namedNode('g1') ],
+                [ DF.namedNode('o2'), DF.namedNode('g1') ],
+                [ DF.namedNode('o2'), DF.namedNode('g2') ],
+              ]);
+            });
+
+            it('should return distinct objects and predicates and graphs', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'object', 'predicate', 'graph' ]), [
+                [ DF.namedNode('o1'), DF.namedNode('p1'), DF.namedNode('g1') ],
+                [ DF.namedNode('o2'), DF.namedNode('p2'), DF.namedNode('g1') ],
+                [ DF.namedNode('o2'), DF.namedNode('p2'), DF.namedNode('g2') ],
+              ]);
+            });
+
+            it('should return distinct objects and graphs and predicates', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'object', 'graph', 'predicate' ]), [
+                [ DF.namedNode('o1'), DF.namedNode('g1'), DF.namedNode('p1') ],
+                [ DF.namedNode('o2'), DF.namedNode('g1'), DF.namedNode('p2') ],
+                [ DF.namedNode('o2'), DF.namedNode('g2'), DF.namedNode('p2') ],
+              ]);
+            });
+
+            it('should return distinct objects and predicates and graphs and subjects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'object', 'predicate', 'graph', 'subject' ]), [
+                [ DF.namedNode('o1'), DF.namedNode('p1'), DF.namedNode('g1'), DF.namedNode('s1') ],
+                [ DF.namedNode('o1'), DF.namedNode('p1'), DF.namedNode('g1'), DF.namedNode('s2') ],
+                [ DF.namedNode('o2'), DF.namedNode('p2'), DF.namedNode('g1'), DF.namedNode('s1') ],
+                [ DF.namedNode('o2'), DF.namedNode('p2'), DF.namedNode('g2'), DF.namedNode('s2') ],
+              ]);
+            });
+
+            it('should return distinct graphs', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'graph' ]), [
+                [ DF.namedNode('g1') ],
+                [ DF.namedNode('g2') ],
+              ]);
+            });
+
+            it('should return distinct graphs and objects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'graph', 'object' ]), [
+                [ DF.namedNode('g1'), DF.namedNode('o1') ],
+                [ DF.namedNode('g1'), DF.namedNode('o2') ],
+                [ DF.namedNode('g2'), DF.namedNode('o2') ],
+              ]);
+            });
+
+            it('should return distinct graphs and objects and subjects', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'graph', 'object', 'subject' ]), [
+                [ DF.namedNode('g1'), DF.namedNode('o1'), DF.namedNode('s1') ],
+                [ DF.namedNode('g1'), DF.namedNode('o1'), DF.namedNode('s2') ],
+                [ DF.namedNode('g1'), DF.namedNode('o2'), DF.namedNode('s1') ],
+                [ DF.namedNode('g2'), DF.namedNode('o2'), DF.namedNode('s2') ],
+              ]);
+            });
+
+            it('should return distinct graphs and objects and subjects and predicates', async() => {
+              expectToEqualTerms(store.getDistinctTerms([ 'graph', 'object', 'subject', 'predicate' ]), [
+                [ DF.namedNode('g1'), DF.namedNode('o1'), DF.namedNode('s1'), DF.namedNode('p1') ],
+                [ DF.namedNode('g1'), DF.namedNode('o1'), DF.namedNode('s2'), DF.namedNode('p1') ],
+                [ DF.namedNode('g1'), DF.namedNode('o2'), DF.namedNode('s1'), DF.namedNode('p2') ],
+                [ DF.namedNode('g2'), DF.namedNode('o2'), DF.namedNode('s2'), DF.namedNode('p2') ],
+              ]);
+            });
+          });
+
+          describe('matchDistinctTerms', () => {
+            it('should return distinct subjects', async() => {
+              expectToEqualTerms(await store.matchDistinctTerms([ 'subject' ]).toArray(), [
+                [ DF.namedNode('s1') ],
+                [ DF.namedNode('s2') ],
               ]);
             });
           });

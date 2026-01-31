@@ -155,6 +155,30 @@ export class RdfStoreIndexNestedRecord<E extends number, V> implements IRdfStore
     }
   }
 
+  protected * findTermsInner(
+    depth: number,
+    map: NestedRecordActual<E>,
+    matchTerms: boolean[],
+    partialResult: E[],
+  ): IterableIterator<E[]> {
+    if (matchTerms[depth]) {
+      for (const [ key1, subMap ] of Object.entries(map)) {
+        const newPartialResult = [ ...partialResult, <E> Number.parseInt(key1, 10) ];
+        yield * this.findTermsInner(depth + 1, <NestedRecordActual<E>> subMap, matchTerms, newPartialResult);
+      }
+    } else if (depth < matchTerms.length) {
+      for (const subMap of Object.values(map)) {
+        yield * this.findTermsInner(depth + 1, <NestedRecordActual<E>> subMap, matchTerms, partialResult);
+      }
+    } else {
+      yield partialResult;
+    }
+  }
+
+  public findTerms(matchTerms: boolean[]): IterableIterator<E[]> {
+    return this.findTermsInner(0, this.nestedRecords, matchTerms, []);
+  }
+
   public count(terms: QuadPatternTerms): number {
     let count = 0;
 

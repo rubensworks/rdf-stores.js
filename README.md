@@ -242,6 +242,51 @@ stream.on('end', () => {
 });
 ```
 
+### `readDistinctTerms`
+
+Returns an iterable iterator producing distinct arrays of terms that exist in the store.
+Each returned array corresponds to the terms specified by given quad term names.
+
+```typescript
+for (const [ subjectTerm ] of store.readDistinctTerms([ 'subject' ])) {
+  console.log(subjectTerm);
+}
+```
+
+```typescript
+for (const [ subjectTerm, predicateTerm ] of store.readDistinctTerms([ 'subject', 'predicate' ])) {
+  console.log(subjectTerm.value);
+  console.log(predicateTerm.value);
+}
+```
+
+### `getDistinctTerms`
+
+Returns an array containing distinct arrays of terms that exist in the store.
+Each returned array corresponds to the terms specified by given quad term names.
+
+```typescript
+const array = store.getDistinctTerms([ 'subject', 'predicate' ]);
+console.log(array);
+```
+
+### `matchDistinctTerms`
+
+Returns a stream producing distinct arrays of terms that exist in the store.
+Each returned array corresponds to the terms specified by given quad term names.
+
+```typescript
+const stream = store.matchDistinctTerms([ 'subject', 'predicate' ]);
+
+stream.on('data', ([ subjectTerm, predicateTerm ]) => {
+  console.log(subjectTerm.value);
+  console.log(predicateTerm.value);
+});
+stream.on('end', () => {
+  console.log('Done!');
+});
+```
+
 ### `countQuads`
 
 Count the number of quads matching the given pattern:
