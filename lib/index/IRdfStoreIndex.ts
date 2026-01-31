@@ -55,6 +55,17 @@ export interface IRdfStoreIndex<E, V> {
    */
   findEncoded: (ids: EncodedQuadTerms<E | undefined>, terms: QuadPatternTerms) => IterableIterator<EncodedQuadTerms<E>>;
   /**
+   * Returns a generator producing arrays of terms that exist in the index.
+   * Each returned array corresponds to the terms specified by given quad term names.
+   * Distinct-ness is only guaranteed if there are only true match term values.
+   *
+   * For example, when requesting the terms `[ true, true ]`,
+   * a produced array could be `[ 'ex:s', 'ex:p' ]`,
+   *
+   * @param matchTerms An array of booleans indicating which terms to match. Length may be shorter than 4.
+   */
+  findTerms: (matchTerms: boolean[]) => IterableIterator<E[]>;
+  /**
    * Count the keys matching the given terms.
    * Quads are represented as an array of terms, in the component order of this index.
    * @param terms An iterable of pattern terms, ordered in the component order of this index.

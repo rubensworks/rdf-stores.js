@@ -5,6 +5,7 @@ import type * as RDF from '@rdfjs/types';
 import arrayifyStream from 'arrayify-stream';
 import { Store } from 'n3';
 import { DataFactory } from 'rdf-data-factory';
+import { QUAD_TERM_NAMES } from 'rdf-terms';
 import type { IRdfStoreOptions } from '../lib/IRdfStoreOptions';
 import { RdfStore } from '../lib/RdfStore';
 
@@ -21,7 +22,7 @@ export class PerformanceTest {
     public readonly bindingsFactory: RDF.BindingsFactory = new BindingsFactory(<any> this.dataFactory),
   ) {}
 
-  public async run(scope: 'all' | 'triples' | 'quads' | 'quoted'): Promise<void> {
+  public async run(scope: 'all' | 'triples' | 'quads' | 'quoted' | 'terms'): Promise<void> {
     for (const approach of this.approaches) {
       console.log(`\n# ${approach.name}\n`);
 
@@ -50,6 +51,17 @@ export class PerformanceTest {
         const store = new RdfStore(approach.options.options);
         this.addQuotedTriplesToGraphs(this.dimension / 2, store);
         this.findQuotedTriplesInGraphs(this.dimension / 2, store);
+        console.log();
+      }
+
+      if ((scope === 'all' || scope === 'terms') && approach.options.type !== 'n3') {
+        const store = new RdfStore(approach.options.options);
+        this.addQuadsToGraphs(this.dimension / 4, store);
+        this.findTerms1(this.dimension / 4, store);
+        this.findTerms2(this.dimension / 4, store);
+        this.findTerms3(this.dimension / 4, store);
+        this.findTerms4(this.dimension / 4, store);
+        console.log();
       }
     }
   }
@@ -279,6 +291,70 @@ export class PerformanceTest {
           this.dataFactory.literal(`${this.prefix}${i}`),
         ),
       ).length, dimension * dimension);
+    }
+    console.timeEnd(TEST);
+  }
+
+  public findTerms1(dimension: number, store: RdfStore): void {
+    const TEST = `- Finding all ${dimension} terms (1) in the default graph ${dimension * dimension} times for each quad term (4)`;
+    console.time(TEST);
+    for (const quadTermName of QUAD_TERM_NAMES) {
+      for (let i = 0; i < dimension; i++) {
+        for (let j = 0; j < dimension; j++) {
+          assert.equal(store.getDistinctTerms([ quadTermName ]).length, dimension);
+        }
+      }
+    }
+    console.timeEnd(TEST);
+  }
+
+  public findTerms2(dimension: number, store: RdfStore): void {
+    const TEST = `- Finding all ${dimension * dimension} terms (2) in the default graph ${dimension} times for each sequential quad term pair (4)`;
+    console.time(TEST);
+    // eslint-disable-next-line id-length
+    for (let k = 0; k < QUAD_TERM_NAMES.length; k++) {
+      const quadTerm1 = QUAD_TERM_NAMES[k];
+      const quadTerm2 = QUAD_TERM_NAMES[(k + 1) % QUAD_TERM_NAMES.length];
+      for (let i = 0; i < dimension; i++) {
+        assert.equal(store.getDistinctTerms([ quadTerm1, quadTerm2 ]).length, dimension * dimension);
+      }
+    }
+    console.timeEnd(TEST);
+  }
+
+  public findTerms3(dimension: number, store: RdfStore): void {
+    const TEST = `- Finding all ${dimension * dimension * dimension} terms (3) in the default graph ${dimension} times for each sequential quad term triple (4)`;
+    console.time(TEST);
+    // eslint-disable-next-line id-length
+    for (let k = 0; k < QUAD_TERM_NAMES.length; k++) {
+      const quadTerm1 = QUAD_TERM_NAMES[k];
+      const quadTerm2 = QUAD_TERM_NAMES[(k + 1) % QUAD_TERM_NAMES.length];
+      const quadTerm3 = QUAD_TERM_NAMES[(k + 2) % QUAD_TERM_NAMES.length];
+      for (let i = 0; i < dimension; i++) {
+        assert.equal(
+          store.getDistinctTerms([ quadTerm1, quadTerm2, quadTerm3 ]).length,
+          dimension * dimension * dimension,
+        );
+      }
+    }
+    console.timeEnd(TEST);
+  }
+
+  public findTerms4(dimension: number, store: RdfStore): void {
+    const TEST = `- Finding all ${dimension * dimension * dimension * dimension} terms (4) in the default graph ${dimension} times for each sequential quad term quad (4)`;
+    console.time(TEST);
+    // eslint-disable-next-line id-length
+    for (let k = 0; k < QUAD_TERM_NAMES.length; k++) {
+      const quadTerm1 = QUAD_TERM_NAMES[k];
+      const quadTerm2 = QUAD_TERM_NAMES[(k + 1) % QUAD_TERM_NAMES.length];
+      const quadTerm3 = QUAD_TERM_NAMES[(k + 2) % QUAD_TERM_NAMES.length];
+      const quadTerm4 = QUAD_TERM_NAMES[(k + 3) % QUAD_TERM_NAMES.length];
+      for (let i = 0; i < dimension; i++) {
+        assert.equal(
+          store.getDistinctTerms([ quadTerm1, quadTerm2, quadTerm3, quadTerm4 ]).length,
+          dimension * dimension * dimension * dimension,
+        );
+      }
     }
     console.timeEnd(TEST);
   }

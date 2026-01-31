@@ -1,3 +1,5 @@
+import type * as RDF from '@rdfjs/types';
+import { termToString } from 'rdf-string';
 import type { ITermDictionary } from '../lib/dictionary/ITermDictionary';
 import { TermDictionaryNumberMap } from '../lib/dictionary/TermDictionaryNumberMap';
 import { TermDictionaryNumberRecord } from '../lib/dictionary/TermDictionaryNumberRecord';
@@ -50,3 +52,13 @@ export const dictClazzToInstance: Record<string, () => ITermDictionary<number>> 
   TermDictionaryQuotedReferential: () => new TermDictionaryQuotedReferential(new TermDictionaryNumberRecordFullTerms()),
   TermDictionaryQuotedIndexed: () => new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms()),
 };
+
+export function expectToEqualTerms(terms1: RDF.Term[][], terms2: RDF.Term[][]) {
+  const compareFn = (left: RDF.Term[], right: RDF.Term[]) => {
+    return left
+      .map(element => termToString(element))
+      .join(',')
+      .localeCompare(right.map(element => termToString(element)).join(','));
+  };
+  expect(terms1.sort(compareFn)).toEqual(terms2.sort(compareFn));
+}

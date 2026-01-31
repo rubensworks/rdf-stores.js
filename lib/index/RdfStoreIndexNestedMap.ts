@@ -171,6 +171,30 @@ export class RdfStoreIndexNestedMap<E, V> implements IRdfStoreIndex<E, V> {
     }
   }
 
+  protected * findTermsInner(
+    depth: number,
+    map: NestedMapActual<E, V>,
+    matchTerms: boolean[],
+    partialResult: E[],
+  ): IterableIterator<E[]> {
+    if (matchTerms[depth]) {
+      for (const entry of map) {
+        const newPartialResult = [ ...partialResult, entry[0] ];
+        yield * this.findTermsInner(depth + 1, <NestedMapActual<E, V>> entry[1], matchTerms, newPartialResult);
+      }
+    } else if (depth < matchTerms.length) {
+      for (const subMap of map.values()) {
+        yield * this.findTermsInner(depth + 1, <NestedMapActual<E, V>> subMap, matchTerms, partialResult);
+      }
+    } else {
+      yield partialResult;
+    }
+  }
+
+  public findTerms(matchTerms: boolean[]): IterableIterator<E[]> {
+    return this.findTermsInner(0, this.nestedMap, matchTerms, []);
+  }
+
   public count(terms: QuadPatternTerms): number {
     let count = 0;
 
