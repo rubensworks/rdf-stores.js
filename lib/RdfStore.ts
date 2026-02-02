@@ -573,6 +573,19 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
   }
 
   /**
+   * Returns the number of nodes.
+   * Nodes are all terms that are either a subject or object within the store.
+   *
+   * This method can only be called when the store is constructed with `indexNodes: true`.
+   */
+  public countNodes(): number {
+    if (!this.indexNodes) {
+      throw new Error(`Nodes can only be read when the store was constructed with 'indexNodes: true'`);
+    }
+    return this.indexNodes.size;
+  }
+
+  /**
    * Returns a generator producing all nodes.
    * Nodes are all terms that are either a subject or object within the store.
    *

@@ -287,6 +287,20 @@ stream.on('end', () => {
 });
 ```
 
+### `countNodes`
+
+Returns the number of nodes.
+Nodes are all terms that are either a subject or object within the store.
+
+This method can only be called when the store is constructed with `indexNodes: true`.
+
+This can for example be useful for optimizing the Nodes function in SPARQL's property paths:
+https://www.w3.org/TR/sparql12-query/#defn_nodeSet
+
+```typescript
+const amount = store.countNodes();
+```
+
 ### `readNodes`
 
 Returns a generator producing all nodes.

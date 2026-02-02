@@ -2013,6 +2013,10 @@ describe('RdfStore', () => {
       expect((<any> store).indexNodes).toBeUndefined();
     });
 
+    it('countNodes should throw', () => {
+      expect(() => store.countNodes()).toThrow();
+    });
+
     it('readNodes should throw', () => {
       expect(() => [ ...store.readNodes() ]).toThrow();
     });
@@ -2082,6 +2086,10 @@ describe('RdfStore', () => {
     it('contains 3 indexes', () => {
       expect((<any> store).indexesWrapped).toHaveLength(3);
       expect((<any> store).indexNodes).toBeDefined();
+    });
+
+    it('countNodes should return 4', () => {
+      expect(store.countNodes()).toEqual(4);
     });
 
     it('readNodes should return all nodes', () => {
