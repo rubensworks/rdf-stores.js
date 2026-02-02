@@ -64,14 +64,12 @@ export class RdfStoreIndexNestedMapRecursiveQuoted<E, V> extends RdfStoreIndexNe
       } else {
         // If the current term is defined, find one matching map for the current term.
         const encodedTerm = id;
-        if (encodedTerm !== undefined) {
-          const subMap = map.get(encodedTerm);
-          if (subMap) {
-            partialQuad[index] = <E> id;
-            yield * this.findEncodedInnerQuoted(
-              index + 1, ids, terms, isQuotedPattern, <NestedMapActual<E, V>>subMap, partialQuad,
-            );
-          }
+        const subMap = map.get(encodedTerm!);
+        if (subMap) {
+          partialQuad[index] = <E> id;
+          yield * this.findEncodedInnerQuoted(
+            index + 1, ids, terms, isQuotedPattern, <NestedMapActual<E, V>>subMap, partialQuad,
+          );
         }
       }
     }

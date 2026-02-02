@@ -141,13 +141,11 @@ export class RdfStoreIndexNestedMapRecursive<E, V> implements IRdfStoreIndex<E, 
       } else {
         // If the current term is defined, find one matching map for the current term.
         const encodedTerm = id;
-        if (encodedTerm !== undefined) {
-          const subMap = map.get(encodedTerm);
-          if (subMap) {
-            partialQuad[index] = <E> id;
-            yield * this
-              .findEncodedInner(index + 1, ids, terms, <NestedMapActual<E, V>>subMap, partialQuad);
-          }
+        const subMap = map.get(encodedTerm!);
+        if (subMap) {
+          partialQuad[index] = <E> id;
+          yield * this
+            .findEncodedInner(index + 1, ids, terms, <NestedMapActual<E, V>>subMap, partialQuad);
         }
       }
     }

@@ -354,12 +354,10 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
         // If we had overlapping variables, potentially exclude this binding if values for variable are unequal
         if (shouldFilterIndexes) {
           const filterI = filterIndexes[i];
-          if (filterI) {
-            for (const j of filterI) {
-              if (decomposedQuadEncoded[i] !== decomposedQuadEncoded[j]) {
-                skipBinding = true;
-                break;
-              }
+          for (const j of filterI) {
+            if (decomposedQuadEncoded[i] !== decomposedQuadEncoded[j]) {
+              skipBinding = true;
+              break;
             }
           }
           if (skipBinding) {
@@ -374,23 +372,21 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
         //  false that would return bindings instead of quads. The following could then be skipped.
         //  variableIndexes would also need to be changed to check requireQuotedTripleFiltering (see readQuads).
         if (terms[i].termType === 'Quad') {
-          if (decodedTerm.termType === 'Quad') {
-            // If the term is a quad, it may also contain nested variables,
-            // so we need to extract those additional bindings.
-            const additionalBindings = matchPatternMappings(decodedTerm, terms[i], { returnMappings: true });
-            if (additionalBindings) {
-              checkForBindingConflicts = true;
-              for (const [ key, value ] of Object.entries(additionalBindings)) {
-                const variable = this.dataFactory.variable!(key);
-                if (bindingsEntries.some(entry => entry[0].equals(variable) && !entry[1].equals(value))) {
-                  // Skip this binding if we find conflicting variable bindings
-                  skipBinding = true;
-                  break;
-                }
-                bindingsEntries.push([ variable, value ]);
+          // If the term is a quad, it may also contain nested variables,
+          // so we need to extract those additional bindings.
+          const additionalBindings = matchPatternMappings(<RDF.Quad> decodedTerm, terms[i], { returnMappings: true });
+          if (additionalBindings) {
+            checkForBindingConflicts = true;
+            for (const [ key, value ] of Object.entries(additionalBindings)) {
+              const variable = this.dataFactory.variable!(key);
+              if (bindingsEntries.some(entry => entry[0].equals(variable) && !entry[1].equals(value))) {
+                // Skip this binding if we find conflicting variable bindings
+                skipBinding = true;
+                break;
               }
-              continue;
+              bindingsEntries.push([ variable, value ]);
             }
+            continue;
           }
           skipBinding = true;
           break;
