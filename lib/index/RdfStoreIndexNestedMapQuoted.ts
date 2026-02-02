@@ -9,7 +9,7 @@ import { RdfStoreIndexNestedMap } from './RdfStoreIndexNestedMap';
  * An RDF store index that is implemented using nested Maps with optimized quoted triple support.
  */
 export class RdfStoreIndexNestedMapQuoted<E, V> extends RdfStoreIndexNestedMap<E, V> {
-  public readonly features = {
+  public override readonly features = {
     quotedTripleFiltering: true,
   };
 
@@ -25,7 +25,7 @@ export class RdfStoreIndexNestedMapQuoted<E, V> extends RdfStoreIndexNestedMap<E
     }
   }
 
-  public * find(terms: QuadPatternTerms): IterableIterator<QuadTerms> {
+  public override * find(terms: QuadPatternTerms): IterableIterator<QuadTerms> {
     const ids = encodeOptionalTerms(terms, this.dictionary);
     if (!ids) {
       return;
@@ -77,7 +77,7 @@ export class RdfStoreIndexNestedMapQuoted<E, V> extends RdfStoreIndexNestedMap<E
 
   // The code below is nearly identical. We duplicate because abstraction would result in a significant performance hit.
 
-  public * findEncoded(
+  public override * findEncoded(
     ids: EncodedQuadTerms<E | undefined>,
     terms: QuadPatternTerms,
   ): IterableIterator<EncodedQuadTerms<E>> {
@@ -121,7 +121,7 @@ export class RdfStoreIndexNestedMapQuoted<E, V> extends RdfStoreIndexNestedMap<E
     }
   }
 
-  public count(terms: QuadPatternTerms): number {
+  public override count(terms: QuadPatternTerms): number {
     let count = 0;
 
     const ids = encodeOptionalTerms(terms, this.dictionary);

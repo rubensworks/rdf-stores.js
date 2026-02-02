@@ -11,7 +11,7 @@ import { RdfStoreIndexNestedMapRecursive } from './RdfStoreIndexNestedMapRecursi
  * with optimized quoted triple support.
  */
 export class RdfStoreIndexNestedMapRecursiveQuoted<E, V> extends RdfStoreIndexNestedMapRecursive<E, V> {
-  public readonly features = {
+  public override readonly features = {
     quotedTripleFiltering: true,
   };
 
@@ -19,7 +19,7 @@ export class RdfStoreIndexNestedMapRecursiveQuoted<E, V> extends RdfStoreIndexNe
     super(options);
   }
 
-  public * findEncoded(
+  public override * findEncoded(
     ids: EncodedQuadTerms<E | undefined>,
     terms: QuadPatternTerms,
   ): IterableIterator<EncodedQuadTerms<E>> {
@@ -75,7 +75,7 @@ export class RdfStoreIndexNestedMapRecursiveQuoted<E, V> extends RdfStoreIndexNe
     }
   }
 
-  protected countInner(
+  protected override countInner(
     index: number,
     terms: PatternTerm[],
     map: NestedMapActual<E, V>,
