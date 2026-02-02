@@ -2010,6 +2010,105 @@ describe('RdfStore', () => {
 
     it('contains 3 indexes', () => {
       expect((<any> store).indexesWrapped).toHaveLength(3);
+      expect((<any> store).indexNodes).toBeUndefined();
+    });
+
+    it('readNodes should throw', () => {
+      expect(() => [ ...store.readNodes() ]).toThrow();
+    });
+
+    it('getNodes should throw', () => {
+      expect(() => store.getNodes()).toThrow();
+    });
+
+    it('matchNodes should throw', async() => {
+      expect(() => store.matchNodes()).toThrow();
+    });
+  });
+
+  describe('createDefault with nodes: true', () => {
+    beforeEach(() => {
+      store = RdfStore.createDefault(true);
+    });
+
+    beforeEach(async() => {
+      const ret = store.import(streamifyArray([
+        DF.quad(
+          DF.namedNode('s1'),
+          DF.namedNode('p1'),
+          DF.namedNode('o1'),
+          DF.namedNode('g1'),
+        ),
+        DF.quad(
+          DF.namedNode('s1'),
+          DF.namedNode('p2'),
+          DF.namedNode('o2'),
+          DF.namedNode('g1'),
+        ),
+        DF.quad(
+          DF.namedNode('s2'),
+          DF.namedNode('p1'),
+          DF.namedNode('o1'),
+          DF.namedNode('g1'),
+        ),
+        DF.quad(
+          DF.namedNode('s2'),
+          DF.namedNode('p2'),
+          DF.namedNode('o2'),
+          DF.namedNode('g2'),
+        ),
+        DF.quad(
+          DF.namedNode('s3'),
+          DF.namedNode('p3'),
+          DF.namedNode('o3'),
+          DF.namedNode('g3'),
+        ),
+      ]));
+      await new Promise(resolve => ret.on('end', resolve));
+      store.removeQuad(DF.quad(
+        DF.namedNode('s2'),
+        DF.namedNode('p2'),
+        DF.namedNode('o2'),
+        DF.namedNode('g2'),
+      ));
+      store.removeQuad(DF.quad(
+        DF.namedNode('s3'),
+        DF.namedNode('p3'),
+        DF.namedNode('o3'),
+        DF.namedNode('g3'),
+      ));
+    });
+
+    it('contains 3 indexes', () => {
+      expect((<any> store).indexesWrapped).toHaveLength(3);
+      expect((<any> store).indexNodes).toBeDefined();
+    });
+
+    it('readNodes should return all nodes', () => {
+      expect([ ...store.readNodes() ]).toEqual([
+        DF.namedNode('s1'),
+        DF.namedNode('o1'),
+        DF.namedNode('o2'),
+        DF.namedNode('s2'),
+      ]);
+    });
+
+    it('getNodes should return all nodes', () => {
+      expect(store.getNodes()).toEqual([
+        DF.namedNode('s1'),
+        DF.namedNode('o1'),
+        DF.namedNode('o2'),
+        DF.namedNode('s2'),
+      ]);
+    });
+
+    it('matchNodes should return all nodes', async() => {
+      expect(await store.matchNodes().toArray()).toEqual([
+        DF.namedNode('s1'),
+        DF.namedNode('o1'),
+        DF.namedNode('o2'),
+        DF.namedNode('s2'),
+      ]);
     });
   });
 

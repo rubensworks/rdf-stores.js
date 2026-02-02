@@ -253,6 +253,19 @@ export function makeTests(optimal: boolean): IPerformanceTestApproach[] {
       },
     },
     {
+      name: '3 Map indexes (number) OPT-QUERY-NODES',
+      options: {
+        type: 'rdfstore',
+        options: {
+          indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+          indexConstructor: subOptions => new RdfStoreIndexNestedMap(subOptions),
+          indexNodes: true,
+          dictionary: new TermDictionaryNumberRecordFullTerms(),
+          dataFactory: new DataFactory(),
+        },
+      },
+    },
+    {
       name: '3 Record indexes (number) OPT-INGEST',
       options: {
         type: 'rdfstore',

@@ -21,6 +21,14 @@ export interface IRdfStoreOptions<E, Q extends RDF.BaseQuad = RDF.Quad> {
    */
   indexConstructor: (options: IRdfStoreOptions<E, Q>) => IRdfStoreIndex<E, boolean>;
   /**
+   * If all nodes should be indexed.
+   * Nodes are all terms that are either a subject or object within the store.
+   *
+   * This can for example be useful for optimizing the Nodes function in SPARQL's property paths:
+   * https://www.w3.org/TR/sparql12-query/#defn_nodeSet
+   */
+  indexNodes?: true;
+  /**
    * The dictionary for encoding and decoding RDF terms.
    */
   dictionary: ITermDictionary<E>;

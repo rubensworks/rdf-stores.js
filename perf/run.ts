@@ -19,7 +19,7 @@ const argv = require('yargs/yargs')(hideBin(process.argv))
     tests: {
       type: 'string',
       alias: 't',
-      choices: [ 'all', 'triples', 'quads', 'quoted', 'terms' ],
+      choices: [ 'all', 'triples', 'quads', 'quoted', 'terms', 'nodes' ],
       describe: 'Which tests must be executed',
       default: 'all',
     },

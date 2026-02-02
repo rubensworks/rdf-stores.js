@@ -287,6 +287,58 @@ stream.on('end', () => {
 });
 ```
 
+### `readNodes`
+
+Returns a generator producing all nodes.
+Nodes are all terms that are either a subject or object within the store.
+
+This method can only be called when the store is constructed with `indexNodes: true`.
+
+This can for example be useful for optimizing the Nodes function in SPARQL's property paths:
+https://www.w3.org/TR/sparql12-query/#defn_nodeSet
+
+```typescript
+for (const term of store.readNodes()) {
+  console.log(term.value);
+}
+```
+
+### `getNodes`
+
+Returns an array containing all nodes.
+Nodes are all terms that are either a subject or object within the store.
+
+This method can only be called when the store is constructed with `indexNodes: true`.
+
+This can for example be useful for optimizing the Nodes function in SPARQL's property paths:
+https://www.w3.org/TR/sparql12-query/#defn_nodeSet
+
+```typescript
+const array = store.getNodes();
+console.log(array);
+```
+
+### `matchNodes`
+
+Returns a stream containing all nodes.
+Nodes are all terms that are either a subject or object within the store.
+
+This method can only be called when the store is constructed with `indexNodes: true`.
+
+This can for example be useful for optimizing the Nodes function in SPARQL's property paths:
+https://www.w3.org/TR/sparql12-query/#defn_nodeSet
+
+```typescript
+const stream = store.matchNodes();
+
+stream.on('data', (term) => {
+  console.log(term.value);
+});
+stream.on('end', () => {
+  console.log('Done!');
+});
+```
+
 ### `countQuads`
 
 Count the number of quads matching the given pattern:
@@ -339,6 +391,7 @@ const store = new RdfStore<number>({
   indexConstructor: subOptions => new RdfStoreIndexNestedMapQuoted(subOptions),
   dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms()),
   dataFactory: new DataFactory(),
+  indexNodes: false,
 });
 ```
 

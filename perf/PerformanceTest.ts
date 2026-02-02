@@ -22,7 +22,7 @@ export class PerformanceTest {
     public readonly bindingsFactory: RDF.BindingsFactory = new BindingsFactory(<any> this.dataFactory),
   ) {}
 
-  public async run(scope: 'all' | 'triples' | 'quads' | 'quoted' | 'terms'): Promise<void> {
+  public async run(scope: 'all' | 'triples' | 'quads' | 'quoted' | 'terms' | 'nodes'): Promise<void> {
     for (const approach of this.approaches) {
       console.log(`\n# ${approach.name}\n`);
 
@@ -62,6 +62,14 @@ export class PerformanceTest {
         this.findTerms2(this.dimension / 4, store);
         this.findTerms3(this.dimension / 4, store);
         this.findTerms4(this.dimension / 4, store);
+        console.log();
+      }
+
+      if ((scope === 'all' || scope === 'nodes') && approach.options.type !== 'n3' &&
+        approach.options.options.indexNodes) {
+        const store = new RdfStore(approach.options.options);
+        this.addQuadsToGraphs(this.dimension, store);
+        this.findNodes(this.dimension, store);
         console.log();
       }
     }
@@ -355,6 +363,17 @@ export class PerformanceTest {
           store.getDistinctTerms([ quadTerm1, quadTerm2, quadTerm3, quadTerm4 ]).length,
           dimension * dimension * dimension * dimension,
         );
+      }
+    }
+    console.timeEnd(TEST);
+  }
+
+  public findNodes(dimension: number, store: RdfStore): void {
+    const TEST = `- Finding all ${dimension} nodes ${dimension * dimension} times`;
+    console.time(TEST);
+    for (let i = 0; i < dimension; i++) {
+      for (let j = 0; j < dimension; j++) {
+        assert.equal(store.getNodes().length, dimension);
       }
     }
     console.timeEnd(TEST);

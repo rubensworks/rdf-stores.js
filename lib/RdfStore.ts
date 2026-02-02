@@ -42,7 +42,8 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
   public readonly dictionary: ITermDictionary<E>;
   public readonly indexesWrapped: IRdfStoreIndexWrapped<E>[];
   private readonly indexesWrappedComponentOrders: QuadTermName[][];
-  public readonly features = { quotedTripleFiltering: true };
+  public readonly features = { quotedTripleFiltering: true, indexNodes: false };
+  private readonly indexNodes: Set<any> | undefined;
 
   private _size = 0;
 
@@ -52,17 +53,21 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     this.dictionary = options.dictionary;
     this.indexesWrapped = RdfStore.constructIndexesWrapped(options);
     this.indexesWrappedComponentOrders = this.indexesWrapped.map(indexThis => indexThis.componentOrder);
+    this.indexNodes = options.indexNodes ? new Set() : undefined;
+    this.features.indexNodes = Boolean(options.indexNodes);
   }
 
   /**
    * Create an RDF store with default settings.
    * Concretely, this store stores triples in GSPO, GPOS, and GOSP order,
    * and makes use of in-memory number dictionary encoding.
+   * @param nodes If an index of nodes (subjects or objects) must be maintained.
    */
-  public static createDefault(): RdfStore<number> {
+  public static createDefault(nodes?: true): RdfStore<number> {
     return new RdfStore<number>({
       indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
       indexConstructor: subOptions => new RdfStoreIndexNestedMapQuoted(subOptions),
+      indexNodes: nodes,
       dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms()),
       dataFactory: new DataFactory(),
     });
@@ -132,6 +137,13 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     }
     if (newQuad) {
       this._size++;
+
+      // If we're indexing nodes, add subject and object to this index.
+      if (this.indexNodes) {
+        this.indexNodes.add(quadEncoded[0]);
+        this.indexNodes.add(quadEncoded[2]);
+      }
+
       return true;
     }
     return false;
@@ -167,6 +179,17 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     }
     if (wasPresent) {
       this._size--;
+
+      // If we're indexing nodes, remove subject and object from this index if they are not present anymore.
+      if (this.indexNodes) {
+        if (!this.readQuads(quad.subject).next().value) {
+          this.indexNodes.delete(quadEncoded[0]);
+        }
+        if (!this.readQuads(undefined, undefined, quad.object).next().value) {
+          this.indexNodes.delete(quadEncoded[2]);
+        }
+      }
+
       return true;
     }
     return false;
@@ -547,6 +570,47 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     terms: QuadTermName[],
   ): AsyncIterator<RDF.Term[]> {
     return wrap(this.readDistinctTerms(terms));
+  }
+
+  /**
+   * Returns a generator producing all nodes.
+   * Nodes are all terms that are either a subject or object within the store.
+   *
+   * This method can only be called when the store is constructed with `indexNodes: true`.
+   */
+  public * readNodes(): IterableIterator<RDF.Term> {
+    if (!this.indexNodes) {
+      throw new Error(`Nodes can only be read when the store was constructed with 'indexNodes: true'`);
+    }
+
+    // Decode all nodes
+    for (const term of this.indexNodes) {
+      yield this.dictionary.decode(term);
+    }
+  }
+
+  /**
+   * Returns an array containing all nodes.
+   * Nodes are all terms that are either a subject or object within the store.
+   *
+   * This method can only be called when the store is constructed with `indexNodes: true`.
+   */
+  public getNodes(): RDF.Term[] {
+    return [ ...this.readNodes() ];
+  }
+
+  /**
+   * Returns a stream containing all nodes.
+   * Nodes are all terms that are either a subject or object within the store.
+   *
+   * This method can only be called when the store is constructed with `indexNodes: true`.
+   */
+  public matchNodes(): AsyncIterator<RDF.Term> {
+    if (!this.indexNodes) {
+      throw new Error(`Nodes can only be read when the store was constructed with 'indexNodes: true'`);
+    }
+
+    return wrap(this.readNodes());
   }
 
   /**
