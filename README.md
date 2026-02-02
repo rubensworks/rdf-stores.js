@@ -289,7 +289,7 @@ stream.on('end', () => {
 
 ### `countNodes`
 
-Returns the number of nodes.
+Returns the number of nodes in the given graph (can be a variable).
 Nodes are all terms that are either a subject or object within the store.
 
 This method can only be called when the store is constructed with `indexNodes: true`.
@@ -298,52 +298,58 @@ This can for example be useful for optimizing the Nodes function in SPARQL's pro
 https://www.w3.org/TR/sparql12-query/#defn_nodeSet
 
 ```typescript
-const amount = store.countNodes();
+const amount = store.countNodes(DF.namedNode('g1'));
 ```
 
 ### `readNodes`
 
-Returns a generator producing all nodes.
+Returns a generator producing all nodes in the given graph (can be a variable).
 Nodes are all terms that are either a subject or object within the store.
 
 This method can only be called when the store is constructed with `indexNodes: true`.
+
+It returns a generator of tuples containing the named graph as first element and the node term as second element.
 
 This can for example be useful for optimizing the Nodes function in SPARQL's property paths:
 https://www.w3.org/TR/sparql12-query/#defn_nodeSet
 
 ```typescript
-for (const term of store.readNodes()) {
+for (const [ graph, term ] of store.readNodes(DF.namedNode('g1'))) {
   console.log(term.value);
 }
 ```
 
 ### `getNodes`
 
-Returns an array containing all nodes.
+Returns an array containing all nodes in the given graph (can be a variable).
 Nodes are all terms that are either a subject or object within the store.
 
 This method can only be called when the store is constructed with `indexNodes: true`.
+
+It returns an array of tuples containing the named graph as first element and the node term as second element.
 
 This can for example be useful for optimizing the Nodes function in SPARQL's property paths:
 https://www.w3.org/TR/sparql12-query/#defn_nodeSet
 
 ```typescript
-const array = store.getNodes();
+const array = store.getNodes(DF.namedNode('g1'));
 console.log(array);
 ```
 
 ### `matchNodes`
 
-Returns a stream containing all nodes.
+Returns a stream containing all nodes in the given graph (can be a variable).
 Nodes are all terms that are either a subject or object within the store.
 
 This method can only be called when the store is constructed with `indexNodes: true`.
+
+It returns a stream of tuples containing the named graph as first element and the node term as second element.
 
 This can for example be useful for optimizing the Nodes function in SPARQL's property paths:
 https://www.w3.org/TR/sparql12-query/#defn_nodeSet
 
 ```typescript
-const stream = store.matchNodes();
+const stream = store.matchNodes(DF.namedNode('g1'));
 
 stream.on('data', (term) => {
   console.log(term.value);

@@ -2014,19 +2014,19 @@ describe('RdfStore', () => {
     });
 
     it('countNodes should throw', () => {
-      expect(() => store.countNodes()).toThrow();
+      expect(() => store.countNodes(DF.namedNode('g'))).toThrow();
     });
 
     it('readNodes should throw', () => {
-      expect(() => [ ...store.readNodes() ]).toThrow();
+      expect(() => [ ...store.readNodes(DF.namedNode('g')) ]).toThrow();
     });
 
     it('getNodes should throw', () => {
-      expect(() => store.getNodes()).toThrow();
+      expect(() => store.getNodes(DF.namedNode('g'))).toThrow();
     });
 
     it('matchNodes should throw', async() => {
-      expect(() => store.matchNodes()).toThrow();
+      expect(() => store.matchNodes(DF.namedNode('g'))).toThrow();
     });
   });
 
@@ -2058,6 +2058,12 @@ describe('RdfStore', () => {
         DF.quad(
           DF.namedNode('s2'),
           DF.namedNode('p2'),
+          DF.namedNode('o1'),
+          DF.namedNode('g1'),
+        ),
+        DF.quad(
+          DF.namedNode('s2'),
+          DF.namedNode('p2'),
           DF.namedNode('o2'),
           DF.namedNode('g2'),
         ),
@@ -2071,9 +2077,9 @@ describe('RdfStore', () => {
       await new Promise(resolve => ret.on('end', resolve));
       store.removeQuad(DF.quad(
         DF.namedNode('s2'),
-        DF.namedNode('p2'),
-        DF.namedNode('o2'),
-        DF.namedNode('g2'),
+        DF.namedNode('p1'),
+        DF.namedNode('o1'),
+        DF.namedNode('g1'),
       ));
       store.removeQuad(DF.quad(
         DF.namedNode('s3'),
@@ -2088,34 +2094,61 @@ describe('RdfStore', () => {
       expect((<any> store).indexNodes).toBeDefined();
     });
 
-    it('countNodes should return 4', () => {
-      expect(store.countNodes()).toEqual(4);
+    it('countNodes should return 4 for variable g', () => {
+      expect(store.countNodes(DF.variable('g'))).toEqual(6);
     });
 
-    it('readNodes should return all nodes', () => {
-      expect([ ...store.readNodes() ]).toEqual([
-        DF.namedNode('s1'),
-        DF.namedNode('o1'),
-        DF.namedNode('o2'),
-        DF.namedNode('s2'),
+    it('countNodes should return 2 for an existing g', () => {
+      expect(store.countNodes(DF.namedNode('g1'))).toEqual(4);
+    });
+
+    it('countNodes should return 0 for a non-existing g', () => {
+      expect(store.countNodes(DF.namedNode('gother'))).toEqual(0);
+    });
+
+    it('readNodes should return all nodes for variable g', () => {
+      expect([ ...store.readNodes(DF.variable('g')) ]).toEqual([
+        [ DF.namedNode('g1'), DF.namedNode('s1') ],
+        [ DF.namedNode('g1'), DF.namedNode('o1') ],
+        [ DF.namedNode('g1'), DF.namedNode('o2') ],
+        [ DF.namedNode('g1'), DF.namedNode('s2') ],
+        [ DF.namedNode('g2'), DF.namedNode('s2') ],
+        [ DF.namedNode('g2'), DF.namedNode('o2') ],
       ]);
     });
 
-    it('getNodes should return all nodes', () => {
-      expect(store.getNodes()).toEqual([
-        DF.namedNode('s1'),
-        DF.namedNode('o1'),
-        DF.namedNode('o2'),
-        DF.namedNode('s2'),
+    it('readNodes should return all nodes for an existing g', () => {
+      expect([ ...store.readNodes(DF.namedNode('g1')) ]).toEqual([
+        [ DF.namedNode('g1'), DF.namedNode('s1') ],
+        [ DF.namedNode('g1'), DF.namedNode('o1') ],
+        [ DF.namedNode('g1'), DF.namedNode('o2') ],
+        [ DF.namedNode('g1'), DF.namedNode('s2') ],
       ]);
     });
 
-    it('matchNodes should return all nodes', async() => {
-      expect(await store.matchNodes().toArray()).toEqual([
-        DF.namedNode('s1'),
-        DF.namedNode('o1'),
-        DF.namedNode('o2'),
-        DF.namedNode('s2'),
+    it('readNodes should return all nodes for a non-existing g', () => {
+      expect([ ...store.readNodes(DF.namedNode('gother')) ]).toEqual([]);
+    });
+
+    it('getNodes should return all nodes for variable g', () => {
+      expect(store.getNodes(DF.variable('g'))).toEqual([
+        [ DF.namedNode('g1'), DF.namedNode('s1') ],
+        [ DF.namedNode('g1'), DF.namedNode('o1') ],
+        [ DF.namedNode('g1'), DF.namedNode('o2') ],
+        [ DF.namedNode('g1'), DF.namedNode('s2') ],
+        [ DF.namedNode('g2'), DF.namedNode('s2') ],
+        [ DF.namedNode('g2'), DF.namedNode('o2') ],
+      ]);
+    });
+
+    it('matchNodes should return all nodes for variable g', async() => {
+      expect(await store.matchNodes(DF.variable('g')).toArray()).toEqual([
+        [ DF.namedNode('g1'), DF.namedNode('s1') ],
+        [ DF.namedNode('g1'), DF.namedNode('o1') ],
+        [ DF.namedNode('g1'), DF.namedNode('o2') ],
+        [ DF.namedNode('g1'), DF.namedNode('s2') ],
+        [ DF.namedNode('g2'), DF.namedNode('s2') ],
+        [ DF.namedNode('g2'), DF.namedNode('o2') ],
       ]);
     });
   });

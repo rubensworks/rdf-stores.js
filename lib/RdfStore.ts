@@ -43,7 +43,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
   public readonly indexesWrapped: IRdfStoreIndexWrapped<E>[];
   private readonly indexesWrappedComponentOrders: QuadTermName[][];
   public readonly features = { quotedTripleFiltering: true, indexNodes: false };
-  private readonly indexNodes: Set<any> | undefined;
+  private readonly indexNodes: Map<E, Set<E>> | undefined;
 
   private _size = 0;
 
@@ -53,7 +53,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     this.dictionary = options.dictionary;
     this.indexesWrapped = RdfStore.constructIndexesWrapped(options);
     this.indexesWrappedComponentOrders = this.indexesWrapped.map(indexThis => indexThis.componentOrder);
-    this.indexNodes = options.indexNodes ? new Set() : undefined;
+    this.indexNodes = options.indexNodes ? new Map() : undefined;
     this.features.indexNodes = Boolean(options.indexNodes);
   }
 
@@ -140,8 +140,13 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
 
       // If we're indexing nodes, add subject and object to this index.
       if (this.indexNodes) {
-        this.indexNodes.add(quadEncoded[0]);
-        this.indexNodes.add(quadEncoded[2]);
+        let graphIndex = this.indexNodes.get(quadEncoded[3]);
+        if (!graphIndex) {
+          graphIndex = new Set();
+          this.indexNodes.set(quadEncoded[3], graphIndex);
+        }
+        graphIndex.add(quadEncoded[0]);
+        graphIndex.add(quadEncoded[2]);
       }
 
       return true;
@@ -182,11 +187,15 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
 
       // If we're indexing nodes, remove subject and object from this index if they are not present anymore.
       if (this.indexNodes) {
-        if (!this.readQuads(quad.subject).next().value) {
-          this.indexNodes.delete(quadEncoded[0]);
+        const graphIndex = this.indexNodes.get(quadEncoded[3]!)!;
+        if (!this.readQuads(quad.subject, undefined, undefined, quad.graph).next().value) {
+          graphIndex.delete(quadEncoded[0]!);
         }
-        if (!this.readQuads(undefined, undefined, quad.object).next().value) {
-          this.indexNodes.delete(quadEncoded[2]);
+        if (!this.readQuads(undefined, undefined, quad.object, quad.graph).next().value) {
+          graphIndex.delete(quadEncoded[2]!);
+        }
+        if (graphIndex.size === 0) {
+          this.indexNodes.delete(quadEncoded[3]!);
         }
       }
 
@@ -573,57 +582,93 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
   }
 
   /**
-   * Returns the number of nodes.
+   * Returns the number of nodes in the given graph (can be a variable).
    * Nodes are all terms that are either a subject or object within the store.
    *
    * This method can only be called when the store is constructed with `indexNodes: true`.
    */
-  public countNodes(): number {
+  public countNodes(graph: RDF.Term): number {
     if (!this.indexNodes) {
       throw new Error(`Nodes can only be read when the store was constructed with 'indexNodes: true'`);
     }
-    return this.indexNodes.size;
-  }
-
-  /**
-   * Returns a generator producing all nodes.
-   * Nodes are all terms that are either a subject or object within the store.
-   *
-   * This method can only be called when the store is constructed with `indexNodes: true`.
-   */
-  public * readNodes(): IterableIterator<RDF.Term> {
-    if (!this.indexNodes) {
-      throw new Error(`Nodes can only be read when the store was constructed with 'indexNodes: true'`);
+    if (graph.termType === 'Variable') {
+      let size = 0;
+      for (const graphIndex of this.indexNodes.values()) {
+        size += graphIndex.size;
+      }
+      return size;
     }
-
-    // Decode all nodes
-    for (const term of this.indexNodes) {
-      yield this.dictionary.decode(term);
+    const graphEncoded = this.dictionary.encodeOptional(graph);
+    if (graphEncoded !== undefined) {
+      return this.indexNodes.get(graphEncoded)!.size;
     }
+    return 0;
   }
 
   /**
-   * Returns an array containing all nodes.
+   * Returns a generator producing all nodes in the given graph (can be a variable).
    * Nodes are all terms that are either a subject or object within the store.
    *
    * This method can only be called when the store is constructed with `indexNodes: true`.
-   */
-  public getNodes(): RDF.Term[] {
-    return [ ...this.readNodes() ];
-  }
-
-  /**
-   * Returns a stream containing all nodes.
-   * Nodes are all terms that are either a subject or object within the store.
    *
-   * This method can only be called when the store is constructed with `indexNodes: true`.
+   * @param graph The graph to read the nodes from, or a variable if all graphs need to be considered.
+   *
+   * @returns a generator of tuples containing the named graph as first element and the node term as second element.
    */
-  public matchNodes(): AsyncIterator<RDF.Term> {
+  public * readNodes(graph: RDF.Term): IterableIterator<[ RDF.Term, RDF.Term ]> {
     if (!this.indexNodes) {
       throw new Error(`Nodes can only be read when the store was constructed with 'indexNodes: true'`);
     }
 
-    return wrap(this.readNodes());
+    // Decode nodes of all graphs if variable, or only the given graphs.
+    if (graph.termType === 'Variable') {
+      for (const entry of this.indexNodes.entries()) {
+        const graphDecoded = this.dictionary.decode(entry[0]);
+        for (const term of entry[1]) {
+          yield [ graphDecoded, this.dictionary.decode(term) ];
+        }
+      }
+    } else {
+      const graphEncoded = this.dictionary.encodeOptional(graph);
+      if (graphEncoded !== undefined) {
+        const graphIndex = this.indexNodes.get(graphEncoded)!;
+        for (const term of graphIndex) {
+          yield [ graph, this.dictionary.decode(term) ];
+        }
+      }
+    }
+  }
+
+  /**
+   * Returns an array containing all nodes in the given graph (can be a variable).
+   * Nodes are all terms that are either a subject or object within the store.
+   *
+   * This method can only be called when the store is constructed with `indexNodes: true`.
+   *
+   * @param graph The graph to read the nodes from, or a variable if all graphs need to be considered.
+   *
+   * @returns an array of tuples containing the named graph as first element and the node term as second element.
+   */
+  public getNodes(graph: RDF.Term): [ RDF.Term, RDF.Term ][] {
+    return [ ...this.readNodes(graph) ];
+  }
+
+  /**
+   * Returns a stream containing all nodes in the given graph (can be a variable).
+   * Nodes are all terms that are either a subject or object within the store.
+   *
+   * This method can only be called when the store is constructed with `indexNodes: true`.
+   *
+   * @param graph The graph to read the nodes from, or a variable if all graphs need to be considered.
+   *
+   * @returns a stream of tuples containing the named graph as first element and the node term as second element.
+   */
+  public matchNodes(graph: RDF.Term): AsyncIterator<[ RDF.Term, RDF.Term ]> {
+    if (!this.indexNodes) {
+      throw new Error(`Nodes can only be read when the store was constructed with 'indexNodes: true'`);
+    }
+
+    return wrap(this.readNodes(graph));
   }
 
   /**

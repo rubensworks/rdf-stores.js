@@ -373,7 +373,7 @@ export class PerformanceTest {
     console.time(TEST);
     for (let i = 0; i < dimension; i++) {
       for (let j = 0; j < dimension; j++) {
-        assert.equal(store.getNodes().length, dimension);
+        assert.equal(store.getNodes(this.dataFactory.namedNode(`${this.prefix}${i}`)).length, dimension);
       }
     }
     console.timeEnd(TEST);
