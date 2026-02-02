@@ -54,7 +54,8 @@ export class PerformanceTest {
         console.log();
       }
 
-      if (scope === 'terms' && approach.options.type !== 'n3') {
+      if ((scope === 'all' || scope === 'terms') && approach.options.type !== 'n3' &&
+        approach.options.options.indexCombinations.length >= 3) {
         const store = new RdfStore(approach.options.options);
         this.addQuadsToGraphs(this.dimension / 4, store);
         this.findTerms1(this.dimension / 4, store);
