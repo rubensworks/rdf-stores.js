@@ -50,7 +50,7 @@
     "test"
   ],
   "devDependencies": {
-    "@codspeed/tinybench-plugin": "^3.1.0",
+    "@codspeed/tinybench-plugin": "^5.0.0",
     "@comunica/utils-bindings-factory": "^5.0.0",
     "@comunica/utils-jest": "^5.0.0",
     "@rubensworks/eslint-config": "^1.0.0",
