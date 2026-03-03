@@ -73,7 +73,7 @@
     "manual-git-changelog": "^1.0.0",
     "n3": "^2.0.0",
     "pre-commit": "^1.2.2",
-    "streamify-array": "^1.0.1",
+    "streamify-array": "^2.0.0",
     "tinybench": "^2.8.0",
     "ts-jest": "^29.0.0",
     "typescript": "5.9.3",
