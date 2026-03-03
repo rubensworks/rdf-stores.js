@@ -242,6 +242,14 @@ stream.on('end', () => {
 });
 ```
 
+### `countDistinctTerms`
+
+Count the given distinct terms that exist in the store.
+
+```typescript
+store.countDistinctTerms([ 'subject', 'predicate' ]);
+```
+
 ### `readDistinctTerms`
 
 Returns an iterable iterator producing distinct arrays of terms that exist in the store.

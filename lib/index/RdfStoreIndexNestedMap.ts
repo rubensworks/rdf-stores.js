@@ -234,6 +234,26 @@ export class RdfStoreIndexNestedMap<E, V> implements IRdfStoreIndex<E, V> {
 
     return count;
   }
+
+  protected countTermsInner(
+    depth: number,
+    map: NestedMapActual<E, V>,
+    matchTerms: boolean[],
+  ): number {
+    if (depth === matchTerms.length - 1) {
+      return map.size;
+    }
+
+    let count = 0;
+    for (const subMap of map.values()) {
+      count += this.countTermsInner(depth + 1, <NestedMapActual<E, V>> subMap, matchTerms);
+    }
+    return count;
+  }
+
+  public countTerms(matchTerms: boolean[]): number {
+    return this.countTermsInner(0, this.nestedMap, matchTerms);
+  }
 }
 
 export type NestedMap<E, V> = NestedMapActual<E, V> | V;

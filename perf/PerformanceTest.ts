@@ -59,9 +59,13 @@ export class PerformanceTest {
         const store = new RdfStore(approach.options.options);
         this.addQuadsToGraphs(this.dimension / 4, store);
         this.findTerms1(this.dimension / 4, store);
+        this.countTerms1(this.dimension / 4, store);
         this.findTerms2(this.dimension / 4, store);
+        this.countTerms2(this.dimension / 4, store);
         this.findTerms3(this.dimension / 4, store);
+        this.countTerms3(this.dimension / 4, store);
         this.findTerms4(this.dimension / 4, store);
+        this.countTerms4(this.dimension / 4, store);
         console.log();
       }
 
@@ -317,6 +321,19 @@ export class PerformanceTest {
     console.timeEnd(TEST);
   }
 
+  public countTerms1(dimension: number, store: RdfStore): void {
+    const TEST = `- Counting all ${dimension} terms (1) in the default graph ${dimension * dimension} times for each quad term (4)`;
+    console.time(TEST);
+    for (const quadTermName of QUAD_TERM_NAMES) {
+      for (let i = 0; i < dimension; i++) {
+        for (let j = 0; j < dimension; j++) {
+          assert.equal(store.countDistinctTerms([ quadTermName ]), dimension);
+        }
+      }
+    }
+    console.timeEnd(TEST);
+  }
+
   public findTerms2(dimension: number, store: RdfStore): void {
     const TEST = `- Finding all ${dimension * dimension} terms (2) in the default graph ${dimension} times for each sequential quad term pair (4)`;
     console.time(TEST);
@@ -326,6 +343,20 @@ export class PerformanceTest {
       const quadTerm2 = QUAD_TERM_NAMES[(k + 1) % QUAD_TERM_NAMES.length];
       for (let i = 0; i < dimension; i++) {
         assert.equal(store.getDistinctTerms([ quadTerm1, quadTerm2 ]).length, dimension * dimension);
+      }
+    }
+    console.timeEnd(TEST);
+  }
+
+  public countTerms2(dimension: number, store: RdfStore): void {
+    const TEST = `- Counting all ${dimension * dimension} terms (2) in the default graph ${dimension} times for each sequential quad term pair (4)`;
+    console.time(TEST);
+    // eslint-disable-next-line id-length
+    for (let k = 0; k < QUAD_TERM_NAMES.length; k++) {
+      const quadTerm1 = QUAD_TERM_NAMES[k];
+      const quadTerm2 = QUAD_TERM_NAMES[(k + 1) % QUAD_TERM_NAMES.length];
+      for (let i = 0; i < dimension; i++) {
+        assert.equal(store.countDistinctTerms([ quadTerm1, quadTerm2 ]), dimension * dimension);
       }
     }
     console.timeEnd(TEST);
@@ -349,6 +380,24 @@ export class PerformanceTest {
     console.timeEnd(TEST);
   }
 
+  public countTerms3(dimension: number, store: RdfStore): void {
+    const TEST = `- Counting all ${dimension * dimension * dimension} terms (3) in the default graph ${dimension / 4} times for each sequential quad term triple (4)`;
+    console.time(TEST);
+    // eslint-disable-next-line id-length
+    for (let k = 0; k < QUAD_TERM_NAMES.length; k++) {
+      const quadTerm1 = QUAD_TERM_NAMES[k];
+      const quadTerm2 = QUAD_TERM_NAMES[(k + 1) % QUAD_TERM_NAMES.length];
+      const quadTerm3 = QUAD_TERM_NAMES[(k + 2) % QUAD_TERM_NAMES.length];
+      for (let i = 0; i < dimension / 4; i++) {
+        assert.equal(
+          store.countDistinctTerms([ quadTerm1, quadTerm2, quadTerm3 ]),
+          dimension * dimension * dimension,
+        );
+      }
+    }
+    console.timeEnd(TEST);
+  }
+
   public findTerms4(dimension: number, store: RdfStore): void {
     const TEST = `- Finding all ${dimension * dimension * dimension * dimension} terms (4) in the default graph ${dimension / 8} times for each sequential quad term quad (4)`;
     console.time(TEST);
@@ -361,6 +410,25 @@ export class PerformanceTest {
       for (let i = 0; i < dimension / 8; i++) {
         assert.equal(
           store.getDistinctTerms([ quadTerm1, quadTerm2, quadTerm3, quadTerm4 ]).length,
+          dimension * dimension * dimension * dimension,
+        );
+      }
+    }
+    console.timeEnd(TEST);
+  }
+
+  public countTerms4(dimension: number, store: RdfStore): void {
+    const TEST = `- Counting all ${dimension * dimension * dimension * dimension} terms (4) in the default graph ${dimension / 8} times for each sequential quad term quad (4)`;
+    console.time(TEST);
+    // eslint-disable-next-line id-length
+    for (let k = 0; k < QUAD_TERM_NAMES.length; k++) {
+      const quadTerm1 = QUAD_TERM_NAMES[k];
+      const quadTerm2 = QUAD_TERM_NAMES[(k + 1) % QUAD_TERM_NAMES.length];
+      const quadTerm3 = QUAD_TERM_NAMES[(k + 2) % QUAD_TERM_NAMES.length];
+      const quadTerm4 = QUAD_TERM_NAMES[(k + 3) % QUAD_TERM_NAMES.length];
+      for (let i = 0; i < dimension / 8; i++) {
+        assert.equal(
+          store.countDistinctTerms([ quadTerm1, quadTerm2, quadTerm3, quadTerm4 ]),
           dimension * dimension * dimension * dimension,
         );
       }

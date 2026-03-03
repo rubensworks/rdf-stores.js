@@ -42,7 +42,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
   public readonly dictionary: ITermDictionary<E>;
   public readonly indexesWrapped: IRdfStoreIndexWrapped<E>[];
   private readonly indexesWrappedComponentOrders: QuadTermName[][];
-  public readonly features = { quotedTripleFiltering: true, indexNodes: false };
+  public readonly features = { quotedTripleFiltering: true, indexNodes: false, indexDistinctTerms: true };
   private readonly indexNodes: Map<E, Set<E>> | undefined;
 
   private _size = 0;
@@ -485,6 +485,41 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     graph: RDF.Term,
   ): AsyncIterator<RDF.Bindings> {
     return wrap(this.readBindings(bindingsFactory, subject, predicate, object, graph));
+  }
+
+  /**
+   * Returns the number of distinct terms that exist in the store.
+   *
+   * @param terms An array of quad term names
+   */
+  public countDistinctTerms(
+    terms: QuadTermName[],
+  ): number {
+    // Determine the best index for this pattern
+    const bestIndex = getBestIndexTerms(this.indexesWrappedComponentOrders, terms);
+    const indexWrapped = this.indexesWrapped[bestIndex];
+
+    // Order terms, and keep index for fast inverse ordering during decoding
+    const termOrderInToIndex: number[] = [];
+    for (let i = 0; i < terms.length; i++) {
+      termOrderInToIndex[i] = indexWrapped.componentOrder.indexOf(terms[i]);
+    }
+    const termsOrderedUnfiltered: (QuadTermName | undefined)[] = [ undefined, undefined, undefined, undefined ];
+    for (let i = 0; i < terms.length; i++) {
+      termsOrderedUnfiltered[termOrderInToIndex[i]] = terms[i];
+    }
+    const termsOrdered: QuadTermName[] = termsOrderedUnfiltered.filter(t => t !== undefined);
+
+    // Determine path of terms to follow in the index
+    const matchTerms = getIndexMatchTermsPath(indexWrapped.componentOrder, termsOrdered);
+
+    // Ensure distinctness (this can only occur when insufficient indexes are available)
+    if (matchTerms.includes(false)) {
+      return this.getDistinctTerms(terms).length;
+    }
+
+    // Call the best index's count method
+    return indexWrapped.index.countTerms(matchTerms);
   }
 
   /**

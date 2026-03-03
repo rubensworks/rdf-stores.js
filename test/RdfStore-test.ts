@@ -166,6 +166,88 @@ describe('RdfStore', () => {
               expectToEqualTerms(store.getDistinctTerms([ 'graph', 'object', 'subject', 'predicate' ]), []);
             });
           });
+
+          describe('countDistinctTerms', () => {
+            it('should return distinct subjects', async() => {
+              expect(store.countDistinctTerms([ 'subject' ])).toEqual(0);
+            });
+
+            it('should return distinct subjects and objects', async() => {
+              expect(store.countDistinctTerms([ 'subject', 'object' ])).toEqual(0);
+            });
+
+            it('should return distinct subjects and objects and predicates', async() => {
+              expect(store.countDistinctTerms([ 'subject', 'object', 'predicate' ])).toEqual(0);
+            });
+
+            it('should return distinct subjects and predicates and objects', async() => {
+              expect(store.countDistinctTerms([ 'subject', 'predicate', 'object' ])).toEqual(0);
+            });
+
+            it('should return distinct subjects and graphs and predicates and objects', async() => {
+              expect(store.countDistinctTerms([ 'subject', 'graph', 'predicate', 'object' ])).toEqual(0);
+            });
+
+            it('should return distinct predicates', async() => {
+              expect(store.countDistinctTerms([ 'predicate' ])).toEqual(0);
+            });
+
+            it('should return distinct predicates and objects', async() => {
+              expect(store.countDistinctTerms([ 'predicate', 'object' ])).toEqual(0);
+            });
+
+            it('should return distinct predicates and objects and subjects', async() => {
+              expect(store.countDistinctTerms([ 'predicate', 'object', 'subject' ])).toEqual(0);
+            });
+
+            it('should return distinct predicates and subjects and objects', async() => {
+              expect(store.countDistinctTerms([ 'predicate', 'subject', 'object' ])).toEqual(0);
+            });
+
+            it('should return distinct predicates and objects and subjects and graphs', async() => {
+              expect(store.countDistinctTerms([ 'predicate', 'object', 'subject', 'graph' ])).toEqual(0);
+            });
+
+            it('should return distinct predicates and subjects and graphs and objects', async() => {
+              expect(store.countDistinctTerms([ 'predicate', 'subject', 'graph', 'object' ])).toEqual(0);
+            });
+
+            it('should return distinct objects', async() => {
+              expect(store.countDistinctTerms([ 'object' ])).toEqual(0);
+            });
+
+            it('should return distinct objects and graphs', async() => {
+              expect(store.countDistinctTerms([ 'object', 'graph' ])).toEqual(0);
+            });
+
+            it('should return distinct objects and predicates and graphs', async() => {
+              expect(store.countDistinctTerms([ 'object', 'predicate', 'graph' ])).toEqual(0);
+            });
+
+            it('should return distinct objects and graphs and predicates', async() => {
+              expect(store.countDistinctTerms([ 'object', 'graph', 'predicate' ])).toEqual(0);
+            });
+
+            it('should return distinct objects and predicates and graphs and subjects', async() => {
+              expect(store.countDistinctTerms([ 'object', 'predicate', 'graph', 'subject' ])).toEqual(0);
+            });
+
+            it('should return distinct graphs', async() => {
+              expect(store.countDistinctTerms([ 'graph' ])).toEqual(0);
+            });
+
+            it('should return distinct graphs and objects', async() => {
+              expect(store.countDistinctTerms([ 'graph', 'object' ])).toEqual(0);
+            });
+
+            it('should return distinct graphs and objects and subjects', async() => {
+              expect(store.countDistinctTerms([ 'graph', 'object', 'subject' ])).toEqual(0);
+            });
+
+            it('should return distinct graphs and objects and subjects and predicates', async() => {
+              expect(store.countDistinctTerms([ 'graph', 'object', 'subject', 'predicate' ])).toEqual(0);
+            });
+          });
         });
 
         describe('that has one quad', () => {
@@ -546,6 +628,88 @@ describe('RdfStore', () => {
               expectToEqualTerms(store.getDistinctTerms([ 'graph', 'object', 'subject', 'predicate' ]), [
                 [ DF.namedNode('g'), DF.namedNode('o'), DF.namedNode('s'), DF.namedNode('p') ],
               ]);
+            });
+          });
+
+          describe('countDistinctTerms', () => {
+            it('should return distinct subjects', async() => {
+              expect(store.countDistinctTerms([ 'subject' ])).toEqual(1);
+            });
+
+            it('should return distinct subjects and objects', async() => {
+              expect(store.countDistinctTerms([ 'subject', 'object' ])).toEqual(1);
+            });
+
+            it('should return distinct subjects and objects and predicates', async() => {
+              expect(store.countDistinctTerms([ 'subject', 'object', 'predicate' ])).toEqual(1);
+            });
+
+            it('should return distinct subjects and predicates and objects', async() => {
+              expect(store.countDistinctTerms([ 'subject', 'predicate', 'object' ])).toEqual(1);
+            });
+
+            it('should return distinct subjects and graphs and predicates and objects', async() => {
+              expect(store.countDistinctTerms([ 'subject', 'graph', 'predicate', 'object' ])).toEqual(1);
+            });
+
+            it('should return distinct predicates', async() => {
+              expect(store.countDistinctTerms([ 'predicate' ])).toEqual(1);
+            });
+
+            it('should return distinct predicates and objects', async() => {
+              expect(store.countDistinctTerms([ 'predicate', 'object' ])).toEqual(1);
+            });
+
+            it('should return distinct predicates and objects and subjects', async() => {
+              expect(store.countDistinctTerms([ 'predicate', 'object', 'subject' ])).toEqual(1);
+            });
+
+            it('should return distinct predicates and subjects and objects', async() => {
+              expect(store.countDistinctTerms([ 'predicate', 'subject', 'object' ])).toEqual(1);
+            });
+
+            it('should return distinct predicates and objects and subjects and graphs', async() => {
+              expect(store.countDistinctTerms([ 'predicate', 'object', 'subject', 'graph' ])).toEqual(1);
+            });
+
+            it('should return distinct predicates and subjects and graphs and objects', async() => {
+              expect(store.countDistinctTerms([ 'predicate', 'subject', 'graph', 'object' ])).toEqual(1);
+            });
+
+            it('should return distinct objects', async() => {
+              expect(store.countDistinctTerms([ 'object' ])).toEqual(1);
+            });
+
+            it('should return distinct objects and graphs', async() => {
+              expect(store.countDistinctTerms([ 'object', 'graph' ])).toEqual(1);
+            });
+
+            it('should return distinct objects and predicates and graphs', async() => {
+              expect(store.countDistinctTerms([ 'object', 'predicate', 'graph' ])).toEqual(1);
+            });
+
+            it('should return distinct objects and graphs and predicates', async() => {
+              expect(store.countDistinctTerms([ 'object', 'graph', 'predicate' ])).toEqual(1);
+            });
+
+            it('should return distinct objects and predicates and graphs and subjects', async() => {
+              expect(store.countDistinctTerms([ 'object', 'predicate', 'graph', 'subject' ])).toEqual(1);
+            });
+
+            it('should return distinct graphs', async() => {
+              expect(store.countDistinctTerms([ 'graph' ])).toEqual(1);
+            });
+
+            it('should return distinct graphs and objects', async() => {
+              expect(store.countDistinctTerms([ 'graph', 'object' ])).toEqual(1);
+            });
+
+            it('should return distinct graphs and objects and subjects', async() => {
+              expect(store.countDistinctTerms([ 'graph', 'object', 'subject' ])).toEqual(1);
+            });
+
+            it('should return distinct graphs and objects and subjects and predicates', async() => {
+              expect(store.countDistinctTerms([ 'graph', 'object', 'subject', 'predicate' ])).toEqual(1);
             });
           });
         });
@@ -1427,6 +1591,88 @@ describe('RdfStore', () => {
                 [ DF.namedNode('s1') ],
                 [ DF.namedNode('s2') ],
               ]);
+            });
+          });
+
+          describe('countDistinctTerms', () => {
+            it('should return distinct subjects', async() => {
+              expect(store.countDistinctTerms([ 'subject' ])).toEqual(2);
+            });
+
+            it('should return distinct subjects and objects', async() => {
+              expect(store.countDistinctTerms([ 'subject', 'object' ])).toEqual(4);
+            });
+
+            it('should return distinct subjects and objects and predicates', async() => {
+              expect(store.countDistinctTerms([ 'subject', 'object', 'predicate' ])).toEqual(4);
+            });
+
+            it('should return distinct subjects and predicates and objects', async() => {
+              expect(store.countDistinctTerms([ 'subject', 'predicate', 'object' ])).toEqual(4);
+            });
+
+            it('should return distinct subjects and graphs and predicates and objects', async() => {
+              expect(store.countDistinctTerms([ 'subject', 'graph', 'predicate', 'object' ])).toEqual(4);
+            });
+
+            it('should return distinct predicates', async() => {
+              expect(store.countDistinctTerms([ 'predicate' ])).toEqual(2);
+            });
+
+            it('should return distinct predicates and objects', async() => {
+              expect(store.countDistinctTerms([ 'predicate', 'object' ])).toEqual(2);
+            });
+
+            it('should return distinct predicates and objects and subjects', async() => {
+              expect(store.countDistinctTerms([ 'predicate', 'object', 'subject' ])).toEqual(4);
+            });
+
+            it('should return distinct predicates and subjects and objects', async() => {
+              expect(store.countDistinctTerms([ 'predicate', 'subject', 'object' ])).toEqual(4);
+            });
+
+            it('should return distinct predicates and objects and subjects and graphs', async() => {
+              expect(store.countDistinctTerms([ 'predicate', 'object', 'subject', 'graph' ])).toEqual(4);
+            });
+
+            it('should return distinct predicates and subjects and graphs and objects', async() => {
+              expect(store.countDistinctTerms([ 'predicate', 'subject', 'graph', 'object' ])).toEqual(4);
+            });
+
+            it('should return distinct objects', async() => {
+              expect(store.countDistinctTerms([ 'object' ])).toEqual(2);
+            });
+
+            it('should return distinct objects and graphs', async() => {
+              expect(store.countDistinctTerms([ 'object', 'graph' ])).toEqual(3);
+            });
+
+            it('should return distinct objects and predicates and graphs', async() => {
+              expect(store.countDistinctTerms([ 'object', 'predicate', 'graph' ])).toEqual(3);
+            });
+
+            it('should return distinct objects and graphs and predicates', async() => {
+              expect(store.countDistinctTerms([ 'object', 'graph', 'predicate' ])).toEqual(3);
+            });
+
+            it('should return distinct objects and predicates and graphs and subjects', async() => {
+              expect(store.countDistinctTerms([ 'object', 'predicate', 'graph', 'subject' ])).toEqual(4);
+            });
+
+            it('should return distinct graphs', async() => {
+              expect(store.countDistinctTerms([ 'graph' ])).toEqual(2);
+            });
+
+            it('should return distinct graphs and objects', async() => {
+              expect(store.countDistinctTerms([ 'graph', 'object' ])).toEqual(3);
+            });
+
+            it('should return distinct graphs and objects and subjects', async() => {
+              expect(store.countDistinctTerms([ 'graph', 'object', 'subject' ])).toEqual(4);
+            });
+
+            it('should return distinct graphs and objects and subjects and predicates', async() => {
+              expect(store.countDistinctTerms([ 'graph', 'object', 'subject', 'predicate' ])).toEqual(4);
             });
           });
 

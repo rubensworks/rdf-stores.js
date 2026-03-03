@@ -71,4 +71,11 @@ export interface IRdfStoreIndex<E, V> {
    * @param terms An iterable of pattern terms, ordered in the component order of this index.
    */
   count: (terms: QuadPatternTerms) => number;
+  /**
+   * Count the terms that exist in the index.
+   * Each returned array corresponds to the terms specified by given quad term names.
+   * This corresponds to the semantics of {@link #findTerms}, and returns counts instead of terms.
+   * @param terms An array of booleans indicating which terms to match. Length may be shorter than 4.
+   */
+  countTerms: (matchTerms: boolean[]) => number;
 }

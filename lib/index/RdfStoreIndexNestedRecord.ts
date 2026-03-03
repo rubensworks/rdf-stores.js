@@ -218,6 +218,26 @@ export class RdfStoreIndexNestedRecord<E extends number, V> implements IRdfStore
 
     return count;
   }
+
+  protected countTermsInner(
+    depth: number,
+    map: NestedRecordActual<E>,
+    matchTerms: boolean[],
+  ): number {
+    if (depth === matchTerms.length - 1) {
+      return Object.keys(map).length;
+    }
+
+    let count = 0;
+    for (const subMap of Object.values(map)) {
+      count += this.countTermsInner(depth + 1, <NestedRecordActual<E>> subMap, matchTerms);
+    }
+    return count;
+  }
+
+  public countTerms(matchTerms: boolean[]): number {
+    return this.countTermsInner(0, this.nestedRecords, matchTerms);
+  }
 }
 
 export type NestedRecord<E extends string | number | symbol> = NestedRecordActual<E> | true;

@@ -1524,6 +1524,135 @@ describe('RdfStoreIndexes', () => {
           });
         });
 
+        describe('countTerms', () => {
+          it('should produce all subjects', () => {
+            expect(index.countTerms([
+              true,
+            ])).toEqual(2);
+
+            expect(index.countTerms([
+              true,
+              false,
+              false,
+              false,
+            ])).toEqual(4);
+          });
+
+          it('should produce all subjects and predicates', () => {
+            expect(index.countTerms([
+              true,
+              true,
+            ])).toEqual(4);
+          });
+
+          it('should produce all subjects and predicates and objects', () => {
+            expect(index.countTerms([
+              true,
+              true,
+              true,
+            ])).toEqual(4);
+          });
+
+          it('should produce all subjects and predicates and objects and graphs', () => {
+            expect(index.countTerms([
+              true,
+              true,
+              true,
+              true,
+            ])).toEqual(4);
+          });
+
+          it('should produce all subjects and objects', () => {
+            expect(index.countTerms([
+              true,
+              false,
+              true,
+            ])).toEqual(4);
+
+            expect(index.countTerms([
+              true,
+              false,
+              true,
+              false,
+            ])).toEqual(4);
+          });
+
+          it('should produce all subjects and objects and graphs', () => {
+            expect(index.countTerms([
+              true,
+              false,
+              true,
+              true,
+            ])).toEqual(4);
+          });
+
+          it('should produce all subjects and graphs', () => {
+            expect(index.countTerms([
+              true,
+              false,
+              false,
+              true,
+            ])).toEqual(4);
+          });
+
+          it('should produce all predicates', () => {
+            expect(index.countTerms([
+              false,
+              true,
+            ])).toEqual(4);
+          });
+
+          it('should produce all predicates and objects', () => {
+            expect(index.countTerms([
+              false,
+              true,
+              true,
+            ])).toEqual(4);
+          });
+
+          it('should produce all predicates and objects and graphs', () => {
+            expect(index.countTerms([
+              false,
+              true,
+              true,
+              true,
+            ])).toEqual(4);
+          });
+
+          it('should produce all objects', () => {
+            expect(index.countTerms([
+              false,
+              false,
+              true,
+            ])).toEqual(4);
+
+            expect(index.countTerms([
+              true,
+              false,
+              true,
+              false,
+            ])).toEqual(4);
+          });
+
+          it('should produce all objects and graphs', () => {
+            expect(index.countTerms([
+              false,
+              false,
+              true,
+              true,
+            ])).toEqual(4);
+          });
+
+          it('should produce all graphs', () => {
+            expect(index.countTerms([
+              false,
+              false,
+              false,
+              true,
+            ])).toEqual(4);
+          });
+        });
+
         describe('remove', () => {
           it('should be able to remove existing quads', () => {
             expect(index.remove([
