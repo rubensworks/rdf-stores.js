@@ -1,6 +1,15 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+<a name="v2.2.0"></a>
+## [v2.2.0](https://github.com/rubensworks/rdf-stores.js/compare/v2.1.1...v2.2.0) - 2026-03-03
+
+### Added
+* [Add methods for looking up distinct terms](https://github.com/rubensworks/rdf-stores.js/commit/4ab384ca2c404aaa01d1594a6f8d8a8bb3d20ebb)
+* [Add countDistinctTerms method](https://github.com/rubensworks/rdf-stores.js/commit/ee020448faaf92a828d6d68b33c71a3e192556b5)
+* [Add methods for looking up nodes](https://github.com/rubensworks/rdf-stores.js/commit/12038af924a80abe48956b2338860c5ad9d85dfa)
+* [Add countNodes method](https://github.com/rubensworks/rdf-stores.js/commit/4497d4a0ba7812adbfd56458d1dda2e9f1ac6b3c)
+
 <a name="v2.1.1"></a>
 ## [v2.1.1](https://github.com/rubensworks/rdf-stores.js/compare/v2.1.0...v2.1.1) - 2025-02-13
 
