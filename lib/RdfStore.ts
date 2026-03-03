@@ -559,6 +559,8 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     // Ensure distinctness (this can only occur when insufficient indexes are available)
     let distinctTerms: Set<string> | undefined;
     if (matchTerms.includes(false)) {
+      // TODO: if the first index level (e.g. graph) has just one term, distinctness is already guaranteed and we can
+      //  skip this step. Also applies to countDistinctTerms.
       distinctTerms = new Set<string>();
     }
 
@@ -575,6 +577,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
 
       // Filter to ensure distinct terms are returned
       if (distinctTerms) {
+        // TODO: it may be possible to optimize this by filtering using the encoded terms.
         const decodedTermsId = decodedTerms.map(element => termToString(element)).join(',');
         if (distinctTerms.has(decodedTermsId)) {
           continue;
