@@ -53,7 +53,7 @@
     "@codspeed/tinybench-plugin": "^3.1.0",
     "@comunica/utils-bindings-factory": "^5.0.0",
     "@comunica/utils-jest": "^5.0.0",
-    "@rubensworks/eslint-config": "^1.0.0",
+    "@rubensworks/eslint-config": "^3.0.0",
     "@types/jest": "^30.0.0",
     "@types/n3": "^1.10.4",
     "@typescript-eslint/eslint-plugin": "^5.0.0",
