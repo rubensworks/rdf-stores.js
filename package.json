@@ -56,7 +56,7 @@
     "@rubensworks/eslint-config": "^3.0.0",
     "@types/jest": "^30.0.0",
     "@types/n3": "^1.10.4",
-    "arrayify-stream": "^2.0.1",
+    "arrayify-stream": "^3.0.0",
     "coveralls": "^3.0.0",
     "eslint": "^8.56.0",
     "jest": "^30.2.0",
