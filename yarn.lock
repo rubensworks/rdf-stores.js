@@ -513,23 +513,23 @@
   resolved "https://registry.yarnpkg.com/@chevrotain/utils/-/utils-11.1.0.tgz#5a44ccb5522bc41d150aef4f3ef26b552c52e7df"
   integrity sha512-DrS2yldzFnjmBV0O/kDngcFxWuqg2FdmUpaD6KyTmgIIE6lR53dq80R/Zz+o6LpUrXsLJk192kXuaeIPic4WVg==
 
-"@codspeed/core@^3.1.1":
-  version "3.1.1"
-  resolved "https://registry.yarnpkg.com/@codspeed/core/-/core-3.1.1.tgz#8fe9de8cd0ebe01adc3c78cc3510c2bb766ab0f8"
-  integrity sha512-ONhERVDAtkm0nc+FYPivDozoMOlNUP2BWRBFDJYATGA18Iap5Kd2mZ1/Lwz54RB5+g+3YDOpsvotHa4hd3Q+7Q==
+"@codspeed/core@^5.5.0":
+  version "5.5.0"
+  resolved "https://registry.yarnpkg.com/@codspeed/core/-/core-5.5.0.tgz#5ce1156381f7f173d56bf635d08db0e45fd0e028"
+  integrity sha512-5FbjNlxSVOfemB85orEecikZiTz0C8aZYUfCkt5HY6QLLd1mqkrHAfekEJw0gkHcgCjNgD6DVp2TXm0V/xtt4w==
   dependencies:
     axios "^1.4.0"
     find-up "^6.3.0"
-    form-data "^4.0.0"
+    form-data "^4.0.4"
     node-gyp-build "^4.6.0"
-
-"@codspeed/tinybench-plugin@^3.1.0":
-  version "3.1.1"
-  resolved "https://registry.yarnpkg.com/@codspeed/tinybench-plugin/-/tinybench-plugin-3.1.1.tgz#5ca7e0528ed5bd16be762bcbfdda18e2811e58bd"
-  integrity sha512-LVF4End0kDU9V7CzuwAcmngSPJNnpduPnr+csOKvcG++FsYwfUuBJ1rvLPtv6yTkvxpUmUEsj6VA7/AEIBGZVw==
-  dependencies:
-    "@codspeed/core" "^3.1.1"
     stack-trace "1.0.0-pre2"
+
+"@codspeed/tinybench-plugin@^5.0.0":
+  version "5.5.0"
+  resolved "https://registry.yarnpkg.com/@codspeed/tinybench-plugin/-/tinybench-plugin-5.5.0.tgz#e0449b3ddde24abfeb25c81becd8170380f5cc7c"
+  integrity sha512-gqzjQjW9tmwExerklOSJMaU6vhv6/chKAYmOh/2z4TRnRO5K7300ftmBpF6wOEFoig3XdEIWgb9nQuM7WJ8Qvg==
+  dependencies:
+    "@codspeed/core" "^5.5.0"
 
 "@comunica/bus-merge-bindings-context@^5.0.0":
   version "5.0.0"
@@ -3699,6 +3699,17 @@ form-data@^4.0.0:
   dependencies:
     asynckit "^0.4.0"
     combined-stream "^1.0.8"
+    mime-types "^2.1.12"
+
+form-data@^4.0.4:
+  version "4.0.5"
+  resolved "https://registry.yarnpkg.com/form-data/-/form-data-4.0.5.tgz#b49e48858045ff4cbf6b03e1805cebcad3679053"
+  integrity sha512-8RipRLol37bNs2bhoV67fiTEvdTrbMUYcFTiy3+wuuOnUog2QBHCZWXDRijWQfAkhBj2Uf5UnVaiWwA5vdd82w==
+  dependencies:
+    asynckit "^0.4.0"
+    combined-stream "^1.0.8"
+    es-set-tostringtag "^2.1.0"
+    hasown "^2.0.2"
     mime-types "^2.1.12"
 
 form-data@~2.3.2:
