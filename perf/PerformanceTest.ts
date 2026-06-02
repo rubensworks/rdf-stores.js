@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
-import * as assert from 'assert';
+/* eslint-disable ts/no-unsafe-argument */
+import * as assert from 'node:assert';
 import { BindingsFactory } from '@comunica/utils-bindings-factory';
 import type * as RDF from '@rdfjs/types';
 import arrayifyStream from 'arrayify-stream';
@@ -337,7 +338,7 @@ export class PerformanceTest {
   public findTerms2(dimension: number, store: RdfStore): void {
     const TEST = `- Finding all ${dimension * dimension} terms (2) in the default graph ${dimension} times for each sequential quad term pair (4)`;
     console.time(TEST);
-    // eslint-disable-next-line id-length
+
     for (let k = 0; k < QUAD_TERM_NAMES.length; k++) {
       const quadTerm1 = QUAD_TERM_NAMES[k];
       const quadTerm2 = QUAD_TERM_NAMES[(k + 1) % QUAD_TERM_NAMES.length];
@@ -351,7 +352,7 @@ export class PerformanceTest {
   public countTerms2(dimension: number, store: RdfStore): void {
     const TEST = `- Counting all ${dimension * dimension} terms (2) in the default graph ${dimension} times for each sequential quad term pair (4)`;
     console.time(TEST);
-    // eslint-disable-next-line id-length
+
     for (let k = 0; k < QUAD_TERM_NAMES.length; k++) {
       const quadTerm1 = QUAD_TERM_NAMES[k];
       const quadTerm2 = QUAD_TERM_NAMES[(k + 1) % QUAD_TERM_NAMES.length];
@@ -365,7 +366,7 @@ export class PerformanceTest {
   public findTerms3(dimension: number, store: RdfStore): void {
     const TEST = `- Finding all ${dimension * dimension * dimension} terms (3) in the default graph ${dimension / 4} times for each sequential quad term triple (4)`;
     console.time(TEST);
-    // eslint-disable-next-line id-length
+
     for (let k = 0; k < QUAD_TERM_NAMES.length; k++) {
       const quadTerm1 = QUAD_TERM_NAMES[k];
       const quadTerm2 = QUAD_TERM_NAMES[(k + 1) % QUAD_TERM_NAMES.length];
@@ -383,7 +384,7 @@ export class PerformanceTest {
   public countTerms3(dimension: number, store: RdfStore): void {
     const TEST = `- Counting all ${dimension * dimension * dimension} terms (3) in the default graph ${dimension / 4} times for each sequential quad term triple (4)`;
     console.time(TEST);
-    // eslint-disable-next-line id-length
+
     for (let k = 0; k < QUAD_TERM_NAMES.length; k++) {
       const quadTerm1 = QUAD_TERM_NAMES[k];
       const quadTerm2 = QUAD_TERM_NAMES[(k + 1) % QUAD_TERM_NAMES.length];
@@ -401,7 +402,7 @@ export class PerformanceTest {
   public findTerms4(dimension: number, store: RdfStore): void {
     const TEST = `- Finding all ${dimension * dimension * dimension * dimension} terms (4) in the default graph ${dimension / 8} times for each sequential quad term quad (4)`;
     console.time(TEST);
-    // eslint-disable-next-line id-length
+
     for (let k = 0; k < QUAD_TERM_NAMES.length; k++) {
       const quadTerm1 = QUAD_TERM_NAMES[k];
       const quadTerm2 = QUAD_TERM_NAMES[(k + 1) % QUAD_TERM_NAMES.length];
@@ -420,7 +421,7 @@ export class PerformanceTest {
   public countTerms4(dimension: number, store: RdfStore): void {
     const TEST = `- Counting all ${dimension * dimension * dimension * dimension} terms (4) in the default graph ${dimension / 8} times for each sequential quad term quad (4)`;
     console.time(TEST);
-    // eslint-disable-next-line id-length
+
     for (let k = 0; k < QUAD_TERM_NAMES.length; k++) {
       const quadTerm1 = QUAD_TERM_NAMES[k];
       const quadTerm2 = QUAD_TERM_NAMES[(k + 1) % QUAD_TERM_NAMES.length];

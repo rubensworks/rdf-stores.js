@@ -45,11 +45,11 @@ export class TermDictionaryNumberMap implements ITermDictionary<number> {
     return this.reverseDictionary.keys();
   }
 
-  public findQuotedTriples(quotedTriplePattern: RDF.Quad): IterableIterator<RDF.Term> {
+  public findQuotedTriples(): IterableIterator<RDF.Term> {
     throw new Error('findQuotedTriples is not supported');
   }
 
-  public findQuotedTriplesEncoded(quotedTriplePattern: RDF.Quad): IterableIterator<number> {
+  public findQuotedTriplesEncoded(): IterableIterator<number> {
     throw new Error('findQuotedTriplesEncoded is not supported');
   }
 }

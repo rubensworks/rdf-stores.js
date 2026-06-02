@@ -19,9 +19,9 @@ for (const test of makeTests(true)) {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-floating-promises
 (async function() {
   await bench.run();
   // eslint-disable-next-line no-console
   console.table(bench.table());
-})();
+// eslint-disable-next-line no-console
+})().catch(console.error);

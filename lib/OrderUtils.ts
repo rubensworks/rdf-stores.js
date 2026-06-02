@@ -4,6 +4,7 @@ import { QUAD_TERM_NAMES } from 'rdf-terms';
 import type { ITermDictionary } from './dictionary/ITermDictionary';
 import type { QuadPatternTerms } from './PatternTerm';
 
+// eslint-disable-next-line ts/no-unsafe-assignment
 export const QUAD_TERM_NAMES_INVERSE: Record<QuadTermName, number> =
   <any>Object.fromEntries(QUAD_TERM_NAMES.map((value, key) => [ value, key ]));
 
@@ -111,7 +112,7 @@ export function orderQuadComponents<T>(
   desiredComponentOrder: QuadTermName[],
   quadPattern: T[],
 ): T[] {
-  return desiredComponentOrder.map(desiredComponent => {
+  return desiredComponentOrder.map((desiredComponent) => {
     const desiredComponentIndex = QUAD_TERM_NAMES_INVERSE[desiredComponent];
     return quadPattern[desiredComponentIndex];
   });
@@ -124,14 +125,15 @@ export function orderQuadComponents<T>(
  * @return array An array of encoded terms.
  * The array will be undefined if at least one of the patterns does not occur within the dictionary.
  */
-export function encodeOptionalTerms<E>(
+export function encodeOptionalTerms<TE>(
   terms: QuadPatternTerms,
-  dictionary: ITermDictionary<E>,
-): (E | undefined)[] | undefined {
-  const encodedTerms = terms.map(term => {
+  dictionary: ITermDictionary<TE>,
+): (TE | undefined)[] | undefined {
+  const encodedTerms = terms.map((term) => {
     if (term) {
       if (term.termType === 'Quad' && quadHasVariables(term)) {
-        return;
+        // eslint-disable-next-line unicorn/no-useless-undefined
+        return undefined;
       }
       const encodedTerm = dictionary.encodeOptional(term);
       if (encodedTerm === undefined) {
@@ -146,7 +148,7 @@ export function encodeOptionalTerms<E>(
     return undefined;
   }
 
-  return <(E | undefined)[]> encodedTerms;
+  return <(TE | undefined)[]> encodedTerms;
 }
 
 /**
@@ -169,18 +171,20 @@ export function quadToPattern(
 ): [ QuadPatternTerms, boolean ] {
   let requireQuotedTripleFiltering = false;
   const quadPatternTerms = <QuadPatternTerms>
-    [ subject || undefined, predicate || undefined, object || undefined, graph || undefined ]
-      .map(term => {
+    [ subject ?? undefined, predicate ?? undefined, object ?? undefined, graph ?? undefined ]
+      .map((term) => {
         if (term) {
           if (term.termType === 'Variable') {
-            return;
+            // eslint-disable-next-line unicorn/no-useless-undefined
+            return undefined;
           }
           if (term.termType === 'Quad') {
             if (quotedPatterns) {
               return term;
             }
             requireQuotedTripleFiltering = true;
-            return;
+            // eslint-disable-next-line unicorn/no-useless-undefined
+            return undefined;
           }
         }
         return term;

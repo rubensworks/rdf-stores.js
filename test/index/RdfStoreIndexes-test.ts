@@ -32,7 +32,7 @@ describe('RdfStoreIndexes', () => {
               DF.namedNode('p'),
               DF.namedNode('o'),
               DF.namedNode('g'),
-            ])).toEqual(undefined);
+            ])).toBeUndefined();
           });
         });
 
@@ -87,13 +87,13 @@ describe('RdfStoreIndexes', () => {
               undefined,
               undefined,
               undefined,
-            ])).toEqual(0);
+            ])).toBe(0);
             expect(index.count([
               DF.namedNode('s'),
               DF.namedNode('p'),
               DF.namedNode('o'),
               DF.namedNode('g'),
-            ])).toEqual(0);
+            ])).toBe(0);
           });
         });
 
@@ -104,7 +104,7 @@ describe('RdfStoreIndexes', () => {
               dictionary.encode(DF.namedNode('p')),
               dictionary.encode(DF.namedNode('o')),
               dictionary.encode(DF.namedNode('g')),
-            ])).toEqual(false);
+            ])).toBe(false);
           });
         });
       });
@@ -146,63 +146,63 @@ describe('RdfStoreIndexes', () => {
               DF.namedNode('p'),
               DF.namedNode('o'),
               DF.namedNode('g'),
-            ])).toEqual(true);
+            ])).toBe(true);
 
             expect(index.get([
               DF.namedNode('sother'),
               DF.namedNode('p'),
               DF.namedNode('o'),
               DF.namedNode('g'),
-            ])).toEqual(undefined);
+            ])).toBeUndefined();
 
             expect(index.get([
               DF.namedNode('s'),
               DF.namedNode('pother'),
               DF.namedNode('o'),
               DF.namedNode('g'),
-            ])).toEqual(undefined);
+            ])).toBeUndefined();
 
             expect(index.get([
               DF.namedNode('s'),
               DF.namedNode('p'),
               DF.namedNode('oother'),
               DF.namedNode('g'),
-            ])).toEqual(undefined);
+            ])).toBeUndefined();
 
             expect(index.get([
               DF.namedNode('s'),
               DF.namedNode('p'),
               DF.namedNode('o'),
               DF.namedNode('gother'),
-            ])).toEqual(undefined);
+            ])).toBeUndefined();
 
             expect(index.get([
               DF.namedNode('p'),
               DF.namedNode('p'),
               DF.namedNode('p'),
               DF.namedNode('p'),
-            ])).toEqual(undefined);
+            ])).toBeUndefined();
 
             expect(index.get([
               DF.namedNode('s'),
               DF.namedNode('s'),
               DF.namedNode('s'),
               DF.namedNode('s'),
-            ])).toEqual(undefined);
+            ])).toBeUndefined();
 
             expect(index.get([
               DF.namedNode('s'),
               DF.namedNode('p'),
               DF.namedNode('s'),
               DF.namedNode('s'),
-            ])).toEqual(undefined);
+            ])).toBeUndefined();
 
             expect(index.get([
               DF.namedNode('s'),
               DF.namedNode('p'),
               DF.namedNode('o'),
               DF.namedNode('s'),
-            ])).toEqual(undefined);
+            ])).toBeUndefined();
           });
         });
 
@@ -370,7 +370,7 @@ describe('RdfStoreIndexes', () => {
               undefined,
               undefined,
               undefined,
-            ])).toEqual(1);
+            ])).toBe(1);
           });
 
           it('should return 1 for an exact match', () => {
@@ -379,7 +379,7 @@ describe('RdfStoreIndexes', () => {
               DF.namedNode('p'),
               DF.namedNode('o'),
               DF.namedNode('g'),
-            ])).toEqual(1);
+            ])).toBe(1);
           });
 
           it('should return 1 for a partial match', () => {
@@ -388,7 +388,7 @@ describe('RdfStoreIndexes', () => {
               DF.namedNode('p'),
               undefined,
               DF.namedNode('g'),
-            ])).toEqual(1);
+            ])).toBe(1);
           });
 
           it('should return 0 for a partial non-match', () => {
@@ -397,14 +397,14 @@ describe('RdfStoreIndexes', () => {
               DF.namedNode('p1'),
               undefined,
               DF.namedNode('g'),
-            ])).toEqual(0);
+            ])).toBe(0);
 
             expect(index.count([
               DF.namedNode('s'),
               DF.namedNode('p'),
               DF.namedNode('o1'),
               undefined,
-            ])).toEqual(0);
+            ])).toBe(0);
           });
         });
 
@@ -415,7 +415,7 @@ describe('RdfStoreIndexes', () => {
               dictionary.encode(DF.namedNode('p')),
               dictionary.encode(DF.namedNode('o')),
               dictionary.encode(DF.namedNode('g')),
-            ])).toEqual(true);
+            ])).toBe(true);
           });
 
           it('should be able to remove an existing quad only once', () => {
@@ -424,14 +424,14 @@ describe('RdfStoreIndexes', () => {
               dictionary.encode(DF.namedNode('p')),
               dictionary.encode(DF.namedNode('o')),
               dictionary.encode(DF.namedNode('g')),
-            ])).toEqual(true);
+            ])).toBe(true);
 
             expect(index.remove([
               dictionary.encode(DF.namedNode('s')),
               dictionary.encode(DF.namedNode('p')),
               dictionary.encode(DF.namedNode('o')),
               dictionary.encode(DF.namedNode('g')),
-            ])).toEqual(false);
+            ])).toBe(false);
           });
 
           it('should be unable to remove non-existing quads', () => {
@@ -440,7 +440,7 @@ describe('RdfStoreIndexes', () => {
               dictionary.encode(DF.namedNode('p-no')),
               dictionary.encode(DF.namedNode('o-no')),
               dictionary.encode(DF.namedNode('g-no')),
-            ])).toEqual(false);
+            ])).toBe(false);
           });
         });
       });
@@ -480,35 +480,35 @@ describe('RdfStoreIndexes', () => {
               DF.namedNode('p1'),
               DF.namedNode('o1'),
               DF.namedNode('g1'),
-            ])).toEqual(true);
+            ])).toBe(true);
 
             expect(index.get([
               DF.namedNode('s1'),
               DF.namedNode('p2'),
               DF.namedNode('o2'),
               DF.namedNode('g1'),
-            ])).toEqual(true);
+            ])).toBe(true);
 
             expect(index.get([
               DF.namedNode('s2'),
               DF.namedNode('p1'),
               DF.namedNode('o1'),
               DF.namedNode('g1'),
-            ])).toEqual(true);
+            ])).toBe(true);
 
             expect(index.get([
               DF.namedNode('s2'),
               DF.namedNode('p2'),
               DF.namedNode('o2'),
               DF.namedNode('g2'),
-            ])).toEqual(true);
+            ])).toBe(true);
 
             expect(index.get([
               DF.namedNode('sother'),
               DF.namedNode('p'),
               DF.namedNode('o'),
               DF.namedNode('g'),
-            ])).toEqual(undefined);
+            ])).toBeUndefined();
           });
         });
 
@@ -1421,7 +1421,7 @@ describe('RdfStoreIndexes', () => {
               undefined,
               undefined,
               undefined,
-            ])).toEqual(4);
+            ])).toBe(4);
           });
 
           it('should produce 1 result for exact matches', () => {
@@ -1430,28 +1430,28 @@ describe('RdfStoreIndexes', () => {
               DF.namedNode('p1'),
               DF.namedNode('o1'),
               DF.namedNode('g1'),
-            ])).toEqual(1);
+            ])).toBe(1);
 
             expect(index.count([
               DF.namedNode('s1'),
               DF.namedNode('p2'),
               DF.namedNode('o2'),
               DF.namedNode('g1'),
-            ])).toEqual(1);
+            ])).toBe(1);
 
             expect(index.count([
               DF.namedNode('s2'),
               DF.namedNode('p1'),
               DF.namedNode('o1'),
               DF.namedNode('g1'),
-            ])).toEqual(1);
+            ])).toBe(1);
 
             expect(index.count([
               DF.namedNode('s2'),
               DF.namedNode('p2'),
               DF.namedNode('o2'),
               DF.namedNode('g2'),
-            ])).toEqual(1);
+            ])).toBe(1);
           });
 
           it('should produce results for partial matches', () => {
@@ -1460,67 +1460,67 @@ describe('RdfStoreIndexes', () => {
               undefined,
               undefined,
               undefined,
-            ])).toEqual(2);
+            ])).toBe(2);
 
             expect(index.count([
               DF.namedNode('s2'),
               undefined,
               undefined,
               undefined,
-            ])).toEqual(2);
+            ])).toBe(2);
 
             expect(index.count([
               undefined,
               DF.namedNode('p1'),
               undefined,
               undefined,
-            ])).toEqual(2);
+            ])).toBe(2);
 
             expect(index.count([
               DF.namedNode('s2'),
               DF.namedNode('p1'),
               undefined,
               undefined,
-            ])).toEqual(1);
+            ])).toBe(1);
 
             expect(index.count([
               DF.namedNode('s2'),
               undefined,
               undefined,
               DF.namedNode('g2'),
-            ])).toEqual(1);
+            ])).toBe(1);
 
             expect(index.count([
               DF.namedNode('s2'),
               undefined,
               undefined,
               DF.namedNode('g3'),
-            ])).toEqual(0);
+            ])).toBe(0);
 
             expect(index.count([
               DF.namedNode('p1'),
               undefined,
               undefined,
               undefined,
-            ])).toEqual(0);
+            ])).toBe(0);
             expect(index.count([
               DF.namedNode('s1'),
               DF.namedNode('s1'),
               undefined,
               undefined,
-            ])).toEqual(0);
+            ])).toBe(0);
             expect(index.count([
               DF.namedNode('s1'),
               DF.namedNode('p1'),
               DF.namedNode('s1'),
               undefined,
-            ])).toEqual(0);
+            ])).toBe(0);
             expect(index.count([
               DF.namedNode('s1'),
               DF.namedNode('p1'),
               DF.namedNode('o1'),
               DF.namedNode('s1'),
-            ])).toEqual(0);
+            ])).toBe(0);
           });
         });
 
@@ -1528,21 +1528,21 @@ describe('RdfStoreIndexes', () => {
           it('should produce all subjects', () => {
             expect(index.countTerms([
               true,
-            ])).toEqual(2);
+            ])).toBe(2);
 
             expect(index.countTerms([
               true,
               false,
               false,
               false,
-            ])).toEqual(4);
+            ])).toBe(4);
           });
 
           it('should produce all subjects and predicates', () => {
             expect(index.countTerms([
               true,
               true,
-            ])).toEqual(4);
+            ])).toBe(4);
           });
 
           it('should produce all subjects and predicates and objects', () => {
@@ -1550,7 +1550,7 @@ describe('RdfStoreIndexes', () => {
               true,
               true,
               true,
-            ])).toEqual(4);
+            ])).toBe(4);
           });
 
           it('should produce all subjects and predicates and objects and graphs', () => {
@@ -1559,7 +1559,7 @@ describe('RdfStoreIndexes', () => {
               true,
               true,
               true,
-            ])).toEqual(4);
+            ])).toBe(4);
           });
 
           it('should produce all subjects and objects', () => {
@@ -1567,14 +1567,14 @@ describe('RdfStoreIndexes', () => {
               true,
               false,
               true,
-            ])).toEqual(4);
+            ])).toBe(4);
 
             expect(index.countTerms([
               true,
               false,
               true,
               false,
-            ])).toEqual(4);
+            ])).toBe(4);
           });
 
           it('should produce all subjects and objects and graphs', () => {
@@ -1583,7 +1583,7 @@ describe('RdfStoreIndexes', () => {
               false,
               true,
               true,
-            ])).toEqual(4);
+            ])).toBe(4);
           });
 
           it('should produce all subjects and graphs', () => {
@@ -1592,14 +1592,14 @@ describe('RdfStoreIndexes', () => {
               false,
               false,
               true,
-            ])).toEqual(4);
+            ])).toBe(4);
           });
 
           it('should produce all predicates', () => {
             expect(index.countTerms([
               false,
               true,
-            ])).toEqual(4);
+            ])).toBe(4);
           });
 
           it('should produce all predicates and objects', () => {
@@ -1607,7 +1607,7 @@ describe('RdfStoreIndexes', () => {
               false,
               true,
               true,
-            ])).toEqual(4);
+            ])).toBe(4);
           });
 
           it('should produce all predicates and objects and graphs', () => {
@@ -1616,7 +1616,7 @@ describe('RdfStoreIndexes', () => {
               true,
               true,
               true,
-            ])).toEqual(4);
+            ])).toBe(4);
           });
 
           it('should produce all objects', () => {
@@ -1624,14 +1624,14 @@ describe('RdfStoreIndexes', () => {
               false,
               false,
               true,
-            ])).toEqual(4);
+            ])).toBe(4);
 
             expect(index.countTerms([
               true,
               false,
               true,
               false,
-            ])).toEqual(4);
+            ])).toBe(4);
           });
 
           it('should produce all objects and graphs', () => {
@@ -1640,7 +1640,7 @@ describe('RdfStoreIndexes', () => {
               false,
               true,
               true,
-            ])).toEqual(4);
+            ])).toBe(4);
           });
 
           it('should produce all graphs', () => {
@@ -1649,7 +1649,7 @@ describe('RdfStoreIndexes', () => {
               false,
               false,
               true,
-            ])).toEqual(4);
+            ])).toBe(4);
           });
         });
 
@@ -1660,25 +1660,25 @@ describe('RdfStoreIndexes', () => {
               dictionary.encode(DF.namedNode('p1')),
               dictionary.encode(DF.namedNode('o1')),
               dictionary.encode(DF.namedNode('g1')),
-            ])).toEqual(true);
+            ])).toBe(true);
             expect(index.remove([
               dictionary.encode(DF.namedNode('s1')),
               dictionary.encode(DF.namedNode('p2')),
               dictionary.encode(DF.namedNode('o2')),
               dictionary.encode(DF.namedNode('g1')),
-            ])).toEqual(true);
+            ])).toBe(true);
             expect(index.remove([
               dictionary.encode(DF.namedNode('s2')),
               dictionary.encode(DF.namedNode('p1')),
               dictionary.encode(DF.namedNode('o1')),
               dictionary.encode(DF.namedNode('g1')),
-            ])).toEqual(true);
+            ])).toBe(true);
             expect(index.remove([
               dictionary.encode(DF.namedNode('s2')),
               dictionary.encode(DF.namedNode('p2')),
               dictionary.encode(DF.namedNode('o2')),
               dictionary.encode(DF.namedNode('g2')),
-            ])).toEqual(true);
+            ])).toBe(true);
           });
 
           it('should be able to remove an existing quad only once', () => {
@@ -1687,14 +1687,14 @@ describe('RdfStoreIndexes', () => {
               dictionary.encode(DF.namedNode('p1')),
               dictionary.encode(DF.namedNode('o1')),
               dictionary.encode(DF.namedNode('g1')),
-            ])).toEqual(true);
+            ])).toBe(true);
 
             expect(index.remove([
               dictionary.encode(DF.namedNode('s1')),
               dictionary.encode(DF.namedNode('p1')),
               dictionary.encode(DF.namedNode('o1')),
               dictionary.encode(DF.namedNode('g1')),
-            ])).toEqual(false);
+            ])).toBe(false);
           });
 
           it('should be unable to remove non-existing quads', () => {
@@ -1703,28 +1703,28 @@ describe('RdfStoreIndexes', () => {
               dictionary.encode(DF.namedNode('p1-no')),
               dictionary.encode(DF.namedNode('o1-no')),
               dictionary.encode(DF.namedNode('g1-no')),
-            ])).toEqual(false);
+            ])).toBe(false);
 
             expect(index.remove([
               dictionary.encode(DF.namedNode('s1')),
               dictionary.encode(DF.namedNode('p1-no')),
               dictionary.encode(DF.namedNode('o1-no')),
               dictionary.encode(DF.namedNode('g1-no')),
-            ])).toEqual(false);
+            ])).toBe(false);
 
             expect(index.remove([
               dictionary.encode(DF.namedNode('s1')),
               dictionary.encode(DF.namedNode('p1')),
               dictionary.encode(DF.namedNode('o1-no')),
               dictionary.encode(DF.namedNode('g1-no')),
-            ])).toEqual(false);
+            ])).toBe(false);
 
             expect(index.remove([
               dictionary.encode(DF.namedNode('s1')),
               dictionary.encode(DF.namedNode('p1')),
               dictionary.encode(DF.namedNode('o1')),
               dictionary.encode(DF.namedNode('g1-no')),
-            ])).toEqual(false);
+            ])).toBe(false);
           });
         });
       });
@@ -1763,14 +1763,14 @@ describe('RdfStoreIndexes', () => {
                 DF.namedNode('says'),
                 DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
                 DF.namedNode('g1'),
-              ])).toEqual(true);
+              ])).toBe(true);
 
               expect(index.get([
                 DF.namedNode('Alice'),
                 DF.namedNode('says'),
                 DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue')),
                 DF.namedNode('g1'),
-              ])).toEqual(true);
+              ])).toBe(true);
 
               expect(index.get([
                 DF.namedNode('Bob'),
@@ -1781,14 +1781,14 @@ describe('RdfStoreIndexes', () => {
                   DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
                 ),
                 DF.namedNode('g1'),
-              ])).toEqual(true);
+              ])).toBe(true);
 
               expect(index.get([
                 DF.namedNode('sother'),
                 DF.namedNode('p'),
                 DF.namedNode('o'),
                 DF.namedNode('g'),
-              ])).toEqual(undefined);
+              ])).toBeUndefined();
             });
           });
 
@@ -2373,7 +2373,7 @@ describe('RdfStoreIndexes', () => {
                 undefined,
                 undefined,
                 undefined,
-              ])).toEqual(3);
+              ])).toBe(3);
             });
 
             it('should produce 1 result for exact matches', () => {
@@ -2382,14 +2382,14 @@ describe('RdfStoreIndexes', () => {
                 DF.namedNode('says'),
                 DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
                 DF.namedNode('g1'),
-              ])).toEqual(1);
+              ])).toBe(1);
 
               expect(index.count([
                 DF.namedNode('Alice'),
                 DF.namedNode('says'),
                 DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('DarkBlue')),
                 DF.namedNode('g1'),
-              ])).toEqual(1);
+              ])).toBe(1);
 
               expect(index.count([
                 DF.namedNode('Bob'),
@@ -2400,7 +2400,7 @@ describe('RdfStoreIndexes', () => {
                   DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
                 ),
                 DF.namedNode('g1'),
-              ])).toEqual(1);
+              ])).toBe(1);
             });
 
             it('should produce results for a variable', () => {
@@ -2409,7 +2409,7 @@ describe('RdfStoreIndexes', () => {
                 DF.namedNode('says'),
                 undefined,
                 DF.namedNode('g1'),
-              ])).toEqual(3);
+              ])).toBe(3);
             });
 
             it('should produce results for a variable inside a quoted triple', () => {
@@ -2418,7 +2418,7 @@ describe('RdfStoreIndexes', () => {
                 DF.namedNode('says'),
                 DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
                 DF.namedNode('g1'),
-              ])).toEqual(2);
+              ])).toBe(2);
             });
 
             it('should produce results for a variable inside and outside a quoted triple', () => {
@@ -2427,7 +2427,7 @@ describe('RdfStoreIndexes', () => {
                 DF.namedNode('says'),
                 DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
                 DF.namedNode('g1'),
-              ])).toEqual(2);
+              ])).toBe(2);
             });
 
             it('should produce results for a variable inside a quoted triple in subject position', () => {
@@ -2443,7 +2443,7 @@ describe('RdfStoreIndexes', () => {
                 DF.namedNode('says'),
                 DF.namedNode('o1'),
                 DF.namedNode('g1'),
-              ])).toEqual(1);
+              ])).toBe(1);
             });
 
             it('should produce results for a variable inside a quoted triple in predicate position', () => {
@@ -2459,7 +2459,7 @@ describe('RdfStoreIndexes', () => {
                 DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
                 DF.namedNode('o1'),
                 DF.namedNode('g1'),
-              ])).toEqual(1);
+              ])).toBe(1);
             });
 
             it('should produce results for a variable inside a quoted triple in graph position', () => {
@@ -2475,7 +2475,7 @@ describe('RdfStoreIndexes', () => {
                 DF.namedNode('says'),
                 DF.namedNode('o1'),
                 DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
-              ])).toEqual(1);
+              ])).toBe(1);
             });
           });
 
@@ -2486,7 +2486,7 @@ describe('RdfStoreIndexes', () => {
                 dictionary.encode(DF.namedNode('says')),
                 dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
                 dictionary.encode(DF.namedNode('g1')),
-              ])).toEqual(true);
+              ])).toBe(true);
               expect(index.remove([
                 dictionary.encode(DF.namedNode('Alice')),
                 dictionary.encode(DF.namedNode('says')),
@@ -2496,7 +2496,7 @@ describe('RdfStoreIndexes', () => {
                   DF.namedNode('DarkBlue'),
                 )),
                 dictionary.encode(DF.namedNode('g1')),
-              ])).toEqual(true);
+              ])).toBe(true);
               expect(index.remove([
                 dictionary.encode(DF.namedNode('Bob')),
                 dictionary.encode(DF.namedNode('says')),
@@ -2506,7 +2506,7 @@ describe('RdfStoreIndexes', () => {
                   DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
                 )),
                 dictionary.encode(DF.namedNode('g1')),
-              ])).toEqual(true);
+              ])).toBe(true);
             });
 
             it('should be able to remove an existing quad only once', () => {
@@ -2515,14 +2515,14 @@ describe('RdfStoreIndexes', () => {
                 dictionary.encode(DF.namedNode('says')),
                 dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
                 dictionary.encode(DF.namedNode('g1')),
-              ])).toEqual(true);
+              ])).toBe(true);
 
               expect(index.remove([
                 dictionary.encode(DF.namedNode('Alice')),
                 dictionary.encode(DF.namedNode('says')),
                 dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
                 dictionary.encode(DF.namedNode('g1')),
-              ])).toEqual(false);
+              ])).toBe(false);
             });
 
             it('should be unable to remove non-existing quads', () => {
@@ -2531,28 +2531,28 @@ describe('RdfStoreIndexes', () => {
                 dictionary.encode(DF.namedNode('p1-no')),
                 dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
                 dictionary.encode(DF.namedNode('g1-no')),
-              ])).toEqual(false);
+              ])).toBe(false);
 
               expect(index.remove([
                 dictionary.encode(DF.namedNode('s1')),
                 dictionary.encode(DF.namedNode('p1-no')),
                 dictionary.encode(DF.namedNode('o1-no')),
                 dictionary.encode(DF.namedNode('g1-no')),
-              ])).toEqual(false);
+              ])).toBe(false);
 
               expect(index.remove([
                 dictionary.encode(DF.namedNode('s1')),
                 dictionary.encode(DF.namedNode('p1')),
                 dictionary.encode(DF.namedNode('o1-no')),
                 dictionary.encode(DF.namedNode('g1-no')),
-              ])).toEqual(false);
+              ])).toBe(false);
 
               expect(index.remove([
                 dictionary.encode(DF.namedNode('s1')),
                 dictionary.encode(DF.namedNode('p1')),
                 dictionary.encode(DF.namedNode('o1')),
                 dictionary.encode(DF.namedNode('g1-no')),
-              ])).toEqual(false);
+              ])).toBe(false);
             });
           });
         });
@@ -2578,7 +2578,7 @@ describe('RdfStoreIndexes', () => {
               DF.namedNode('o'),
               DF.namedNode('p'),
               DF.namedNode('s'),
-            ])).toEqual(undefined);
+            ])).toBeUndefined();
           });
         });
 
@@ -2644,14 +2644,14 @@ describe('RdfStoreIndexes', () => {
               DF.namedNode('o'),
               DF.namedNode('p'),
               DF.namedNode('s'),
-            ])).toEqual(true);
+            ])).toBe(true);
 
             expect(index.get([
               DF.namedNode('g'),
               DF.namedNode('o'),
               DF.namedNode('p'),
               DF.namedNode('sother'),
-            ])).toEqual(undefined);
+            ])).toBeUndefined();
           });
         });
 
@@ -2860,14 +2860,14 @@ describe('RdfStoreIndexes', () => {
                 DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
                 DF.namedNode('says'),
                 DF.namedNode('Alice'),
-              ])).toEqual(true);
+              ])).toBe(true);
 
               expect(index.get([
                 DF.namedNode('sother'),
                 DF.namedNode('p'),
                 DF.namedNode('o'),
                 DF.namedNode('g'),
-              ])).toEqual(undefined);
+              ])).toBeUndefined();
             });
           });
 
@@ -3183,7 +3183,7 @@ describe('RdfStoreIndexes', () => {
                 undefined,
                 undefined,
                 undefined,
-              ])).toEqual(3);
+              ])).toBe(3);
             });
 
             it('should produce 1 result for exact matches', () => {
@@ -3192,7 +3192,7 @@ describe('RdfStoreIndexes', () => {
                 DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
                 DF.namedNode('says'),
                 DF.namedNode('Alice'),
-              ])).toEqual(1);
+              ])).toBe(1);
             });
 
             it('should produce results for a variable', () => {
@@ -3201,7 +3201,7 @@ describe('RdfStoreIndexes', () => {
                 undefined,
                 DF.namedNode('says'),
                 undefined,
-              ])).toEqual(3);
+              ])).toBe(3);
             });
 
             it('should produce results for a variable inside a quoted triple', () => {
@@ -3210,7 +3210,7 @@ describe('RdfStoreIndexes', () => {
                 DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
                 DF.namedNode('says'),
                 DF.namedNode('Alice'),
-              ])).toEqual(2);
+              ])).toBe(2);
             });
 
             it('should produce results for a variable inside and outside a quoted triple', () => {
@@ -3219,7 +3219,7 @@ describe('RdfStoreIndexes', () => {
                 DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
                 DF.namedNode('says'),
                 undefined,
-              ])).toEqual(2);
+              ])).toBe(2);
             });
           });
 
@@ -3230,7 +3230,7 @@ describe('RdfStoreIndexes', () => {
                 dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
                 dictionary.encode(DF.namedNode('says')),
                 dictionary.encode(DF.namedNode('Alice')),
-              ])).toEqual(true);
+              ])).toBe(true);
             });
 
             it('should be able to remove an existing quad only once', () => {
@@ -3239,14 +3239,14 @@ describe('RdfStoreIndexes', () => {
                 dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
                 dictionary.encode(DF.namedNode('says')),
                 dictionary.encode(DF.namedNode('Alice')),
-              ])).toEqual(true);
+              ])).toBe(true);
 
               expect(index.remove([
                 dictionary.encode(DF.namedNode('g1')),
                 dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
                 dictionary.encode(DF.namedNode('says')),
                 dictionary.encode(DF.namedNode('Alice')),
-              ])).toEqual(false);
+              ])).toBe(false);
             });
 
             it('should be unable to remove non-existing quads', () => {
@@ -3255,7 +3255,7 @@ describe('RdfStoreIndexes', () => {
                 dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),
                 dictionary.encode(DF.namedNode('p1-no')),
                 dictionary.encode(DF.namedNode('s1-no')),
-              ])).toEqual(false);
+              ])).toBe(false);
             });
           });
         });

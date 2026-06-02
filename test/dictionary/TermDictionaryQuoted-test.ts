@@ -26,52 +26,52 @@ describe('TermDictionaryQuoted', () => {
 
   describe('encode', () => {
     it('should encode named nodes', () => {
-      expect(dict.encode(DF.namedNode('ex:s1'))).toEqual(0);
-      expect(dict.encode(DF.namedNode('ex:s2'))).toEqual(1);
-      expect(dict.encode(DF.namedNode('ex:s3'))).toEqual(2);
+      expect(dict.encode(DF.namedNode('ex:s1'))).toBe(0);
+      expect(dict.encode(DF.namedNode('ex:s2'))).toBe(1);
+      expect(dict.encode(DF.namedNode('ex:s3'))).toBe(2);
 
-      expect(dict.encode(DF.namedNode('ex:s1'))).toEqual(0);
-      expect(dict.encode(DF.namedNode('ex:s2'))).toEqual(1);
-      expect(dict.encode(DF.namedNode('ex:s3'))).toEqual(2);
+      expect(dict.encode(DF.namedNode('ex:s1'))).toBe(0);
+      expect(dict.encode(DF.namedNode('ex:s2'))).toBe(1);
+      expect(dict.encode(DF.namedNode('ex:s3'))).toBe(2);
     });
 
     it('should encode blank nodes', () => {
-      expect(dict.encode(DF.blankNode('bs1'))).toEqual(0);
-      expect(dict.encode(DF.blankNode('bs2'))).toEqual(1);
-      expect(dict.encode(DF.blankNode('bs3'))).toEqual(2);
+      expect(dict.encode(DF.blankNode('bs1'))).toBe(0);
+      expect(dict.encode(DF.blankNode('bs2'))).toBe(1);
+      expect(dict.encode(DF.blankNode('bs3'))).toBe(2);
 
-      expect(dict.encode(DF.blankNode('bs1'))).toEqual(0);
-      expect(dict.encode(DF.blankNode('bs2'))).toEqual(1);
-      expect(dict.encode(DF.blankNode('bs3'))).toEqual(2);
+      expect(dict.encode(DF.blankNode('bs1'))).toBe(0);
+      expect(dict.encode(DF.blankNode('bs2'))).toBe(1);
+      expect(dict.encode(DF.blankNode('bs3'))).toBe(2);
     });
 
     it('should encode literals', () => {
-      expect(dict.encode(DF.literal('abc'))).toEqual(0);
-      expect(dict.encode(DF.literal('def'))).toEqual(1);
-      expect(dict.encode(DF.literal('abc', DF.namedNode('ex:d')))).toEqual(2);
-      expect(dict.encode(DF.literal('abc', { language: 'en_us', direction: 'ltr' }))).toEqual(3);
-      expect(dict.encode(DF.literal('abc', { language: 'en_us', direction: 'rtl' }))).toEqual(4);
+      expect(dict.encode(DF.literal('abc'))).toBe(0);
+      expect(dict.encode(DF.literal('def'))).toBe(1);
+      expect(dict.encode(DF.literal('abc', DF.namedNode('ex:d')))).toBe(2);
+      expect(dict.encode(DF.literal('abc', { language: 'en_us', direction: 'ltr' }))).toBe(3);
+      expect(dict.encode(DF.literal('abc', { language: 'en_us', direction: 'rtl' }))).toBe(4);
 
-      expect(dict.encode(DF.literal('abc'))).toEqual(0);
-      expect(dict.encode(DF.literal('def'))).toEqual(1);
-      expect(dict.encode(DF.literal('abc', DF.namedNode('ex:d')))).toEqual(2);
-      expect(dict.encode(DF.literal('abc', { language: 'en_us', direction: 'ltr' }))).toEqual(3);
-      expect(dict.encode(DF.literal('abc', { language: 'en_us', direction: 'rtl' }))).toEqual(4);
+      expect(dict.encode(DF.literal('abc'))).toBe(0);
+      expect(dict.encode(DF.literal('def'))).toBe(1);
+      expect(dict.encode(DF.literal('abc', DF.namedNode('ex:d')))).toBe(2);
+      expect(dict.encode(DF.literal('abc', { language: 'en_us', direction: 'ltr' }))).toBe(3);
+      expect(dict.encode(DF.literal('abc', { language: 'en_us', direction: 'rtl' }))).toBe(4);
     });
 
     it('should encode variables', () => {
-      expect(dict.encode(DF.variable('v1'))).toEqual(0);
-      expect(dict.encode(DF.variable('v2'))).toEqual(1);
-      expect(dict.encode(DF.variable('v3'))).toEqual(2);
+      expect(dict.encode(DF.variable('v1'))).toBe(0);
+      expect(dict.encode(DF.variable('v2'))).toBe(1);
+      expect(dict.encode(DF.variable('v3'))).toBe(2);
 
-      expect(dict.encode(DF.variable('v1'))).toEqual(0);
-      expect(dict.encode(DF.variable('v2'))).toEqual(1);
-      expect(dict.encode(DF.variable('v3'))).toEqual(2);
+      expect(dict.encode(DF.variable('v1'))).toBe(0);
+      expect(dict.encode(DF.variable('v2'))).toBe(1);
+      expect(dict.encode(DF.variable('v3'))).toBe(2);
     });
 
     it('should encode the default graph', () => {
-      expect(dict.encode(DF.defaultGraph())).toEqual(0);
-      expect(dict.encode(DF.defaultGraph())).toEqual(0);
+      expect(dict.encode(DF.defaultGraph())).toBe(0);
+      expect(dict.encode(DF.defaultGraph())).toBe(0);
     });
 
     it('should encode quoted quads', () => {
@@ -153,9 +153,9 @@ describe('TermDictionaryQuoted', () => {
     });
 
     it('should encode mixed terms nodes', () => {
-      expect(dict.encode(DF.namedNode('s'))).toEqual(0);
-      expect(dict.encode(DF.blankNode('s'))).toEqual(1);
-      expect(dict.encode(DF.literal('s'))).toEqual(2);
+      expect(dict.encode(DF.namedNode('s'))).toBe(0);
+      expect(dict.encode(DF.blankNode('s'))).toBe(1);
+      expect(dict.encode(DF.literal('s'))).toBe(2);
       expect(dict.encode(DF.quad(
         DF.namedNode('ex:alice'),
         DF.namedNode('ex:says'),
@@ -170,9 +170,9 @@ describe('TermDictionaryQuoted', () => {
         ),
       ))).toEqual(TermDictionaryQuoted.BITMASK | 1);
 
-      expect(dict.encode(DF.namedNode('s'))).toEqual(0);
-      expect(dict.encode(DF.blankNode('s'))).toEqual(1);
-      expect(dict.encode(DF.literal('s'))).toEqual(2);
+      expect(dict.encode(DF.namedNode('s'))).toBe(0);
+      expect(dict.encode(DF.blankNode('s'))).toBe(1);
+      expect(dict.encode(DF.literal('s'))).toBe(2);
       expect(dict.encode(DF.quad(
         DF.namedNode('ex:alice'),
         DF.namedNode('ex:says'),
@@ -191,9 +191,9 @@ describe('TermDictionaryQuoted', () => {
 
   describe('encodeOptional', () => {
     it('should return undefined for non-encoded terms', () => {
-      expect(dict.encode(DF.namedNode('ex:s1'))).toEqual(0);
-      expect(dict.encode(DF.namedNode('ex:s2'))).toEqual(1);
-      expect(dict.encode(DF.namedNode('ex:s3'))).toEqual(2);
+      expect(dict.encode(DF.namedNode('ex:s1'))).toBe(0);
+      expect(dict.encode(DF.namedNode('ex:s2'))).toBe(1);
+      expect(dict.encode(DF.namedNode('ex:s3'))).toBe(2);
       expect(dict.encode(DF.quad(
         DF.namedNode('ex:alice'),
         DF.namedNode('ex:says'),
@@ -208,10 +208,10 @@ describe('TermDictionaryQuoted', () => {
         ),
       ))).toEqual(TermDictionaryQuoted.BITMASK | 1);
 
-      expect(dict.encodeOptional(DF.namedNode('ex:s1'))).toEqual(0);
-      expect(dict.encodeOptional(DF.namedNode('ex:s2'))).toEqual(1);
-      expect(dict.encodeOptional(DF.namedNode('ex:s3'))).toEqual(2);
-      expect(dict.encodeOptional(DF.namedNode('ex:s4'))).toEqual(undefined);
+      expect(dict.encodeOptional(DF.namedNode('ex:s1'))).toBe(0);
+      expect(dict.encodeOptional(DF.namedNode('ex:s2'))).toBe(1);
+      expect(dict.encodeOptional(DF.namedNode('ex:s3'))).toBe(2);
+      expect(dict.encodeOptional(DF.namedNode('ex:s4'))).toBeUndefined();
       expect(dict.encodeOptional(DF.quad(
         DF.namedNode('ex:alice'),
         DF.namedNode('ex:says'),
@@ -237,7 +237,7 @@ describe('TermDictionaryQuoted', () => {
             DF.literal('Hello'),
           ),
         ),
-      ))).toEqual(undefined);
+      ))).toBeUndefined();
     });
   });
 
@@ -251,9 +251,9 @@ describe('TermDictionaryQuoted', () => {
     });
 
     it('should decode encoded terms', () => {
-      expect(dict.encode(DF.namedNode('s'))).toEqual(0);
-      expect(dict.encode(DF.blankNode('s'))).toEqual(1);
-      expect(dict.encode(DF.literal('s'))).toEqual(2);
+      expect(dict.encode(DF.namedNode('s'))).toBe(0);
+      expect(dict.encode(DF.blankNode('s'))).toBe(1);
+      expect(dict.encode(DF.literal('s'))).toBe(2);
       expect(dict.encode(DF.quad(
         DF.namedNode('s'),
         DF.namedNode('p'),
@@ -303,9 +303,9 @@ describe('TermDictionaryQuoted', () => {
     });
 
     it('should return for a non-empty dictionary', () => {
-      expect(dict.encode(DF.namedNode('s'))).toEqual(0);
-      expect(dict.encode(DF.blankNode('s'))).toEqual(1);
-      expect(dict.encode(DF.literal('s'))).toEqual(2);
+      expect(dict.encode(DF.namedNode('s'))).toBe(0);
+      expect(dict.encode(DF.blankNode('s'))).toBe(1);
+      expect(dict.encode(DF.literal('s'))).toBe(2);
       expect(dict.encode(DF.quad(
         DF.namedNode('s'),
         DF.namedNode('p'),
@@ -330,7 +330,10 @@ describe('TermDictionaryQuoted', () => {
         ),
       ))).toEqual(TermDictionaryQuoted.BITMASK | 3);
 
-      expect([ ...dict.encodings() ]).toEqual([ 0, 1, 2,
+      expect([ ...dict.encodings() ]).toEqual([
+        0,
+        1,
+        2,
         TermDictionaryQuoted.BITMASK | 1,
         TermDictionaryQuoted.BITMASK | 2,
         TermDictionaryQuoted.BITMASK | 3,

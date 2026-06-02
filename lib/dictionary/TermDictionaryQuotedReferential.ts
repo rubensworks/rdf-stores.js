@@ -14,7 +14,9 @@ import type { ITermDictionary } from './ITermDictionary';
  * Finding quoted triples is done by iterating over all quoted triples, and filtering by the matching ones.
  */
 export class TermDictionaryQuotedReferential implements ITermDictionary<number> {
+  // eslint-disable-next-line ts/naming-convention
   public static readonly BITMASK = 1 << 31;
+  // eslint-disable-next-line ts/naming-convention
   public static readonly SEPARATOR = '_';
 
   private readonly plainTermDictionary: ITermDictionary<number>;
@@ -38,10 +40,10 @@ export class TermDictionaryQuotedReferential implements ITermDictionary<number> 
     return this.plainTermDictionary.encode(term);
   }
 
-  private encodeQuotedTriple<O extends boolean>(
+  private encodeQuotedTriple<TO extends boolean>(
     quad: RDF.BaseQuad,
-    optional: O,
-  ): O extends true ? number | undefined : number {
+    optional: TO,
+  ): TO extends true ? number | undefined : number {
     // Only quoted triples are supported
     if (quad.graph.termType !== 'DefaultGraph') {
       throw new Error('Encoding of quoted quads outside of the default graph is not allowed');
@@ -59,7 +61,7 @@ export class TermDictionaryQuotedReferential implements ITermDictionary<number> 
     // Return the encoding if we found one
     if (id !== undefined || optional) {
       // Mask MSB to indicate that the encoding should refer to the quoted triples dictionary.
-      return <O extends true ? number | undefined : number>
+      return <TO extends true ? number | undefined : number>
         (id === undefined ? undefined : TermDictionaryQuotedReferential.BITMASK | id);
     }
 
@@ -103,7 +105,7 @@ export class TermDictionaryQuotedReferential implements ITermDictionary<number> 
     return this.plainTermDictionary.decode(encoding);
   }
 
-  public * encodings(): IterableIterator<number> {
+  public* encodings(): IterableIterator<number> {
     for (const encoding of this.plainTermDictionary.encodings()) {
       yield encoding;
     }
@@ -112,13 +114,13 @@ export class TermDictionaryQuotedReferential implements ITermDictionary<number> 
     }
   }
 
-  public * findQuotedTriples(quotedTriplePattern: RDF.Quad): IterableIterator<RDF.Term> {
+  public* findQuotedTriples(quotedTriplePattern: RDF.Quad): IterableIterator<RDF.Term> {
     for (const termEncoded of this.findQuotedTriplesEncoded(quotedTriplePattern)) {
       yield this.decode(termEncoded);
     }
   }
 
-  public * findQuotedTriplesEncoded(quotedTriplePattern: RDF.Quad): IterableIterator<number> {
+  public* findQuotedTriplesEncoded(quotedTriplePattern: RDF.Quad): IterableIterator<number> {
     for (let encodedQuotedTriple of this.quotedTriplesDictionary.keys()) {
       encodedQuotedTriple = TermDictionaryQuotedReferential.BITMASK | (1 + encodedQuotedTriple);
       const quotedTriple = this.decode(encodedQuotedTriple);

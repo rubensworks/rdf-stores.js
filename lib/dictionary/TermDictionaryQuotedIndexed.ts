@@ -15,6 +15,7 @@ import type { ITermDictionary } from './ITermDictionary';
  * Finding quoted triples is done through indexed lookups.
  */
 export class TermDictionaryQuotedIndexed implements ITermDictionary<number> {
+  // eslint-disable-next-line ts/naming-convention
   public static readonly BITMASK = 1 << 31;
 
   private readonly plainTermDictionary: ITermDictionary<number>;
@@ -33,6 +34,7 @@ export class TermDictionaryQuotedIndexed implements ITermDictionary<number> {
       // Not required
       indexCombinations: [],
       // Not required
+      // eslint-disable-next-line ts/no-unsafe-assignment
       indexConstructor: <any> undefined,
       dictionary: this,
       dataFactory,
@@ -52,10 +54,10 @@ export class TermDictionaryQuotedIndexed implements ITermDictionary<number> {
     return this.plainTermDictionary.encode(term);
   }
 
-  private encodeQuotedTriple<O extends boolean>(
+  private encodeQuotedTriple<TO extends boolean>(
     quad: RDF.BaseQuad,
-    optional: O,
-  ): O extends true ? number | undefined : number {
+    optional: TO,
+  ): TO extends true ? number | undefined : number {
     // Only quoted triples are supported
     if (quad.graph.termType !== 'DefaultGraph') {
       throw new Error('Encoding of quoted quads outside of the default graph is not allowed');
@@ -73,7 +75,7 @@ export class TermDictionaryQuotedIndexed implements ITermDictionary<number> {
     // Return the encoding if we found one
     if (id !== undefined || optional) {
       // Mask MSB to indicate that the encoding should refer to the quoted triples dictionary.
-      return <O extends true ? number | undefined : number>
+      return <TO extends true ? number | undefined : number>
         (id === undefined ? undefined : TermDictionaryQuotedIndexed.BITMASK | id);
     }
 
@@ -135,7 +137,7 @@ export class TermDictionaryQuotedIndexed implements ITermDictionary<number> {
     return this.plainTermDictionary.decode(encoding);
   }
 
-  public * encodings(): IterableIterator<number> {
+  public* encodings(): IterableIterator<number> {
     for (const encoding of this.plainTermDictionary.encodings()) {
       yield encoding;
     }
@@ -144,14 +146,14 @@ export class TermDictionaryQuotedIndexed implements ITermDictionary<number> {
     }
   }
 
-  public * findQuotedTriples(quotedTriplePattern: RDF.Quad): IterableIterator<RDF.Term> {
+  public* findQuotedTriples(quotedTriplePattern: RDF.Quad): IterableIterator<RDF.Term> {
     for (const termEncoded of this.findQuotedTriplesEncoded(quotedTriplePattern)) {
       yield this.decode(termEncoded);
     }
   }
 
-  public * findQuotedTriplesEncoded(quotedTriplePattern: RDF.Quad): IterableIterator<number> {
-    const [ patternIn, requireQuotedTripleFiltering ] = quadToPattern(
+  public* findQuotedTriplesEncoded(quotedTriplePattern: RDF.Quad): IterableIterator<number> {
+    const [ patternIn ] = quadToPattern(
       quotedTriplePattern.subject,
       quotedTriplePattern.predicate,
       quotedTriplePattern.object,
@@ -166,6 +168,7 @@ export class TermDictionaryQuotedIndexed implements ITermDictionary<number> {
           for (const termG of this.patternToIterable(patternIn[3])) {
             // Find all terms matching the pattern from the reverse indexes
             // We select the reverse index according to the current triple pattern
+            // eslint-disable-next-line ts/prefer-nullish-coalescing
             if ((termS && termP) || (!termP && !termO)) {
               // SPO
               const pattern: EncodedQuadTerms<number | undefined> = [ termS, termP, termO, termG ];
@@ -199,10 +202,10 @@ export class TermDictionaryQuotedIndexed implements ITermDictionary<number> {
    * @param patternTerm A term.
    * @protected
    */
-  protected * patternToIterable(patternTerm: PatternTerm): IterableIterator<number | undefined> {
+  protected* patternToIterable(patternTerm: PatternTerm): IterableIterator<number | undefined> {
     // If the term is another quoted quad, recursively find other quoted triples
     if (patternTerm?.termType === 'Quad') {
-      yield * this.findQuotedTriplesEncoded(patternTerm);
+      yield* this.findQuotedTriplesEncoded(patternTerm);
       return;
     }
 

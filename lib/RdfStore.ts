@@ -1,4 +1,4 @@
-import type { EventEmitter } from 'events';
+import type { EventEmitter } from 'node:events';
 import type * as RDF from '@rdfjs/types';
 import type { AsyncIterator } from 'asynciterator';
 import { wrap } from 'asynciterator';
@@ -30,24 +30,26 @@ import type { EncodedQuadTerms, QuadPatternTerms } from './PatternTerm';
 /**
  * An RDF store allows quads to be stored and fetched, based on one or more customizable indexes.
  */
-export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF.Store<Q> {
+export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements RDF.Store<TQ> {
+  // eslint-disable-next-line ts/naming-convention
   public static readonly DEFAULT_INDEX_COMBINATIONS: QuadTermName[][] = [
     [ 'graph', 'subject', 'predicate', 'object' ],
     [ 'graph', 'predicate', 'object', 'subject' ],
     [ 'graph', 'object', 'subject', 'predicate' ],
   ];
 
-  public readonly options: IRdfStoreOptions<E, Q>;
-  public readonly dataFactory: RDF.DataFactory<Q>;
-  public readonly dictionary: ITermDictionary<E>;
-  public readonly indexesWrapped: IRdfStoreIndexWrapped<E>[];
+  public readonly options: IRdfStoreOptions<TE, TQ>;
+  public readonly dataFactory: RDF.DataFactory<TQ>;
+  public readonly dictionary: ITermDictionary<TE>;
+  public readonly indexesWrapped: IRdfStoreIndexWrapped<TE>[];
   private readonly indexesWrappedComponentOrders: QuadTermName[][];
   public readonly features = { quotedTripleFiltering: true, indexNodes: false, indexDistinctTerms: true };
-  private readonly indexNodes: Map<E, Set<E>> | undefined;
+  private readonly indexNodes: Map<TE, Set<TE>> | undefined;
 
+  // eslint-disable-next-line ts/naming-convention
   private _size = 0;
 
-  public constructor(options: IRdfStoreOptions<E, Q>) {
+  public constructor(options: IRdfStoreOptions<TE, TQ>) {
     this.options = options;
     this.dataFactory = options.dataFactory;
     this.dictionary = options.dictionary;
@@ -77,20 +79,21 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
    * Internal helper to create index objects.
    * @param options The RDF store options object.
    */
-  public static constructIndexesWrapped<E, Q extends RDF.BaseQuad = RDF.Quad>(
-    options: IRdfStoreOptions<E, Q>,
-  ): IRdfStoreIndexWrapped<E>[] {
-    const indexes: IRdfStoreIndexWrapped<E>[] = [];
+  public static constructIndexesWrapped<TE, TQ extends RDF.BaseQuad = RDF.Quad>(
+    options: IRdfStoreOptions<TE, TQ>,
+  ): IRdfStoreIndexWrapped<TE>[] {
+    const indexes: IRdfStoreIndexWrapped<TE>[] = [];
     if (options.indexCombinations.length === 0) {
       throw new Error('At least one index combination is required');
     }
     for (const componentOrder of options.indexCombinations) {
       if (!RdfStore.isCombinationValid(componentOrder)) {
-        throw new Error(`Invalid index combination: ${componentOrder}`);
+        throw new Error(`Invalid index combination: ${componentOrder.join(',')}`);
       }
       indexes.push({
         index: options.indexConstructor(options),
         componentOrder,
+        // eslint-disable-next-line ts/no-unsafe-assignment
         componentOrderInverse: <any>Object.fromEntries(componentOrder.map((value, key) => [ value, key ])),
       });
     }
@@ -122,7 +125,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
    * @param quad An RDF quad.
    * @return boolean If the quad was not yet present in the index.
    */
-  public addQuad(quad: Q): boolean {
+  public addQuad(quad: TQ): boolean {
     const quadEncoded = [
       this.dictionary.encode(quad.subject),
       this.dictionary.encode(quad.predicate),
@@ -133,7 +136,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     for (const indexWrapped of this.indexesWrapped) {
       // Before sending the quad to the index, make sure its components are ordered corresponding to the index's order.
       newQuad = indexWrapped.index
-        .set(<EncodedQuadTerms<E>>orderQuadComponents(indexWrapped.componentOrder, quadEncoded), true);
+        .set(<EncodedQuadTerms<TE>>orderQuadComponents(indexWrapped.componentOrder, quadEncoded), true);
     }
     if (newQuad) {
       this._size++;
@@ -159,7 +162,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
    * @param quad An RDF quad.
    * @return boolean If the quad was present in the index.
    */
-  public removeQuad(quad: Q): boolean {
+  public removeQuad(quad: TQ): boolean {
     const quadEncoded = [
       this.dictionary.encodeOptional(quad.subject),
       this.dictionary.encodeOptional(quad.predicate),
@@ -168,7 +171,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     ];
 
     // We can quickly return false if the quad is not present in the dictionary
-    // eslint-disable-next-line unicorn/no-useless-undefined
+
     if (quadEncoded.includes(undefined)) {
       return false;
     }
@@ -177,7 +180,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     for (const indexWrapped of this.indexesWrapped) {
       // Before sending the quad to the index, make sure its components are ordered corresponding to the index's order.
       wasPresent = indexWrapped.index
-        .remove(<EncodedQuadTerms<E>>orderQuadComponents(indexWrapped.componentOrder, quadEncoded));
+        .remove(<EncodedQuadTerms<TE>>orderQuadComponents(indexWrapped.componentOrder, quadEncoded));
       if (!wasPresent) {
         break;
       }
@@ -208,7 +211,8 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
    * Removes all streamed quads.
    * @param stream A stream of quads
    */
-  public remove(stream: RDF.Stream<Q>): EventEmitter {
+  public remove(stream: RDF.Stream<TQ>): EventEmitter {
+    // eslint-disable-next-line ts/no-unsafe-argument
     stream.on('data', quad => this.removeQuad(quad));
     return stream;
   }
@@ -233,7 +237,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
    * Deletes the given named graph.
    * @param graph The graph term or string to match.
    */
-  public deleteGraph(graph: string | Q['graph']): EventEmitter {
+  public deleteGraph(graph: string | TQ['graph']): EventEmitter {
     if (typeof graph === 'string') {
       graph = this.dataFactory.namedNode(graph);
     }
@@ -244,8 +248,8 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
    * Import the given stream of quads into the store.
    * @param stream A stream of RDF quads.
    */
-  public import(stream: RDF.Stream<Q>): EventEmitter {
-    stream.on('data', (quad: Q) => this.addQuad(quad));
+  public import(stream: RDF.Stream<TQ>): EventEmitter {
+    stream.on('data', (quad: TQ) => this.addQuad(quad));
     return stream;
   }
 
@@ -256,12 +260,12 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
    * @param object The optional object.
    * @param graph The optional graph.
    */
-  public * readQuads(
+  public* readQuads(
     subject?: RDF.Term | null,
     predicate?: RDF.Term | null,
     object?: RDF.Term | null,
     graph?: RDF.Term | null,
-  ): IterableIterator<Q> {
+  ): IterableIterator<TQ> {
     // Check if our dictionary and our indexes have quoted pattern support
     const indexesSupportQuotedPatterns = Boolean(this.dictionary.features.quotedTriples) &&
       Object.values(this.indexesWrapped).every(wrapped => wrapped.index.features.quotedTripleFiltering);
@@ -277,7 +281,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     const quadComponentsOrdered = <QuadPatternTerms> orderQuadComponents(indexWrapped.componentOrder, quadComponents);
 
     // Call the best index's find method.
-    // eslint-disable-next-line unicorn/no-array-callback-reference
+
     for (const decomposedQuad of indexWrapped.index.find(quadComponentsOrdered)) {
       // De-order the resulting quad components into the normal SPOG order for quad creation.
       const quad = this.dataFactory.quad(
@@ -308,7 +312,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     predicate?: RDF.Term | null,
     object?: RDF.Term | null,
     graph?: RDF.Term | null,
-  ): Q[] {
+  ): TQ[] {
     return [ ...this.readQuads(subject, predicate, object, graph) ];
   }
 
@@ -324,18 +328,19 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     predicate?: RDF.Term | null,
     object?: RDF.Term | null,
     graph?: RDF.Term | null,
-  ): RDF.Stream<Q> & AsyncIterator<Q> {
+  ): RDF.Stream<TQ> & AsyncIterator<TQ> {
     return wrap(this.readQuads(subject, predicate, object, graph));
   }
 
   /**
    * Returns a generator producing all quads matching the pattern.
+   * @param bindingsFactory The factory to use for creating bindings.
    * @param subject The subject, which can be a variable.
    * @param predicate The predicate, which can be a variable.
    * @param object The object, which can be a variable.
    * @param graph The graph, which can be a variable.
    */
-  public * readBindings(
+  public* readBindings(
     bindingsFactory: RDF.BindingsFactory,
     subject: RDF.Term,
     predicate: RDF.Term,
@@ -347,7 +352,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
       Object.values(this.indexesWrapped).every(wrapped => wrapped.index.features.quotedTripleFiltering);
 
     // Construct a quad pattern array
-    const [ quadComponents, requireQuotedTripleFiltering ] =
+    const [ quadComponents ] =
       quadToPattern(subject, predicate, object, graph, indexesSupportQuotedPatterns);
 
     // Determine the best index for this pattern
@@ -386,7 +391,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
 
     // Call the best index's find method.
     for (const decomposedQuadEncoded of indexWrapped.index
-      .findEncoded(<EncodedQuadTerms<E | undefined>> ids, quadComponentsOrdered)) {
+      .findEncoded(<EncodedQuadTerms<TE | undefined>> ids, quadComponentsOrdered)) {
       let skipBinding = false;
       let checkForBindingConflicts = false;
       const bindingsEntries: [RDF.Variable, RDF.Term][] = [];
@@ -531,7 +536,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
    *
    * @param terms An array of quad term names
    */
-  public * readDistinctTerms(
+  public* readDistinctTerms(
     terms: QuadTermName[],
   ): IterableIterator<RDF.Term[]> {
     // Determine the best index for this pattern
@@ -567,7 +572,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
     // Call the best index's find method
     for (const readTerms of indexWrapped.index.findTerms(matchTerms)) {
       // Inverse term ordering
-      const readTermsInversed: E[] = [];
+      const readTermsInversed: TE[] = [];
       for (let i = 0; i < readTerms.length; i++) {
         readTermsInversed[termOrderOrderedToIn[i]] = readTerms[i];
       }
@@ -653,7 +658,7 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
    *
    * @returns a generator of tuples containing the named graph as first element and the node term as second element.
    */
-  public * readNodes(graph: RDF.Term): IterableIterator<[ RDF.Term, RDF.Term ]> {
+  public* readNodes(graph: RDF.Term): IterableIterator<[ RDF.Term, RDF.Term ]> {
     if (!this.indexNodes) {
       throw new Error(`Nodes can only be read when the store was constructed with 'indexNodes: true'`);
     }
@@ -749,13 +754,13 @@ export class RdfStore<E = any, Q extends RDF.BaseQuad = RDF.Quad> implements RDF
    * Wrap this store inside a DatasetCore interface.
    * Any mutations in either this store or the wrapper will propagate to each other.
    */
-  public asDataset(): DatasetCoreWrapper<E, Q> {
+  public asDataset(): DatasetCoreWrapper<TE, TQ> {
     return new DatasetCoreWrapper(this);
   }
 }
 
-export interface IRdfStoreIndexWrapped<E> {
+export interface IRdfStoreIndexWrapped<TE> {
   componentOrder: QuadTermName[];
   componentOrderInverse: Record<QuadTermName, number>;
-  index: IRdfStoreIndex<E, boolean>;
+  index: IRdfStoreIndex<TE, boolean>;
 }

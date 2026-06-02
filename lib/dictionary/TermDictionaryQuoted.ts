@@ -11,6 +11,7 @@ import type { ITermDictionary } from './ITermDictionary';
  * Finding quoted triples is done by iterating over all quoted triples, and filtering by the matching ones.
  */
 export class TermDictionaryQuoted implements ITermDictionary<number> {
+  // eslint-disable-next-line ts/naming-convention
   public static readonly BITMASK = 1 << 31;
 
   private readonly plainTermDictionary: ITermDictionary<number>;
@@ -59,7 +60,7 @@ export class TermDictionaryQuoted implements ITermDictionary<number> {
     return this.plainTermDictionary.decode(encoding);
   }
 
-  public * encodings(): IterableIterator<number> {
+  public* encodings(): IterableIterator<number> {
     for (const encoding of this.plainTermDictionary.encodings()) {
       yield encoding;
     }
@@ -68,13 +69,13 @@ export class TermDictionaryQuoted implements ITermDictionary<number> {
     }
   }
 
-  public * findQuotedTriples(quotedTriplePattern: RDF.Quad): IterableIterator<RDF.Term> {
+  public* findQuotedTriples(quotedTriplePattern: RDF.Quad): IterableIterator<RDF.Term> {
     for (const termEncoded of this.findQuotedTriplesEncoded(quotedTriplePattern)) {
       yield this.decode(termEncoded);
     }
   }
 
-  public * findQuotedTriplesEncoded(quotedTriplePattern: RDF.Quad): IterableIterator<number> {
+  public* findQuotedTriplesEncoded(quotedTriplePattern: RDF.Quad): IterableIterator<number> {
     for (let encodedQuotedTriple of this.quotedTriplesDictionary.encodings()) {
       encodedQuotedTriple = TermDictionaryQuoted.BITMASK | (1 + encodedQuotedTriple);
       const quotedTriple = this.decode(encodedQuotedTriple);

@@ -6,7 +6,7 @@ import type { IRdfStoreIndex } from './index/IRdfStoreIndex';
 /**
  * Options for constructing an RDF store.
  */
-export interface IRdfStoreOptions<E, Q extends RDF.BaseQuad = RDF.Quad> {
+export interface IRdfStoreOptions<TE, TQ extends RDF.BaseQuad = RDF.Quad> {
   /**
    * The quad component order combinations of indexes that must be created.
    * For example, creating a store with only an SPOG index requires passing:
@@ -19,7 +19,7 @@ export interface IRdfStoreOptions<E, Q extends RDF.BaseQuad = RDF.Quad> {
    * Callback for creating an index.
    * @param options The store options.
    */
-  indexConstructor: (options: IRdfStoreOptions<E, Q>) => IRdfStoreIndex<E, boolean>;
+  indexConstructor: (options: IRdfStoreOptions<TE, TQ>) => IRdfStoreIndex<TE, boolean>;
   /**
    * If all nodes should be indexed.
    * Nodes are all terms that are either a subject or object within the store.
@@ -31,9 +31,9 @@ export interface IRdfStoreOptions<E, Q extends RDF.BaseQuad = RDF.Quad> {
   /**
    * The dictionary for encoding and decoding RDF terms.
    */
-  dictionary: ITermDictionary<E>;
+  dictionary: ITermDictionary<TE>;
   /**
    * The data factory for constructing terms and quads.
    */
-  dataFactory: RDF.DataFactory<Q>;
+  dataFactory: RDF.DataFactory<TQ>;
 }

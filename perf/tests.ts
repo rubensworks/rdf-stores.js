@@ -1,3 +1,4 @@
+/* eslint-disable ts/no-unsafe-argument */
 import { DataFactory } from 'rdf-data-factory';
 import { TermDictionaryNumberMap } from '../lib/dictionary/TermDictionaryNumberMap';
 import { TermDictionaryNumberRecord } from '../lib/dictionary/TermDictionaryNumberRecord';
@@ -17,7 +18,8 @@ import type { IPerformanceTestApproach } from './PerformanceTest';
 
 export function makeTests(optimal: boolean): IPerformanceTestApproach[] {
   return [
-    ...!optimal ?
+    ...optimal ?
+        [] :
       <IPerformanceTestApproach[]> [
         {
           name: '1 Record index (Map<number>)',
@@ -231,8 +233,7 @@ export function makeTests(optimal: boolean): IPerformanceTestApproach[] {
             },
           },
         },
-      ] :
-      [],
+      ],
 
     {
       name: 'N3Store',

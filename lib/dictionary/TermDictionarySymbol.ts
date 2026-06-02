@@ -34,11 +34,11 @@ export class TermDictionarySymbol implements ITermDictionary<symbol> {
     throw new Error('encodings is not supported');
   }
 
-  public findQuotedTriples(quotedTriplePattern: RDF.Quad): IterableIterator<RDF.Term> {
+  public findQuotedTriples(): IterableIterator<RDF.Term> {
     throw new Error('findQuotedTriples is not supported');
   }
 
-  public findQuotedTriplesEncoded(quotedTriplePattern: RDF.Quad): IterableIterator<symbol> {
+  public findQuotedTriplesEncoded(): IterableIterator<symbol> {
     throw new Error('findQuotedTriplesEncoded is not supported');
   }
 }

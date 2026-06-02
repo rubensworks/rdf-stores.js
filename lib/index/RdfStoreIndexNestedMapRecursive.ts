@@ -1,3 +1,4 @@
+/* eslint-disable ts/no-unsafe-assignment */
 import type { ITermDictionary } from '../dictionary/ITermDictionary';
 import type { IRdfStoreOptions } from '../IRdfStoreOptions';
 import { encodeOptionalTerms } from '../OrderUtils';
@@ -9,19 +10,19 @@ import type { NestedMapActual } from './RdfStoreIndexNestedMap';
  * An RDF store index that is implemented using nested Maps,
  * and finds quads components via recursive methods calls.
  */
-export class RdfStoreIndexNestedMapRecursive<E, V> implements IRdfStoreIndex<E, V> {
-  protected readonly dictionary: ITermDictionary<E>;
-  protected readonly nestedMap: NestedMapActual<E, V>;
+export class RdfStoreIndexNestedMapRecursive<TE, TV> implements IRdfStoreIndex<TE, TV> {
+  protected readonly dictionary: ITermDictionary<TE>;
+  protected readonly nestedMap: NestedMapActual<TE, TV>;
   public readonly features = {
     quotedTripleFiltering: false,
   };
 
-  public constructor(options: IRdfStoreOptions<E>) {
+  public constructor(options: IRdfStoreOptions<TE>) {
     this.dictionary = options.dictionary;
     this.nestedMap = new Map();
   }
 
-  public set(terms: EncodedQuadTerms<E>, value: V): boolean {
+  public set(terms: EncodedQuadTerms<TE>, value: TV): boolean {
     let map = this.nestedMap;
     let contained = false;
     for (const [ i, term ] of terms.entries()) {
@@ -33,23 +34,23 @@ export class RdfStoreIndexNestedMapRecursive<E, V> implements IRdfStoreIndex<E, 
       } else if (i === terms.length - 1) {
         contained = true;
       }
-      map = <NestedMapActual<E, V>> nextMap;
+      map = <NestedMapActual<TE, TV>> nextMap;
     }
 
     return !contained;
   }
 
-  public remove(terms: EncodedQuadTerms<E>): boolean {
+  public remove(terms: EncodedQuadTerms<TE>): boolean {
     const map0 = this.nestedMap;
-    const map1: NestedMapActual<E, V> | undefined = <any> map0.get(terms[0]);
+    const map1: NestedMapActual<TE, TV> | undefined = <any> map0.get(terms[0]);
     if (!map1) {
       return false;
     }
-    const map2: NestedMapActual<E, V> | undefined = <any> map1.get(terms[1]);
+    const map2: NestedMapActual<TE, TV> | undefined = <any> map1.get(terms[1]);
     if (!map2) {
       return false;
     }
-    const map3: NestedMapActual<E, V> | undefined = <any> map2.get(terms[2]);
+    const map3: NestedMapActual<TE, TV> | undefined = <any> map2.get(terms[2]);
     if (!map3) {
       return false;
     }
@@ -69,62 +70,63 @@ export class RdfStoreIndexNestedMapRecursive<E, V> implements IRdfStoreIndex<E, 
     return ret;
   }
 
-  public get(key: QuadTerms): V | undefined {
+  public get(key: QuadTerms): TV | undefined {
     const encoded = encodeOptionalTerms(<QuadPatternTerms> key, this.dictionary);
-    // eslint-disable-next-line unicorn/no-useless-undefined
+
     if (!encoded || encoded.includes(undefined)) {
       return undefined;
     }
-    return this.getEncoded(<EncodedQuadTerms<E>> encoded);
+    return this.getEncoded(<EncodedQuadTerms<TE>> encoded);
   }
 
-  public getEncoded(ids: EncodedQuadTerms<E>): V | undefined {
-    const map1: NestedMapActual<E, V> | undefined = <any> this.nestedMap.get(ids[0]);
+  public getEncoded(ids: EncodedQuadTerms<TE>): TV | undefined {
+    const map1: NestedMapActual<TE, TV> | undefined = <any> this.nestedMap.get(ids[0]);
     if (!map1) {
       return undefined;
     }
-    const map2: NestedMapActual<E, V> | undefined = <any> map1.get(ids[1]);
+    const map2: NestedMapActual<TE, TV> | undefined = <any> map1.get(ids[1]);
     if (!map2) {
       return undefined;
     }
-    const map3: NestedMapActual<E, V> | undefined = <any> map2.get(ids[2]);
+    const map3: NestedMapActual<TE, TV> | undefined = <any> map2.get(ids[2]);
     if (!map3) {
       return undefined;
     }
-    return <V | undefined> map3.get(ids[3]);
+    return <TV | undefined> map3.get(ids[3]);
   }
 
-  public * find(terms: QuadPatternTerms): IterableIterator<QuadTerms> {
+  public* find(terms: QuadPatternTerms): IterableIterator<QuadTerms> {
     const ids = encodeOptionalTerms(terms, this.dictionary);
     if (!ids) {
       return;
     }
 
-    for (const termsEncoded of this.findEncoded(<EncodedQuadTerms<E | undefined>> ids, terms)) {
+    for (const termsEncoded of this.findEncoded(<EncodedQuadTerms<TE | undefined>> ids, terms)) {
       yield [
-        ids[0] !== undefined ? terms[0]! : this.dictionary.decode(termsEncoded[0]),
-        ids[1] !== undefined ? terms[1]! : this.dictionary.decode(termsEncoded[1]),
-        ids[2] !== undefined ? terms[2]! : this.dictionary.decode(termsEncoded[2]),
-        ids[3] !== undefined ? terms[3]! : this.dictionary.decode(termsEncoded[3]),
+        ids[0] === undefined ? this.dictionary.decode(termsEncoded[0]) : terms[0]!,
+        ids[1] === undefined ? this.dictionary.decode(termsEncoded[1]) : terms[1]!,
+        ids[2] === undefined ? this.dictionary.decode(termsEncoded[2]) : terms[2]!,
+        ids[3] === undefined ? this.dictionary.decode(termsEncoded[3]) : terms[3]!,
       ];
     }
   }
 
-  public * findEncoded(
-    ids: EncodedQuadTerms<E | undefined>,
+  public* findEncoded(
+    ids: EncodedQuadTerms<TE | undefined>,
     terms: QuadPatternTerms,
-  ): IterableIterator<EncodedQuadTerms<E>> {
-    return yield * <IterableIterator<EncodedQuadTerms<E>>> this
+  ): IterableIterator<EncodedQuadTerms<TE>> {
+    // eslint-disable-next-line ts/no-unsafe-return
+    return yield* <IterableIterator<EncodedQuadTerms<TE>>> this
       .findEncodedInner(0, ids, terms, this.nestedMap, []);
   }
 
-  protected * findEncodedInner(
+  protected* findEncodedInner(
     index: number,
-    ids: (E | undefined)[],
+    ids: (TE | undefined)[],
     terms: QuadPatternTerms,
-    map: NestedMapActual<E, V>,
-    partialQuad: E[],
-  ): IterableIterator<E[]> {
+    map: NestedMapActual<TE, TV>,
+    partialQuad: TE[],
+  ): IterableIterator<TE[]> {
     if (index === ids.length) {
       yield [ ...partialQuad ];
     } else {
@@ -132,46 +134,46 @@ export class RdfStoreIndexNestedMapRecursive<E, V> implements IRdfStoreIndex<E, 
       const currentTerm = terms[index];
 
       // If current term is undefined, iterate over all terms at this level.
-      if (!currentTerm) {
-        for (const [ key, subMap ] of map.entries()) {
-          partialQuad[index] = key;
-          yield * this
-            .findEncodedInner(index + 1, ids, terms, <NestedMapActual<E, V>>subMap, partialQuad);
-        }
-      } else {
+      if (currentTerm) {
         // If the current term is defined, find one matching map for the current term.
         const encodedTerm = id;
         const subMap = map.get(encodedTerm!);
         if (subMap) {
-          partialQuad[index] = <E> id;
-          yield * this
-            .findEncodedInner(index + 1, ids, terms, <NestedMapActual<E, V>>subMap, partialQuad);
+          partialQuad[index] = <TE> id;
+          yield* this
+            .findEncodedInner(index + 1, ids, terms, <NestedMapActual<TE, TV>>subMap, partialQuad);
+        }
+      } else {
+        for (const [ key, subMap ] of map.entries()) {
+          partialQuad[index] = key;
+          yield* this
+            .findEncodedInner(index + 1, ids, terms, <NestedMapActual<TE, TV>>subMap, partialQuad);
         }
       }
     }
   }
 
-  protected * findTermsInner(
+  protected* findTermsInner(
     depth: number,
-    map: NestedMapActual<E, V>,
+    map: NestedMapActual<TE, TV>,
     matchTerms: boolean[],
-    partialResult: E[],
-  ): IterableIterator<E[]> {
+    partialResult: TE[],
+  ): IterableIterator<TE[]> {
     if (matchTerms[depth]) {
       for (const [ key1, subMap ] of map.entries()) {
         const newPartialResult = [ ...partialResult, key1 ];
-        yield * this.findTermsInner(depth + 1, <NestedMapActual<E, V>> subMap, matchTerms, newPartialResult);
+        yield* this.findTermsInner(depth + 1, <NestedMapActual<TE, TV>> subMap, matchTerms, newPartialResult);
       }
     } else if (depth < matchTerms.length) {
       for (const subMap of map.values()) {
-        yield * this.findTermsInner(depth + 1, <NestedMapActual<E, V>> subMap, matchTerms, partialResult);
+        yield* this.findTermsInner(depth + 1, <NestedMapActual<TE, TV>> subMap, matchTerms, partialResult);
       }
     } else {
       yield partialResult;
     }
   }
 
-  public findTerms(matchTerms: boolean[]): IterableIterator<E[]> {
+  public findTerms(matchTerms: boolean[]): IterableIterator<TE[]> {
     return this.findTermsInner(0, this.nestedMap, matchTerms, []);
   }
 
@@ -182,21 +184,13 @@ export class RdfStoreIndexNestedMapRecursive<E, V> implements IRdfStoreIndex<E, 
   protected countInner(
     index: number,
     terms: PatternTerm[],
-    map: NestedMapActual<E, V>,
+    map: NestedMapActual<TE, TV>,
   ): number {
     const currentTerm = terms[index];
     let count = 0;
 
     // If current term is undefined, iterate over all terms at this level.
-    if (!currentTerm) {
-      if (index === terms.length - 1) {
-        return map.size;
-      }
-
-      for (const subMap of map.values()) {
-        count += this.countInner(index + 1, terms, <NestedMapActual<E, V>>subMap);
-      }
-    } else {
+    if (currentTerm) {
       // If the current term is defined, find one matching map for the current term.
       const encodedTerm = this.dictionary.encodeOptional(currentTerm);
       if (encodedTerm !== undefined) {
@@ -209,8 +203,16 @@ export class RdfStoreIndexNestedMapRecursive<E, V> implements IRdfStoreIndex<E, 
 
         const subMap = map.get(encodedTerm);
         if (subMap) {
-          count += this.countInner(index + 1, terms, <NestedMapActual<E, V>>subMap);
+          count += this.countInner(index + 1, terms, <NestedMapActual<TE, TV>>subMap);
         }
+      }
+    } else {
+      if (index === terms.length - 1) {
+        return map.size;
+      }
+
+      for (const subMap of map.values()) {
+        count += this.countInner(index + 1, terms, <NestedMapActual<TE, TV>>subMap);
       }
     }
 
@@ -219,7 +221,7 @@ export class RdfStoreIndexNestedMapRecursive<E, V> implements IRdfStoreIndex<E, 
 
   protected countTermsInner(
     depth: number,
-    map: NestedMapActual<E, V>,
+    map: NestedMapActual<TE, TV>,
     matchTerms: boolean[],
   ): number {
     if (depth === matchTerms.length - 1) {
@@ -228,7 +230,7 @@ export class RdfStoreIndexNestedMapRecursive<E, V> implements IRdfStoreIndex<E, 
 
     let count = 0;
     for (const subMap of map.values()) {
-      count += this.countTermsInner(depth + 1, <NestedMapActual<E, V>> subMap, matchTerms);
+      count += this.countTermsInner(depth + 1, <NestedMapActual<TE, TV>> subMap, matchTerms);
     }
     return count;
   }

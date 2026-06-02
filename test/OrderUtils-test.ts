@@ -4,8 +4,13 @@ import type { ITermDictionary } from '../lib/dictionary/ITermDictionary';
 import { TermDictionaryNumberRecordFullTerms } from '../lib/dictionary/TermDictionaryNumberRecordFullTerms';
 import {
   encodeOptionalTerms,
-  getBestIndex, getBestIndexTerms, getComponentOrderScore, getIndexMatchTermsPath,
-  orderQuadComponents, quadHasVariables, quadToPattern,
+  getBestIndex,
+  getBestIndexTerms,
+  getComponentOrderScore,
+  getIndexMatchTermsPath,
+  orderQuadComponents,
+  quadHasVariables,
+  quadToPattern,
 } from '../lib/OrderUtils';
 
 const DF = new DataFactory();
@@ -25,56 +30,56 @@ describe('OrderUtils', () => {
         DF.namedNode('o'),
         DF.namedNode('g'),
       ]))
-        .toEqual(0);
+        .toBe(0);
       expect(getBestIndex(orders, [
         DF.namedNode('s'),
         DF.namedNode('p'),
         DF.namedNode('o'),
         undefined,
       ]))
-        .toEqual(0);
+        .toBe(0);
       expect(getBestIndex(orders, [
         DF.namedNode('s'),
         DF.namedNode('p'),
         undefined,
         DF.namedNode('g'),
       ]))
-        .toEqual(0);
+        .toBe(0);
       expect(getBestIndex(orders, [
         DF.namedNode('s'),
         DF.namedNode('p'),
         undefined,
         undefined,
       ]))
-        .toEqual(0);
+        .toBe(0);
       expect(getBestIndex(orders, [
         DF.namedNode('s'),
         undefined,
         DF.namedNode('o'),
         DF.namedNode('g'),
       ]))
-        .toEqual(2);
+        .toBe(2);
       expect(getBestIndex(orders, [
         DF.namedNode('s'),
         undefined,
         DF.namedNode('o'),
         undefined,
       ]))
-        .toEqual(2);
+        .toBe(2);
       expect(getBestIndex(orders, [
         DF.namedNode('s'),
         undefined,
         undefined,
         DF.namedNode('g'),
       ]))
-        .toEqual(0);
+        .toBe(0);
       expect(getBestIndex(orders, [
         DF.namedNode('s'),
         undefined,
         undefined,
         undefined,
       ]))
-        .toEqual(0);
+        .toBe(0);
 
       expect(getBestIndex(orders, [
         undefined,
@@ -82,56 +87,56 @@ describe('OrderUtils', () => {
         DF.namedNode('o'),
         DF.namedNode('g'),
       ]))
-        .toEqual(1);
+        .toBe(1);
       expect(getBestIndex(orders, [
         undefined,
         DF.namedNode('p'),
         DF.namedNode('o'),
         undefined,
       ]))
-        .toEqual(1);
+        .toBe(1);
       expect(getBestIndex(orders, [
         undefined,
         DF.namedNode('p'),
         undefined,
         DF.namedNode('g'),
       ]))
-        .toEqual(1);
+        .toBe(1);
       expect(getBestIndex(orders, [
         undefined,
         DF.namedNode('p'),
         undefined,
         undefined,
       ]))
-        .toEqual(1);
+        .toBe(1);
       expect(getBestIndex(orders, [
         undefined,
         undefined,
         DF.namedNode('o'),
         DF.namedNode('g'),
       ]))
-        .toEqual(2);
+        .toBe(2);
       expect(getBestIndex(orders, [
         undefined,
         undefined,
         DF.namedNode('o'),
         undefined,
       ]))
-        .toEqual(2);
+        .toBe(2);
       expect(getBestIndex(orders, [
         undefined,
         undefined,
         undefined,
         DF.namedNode('g'),
       ]))
-        .toEqual(0);
+        .toBe(0);
       expect(getBestIndex(orders, [
         undefined,
         undefined,
         undefined,
         undefined,
       ]))
-        .toEqual(0);
+        .toBe(0);
     });
   });
 
@@ -145,92 +150,92 @@ describe('OrderUtils', () => {
 
       expect(getBestIndexTerms(orders, [
         'graph',
-      ])).toEqual(0);
+      ])).toBe(0);
       expect(getBestIndexTerms(orders, [
         'graph',
         'subject',
-      ])).toEqual(0);
+      ])).toBe(0);
       expect(getBestIndexTerms(orders, [
         'graph',
         'subject',
         'predicate',
-      ])).toEqual(0);
+      ])).toBe(0);
       expect(getBestIndexTerms(orders, [
         'graph',
         'subject',
         'predicate',
         'object',
-      ])).toEqual(0);
+      ])).toBe(0);
 
       expect(getBestIndexTerms(orders, [
         'graph',
         'predicate',
-      ])).toEqual(1);
+      ])).toBe(1);
       expect(getBestIndexTerms(orders, [
         'graph',
         'predicate',
         'object',
-      ])).toEqual(1);
+      ])).toBe(1);
       expect(getBestIndexTerms(orders, [
         'graph',
         'predicate',
         'object',
         'subject',
-      ])).toEqual(0);
+      ])).toBe(0);
 
       expect(getBestIndexTerms(orders, [
         'graph',
         'object',
-      ])).toEqual(2);
+      ])).toBe(2);
       expect(getBestIndexTerms(orders, [
         'graph',
         'object',
         'subject',
-      ])).toEqual(2);
+      ])).toBe(2);
       expect(getBestIndexTerms(orders, [
         'graph',
         'object',
         'subject',
         'predicate',
-      ])).toEqual(0);
+      ])).toBe(0);
 
       expect(getBestIndexTerms(orders, [
         'subject',
-      ])).toEqual(0);
+      ])).toBe(0);
       expect(getBestIndexTerms(orders, [
         'subject',
         'predicate',
-      ])).toEqual(0);
+      ])).toBe(0);
 
       expect(getBestIndexTerms(orders, [
         'predicate',
         'object',
-      ])).toEqual(1);
+      ])).toBe(1);
       expect(getBestIndexTerms(orders, [
         'predicate',
-      ])).toEqual(1);
+      ])).toBe(1);
       expect(getBestIndexTerms(orders, [
         'predicate',
         'object',
         'subject',
-      ])).toEqual(0);
+      ])).toBe(0);
 
       expect(getBestIndexTerms(orders, [
         'object',
-      ])).toEqual(2);
+      ])).toBe(2);
       expect(getBestIndexTerms(orders, [
         'object',
         'subject',
-      ])).toEqual(2);
+      ])).toBe(2);
       expect(getBestIndexTerms(orders, [
         'object',
         'subject',
         'predicate',
-      ])).toEqual(0);
+      ])).toBe(0);
       expect(getBestIndexTerms(orders, [
         'object',
         'predicate',
-      ])).toEqual(1);
+      ])).toBe(1);
     });
   });
 
@@ -290,7 +295,7 @@ describe('OrderUtils', () => {
         'object',
         'predicate',
         'subject',
-      ])).toEqual(10);
+      ])).toBe(10);
 
       expect(getComponentOrderScore([
         'graph',
@@ -301,7 +306,7 @@ describe('OrderUtils', () => {
         'graph',
         'object',
         'predicate',
-      ])).toEqual(9);
+      ])).toBe(9);
 
       expect(getComponentOrderScore([
         'graph',
@@ -311,7 +316,7 @@ describe('OrderUtils', () => {
       ], [
         'graph',
         'predicate',
-      ])).toEqual(6);
+      ])).toBe(6);
 
       expect(getComponentOrderScore([
         'graph',
@@ -321,7 +326,7 @@ describe('OrderUtils', () => {
       ], [
         'graph',
         'object',
-      ])).toEqual(7);
+      ])).toBe(7);
 
       expect(getComponentOrderScore([
         'graph',
@@ -331,7 +336,7 @@ describe('OrderUtils', () => {
       ], [
         'graph',
         'subject',
-      ])).toEqual(5);
+      ])).toBe(5);
 
       expect(getComponentOrderScore([
         'graph',
@@ -340,7 +345,7 @@ describe('OrderUtils', () => {
         'subject',
       ], [
         'graph',
-      ])).toEqual(4);
+      ])).toBe(4);
 
       expect(getComponentOrderScore([
         'graph',
@@ -351,7 +356,7 @@ describe('OrderUtils', () => {
         'object',
         'predicate',
         'subject',
-      ])).toEqual(6);
+      ])).toBe(6);
     });
   });
 
@@ -394,7 +399,10 @@ describe('OrderUtils', () => {
         DF.namedNode('o'),
         DF.namedNode('g'),
       ], dict)).toEqual([
-        0, 1, 2, 3,
+        0,
+        1,
+        2,
+        3,
       ]);
     });
 
@@ -405,7 +413,10 @@ describe('OrderUtils', () => {
         DF.namedNode('o'),
         undefined,
       ], dict)).toEqual([
-        0, undefined, 2, undefined,
+        0,
+        undefined,
+        2,
+        undefined,
       ]);
     });
 
@@ -415,7 +426,7 @@ describe('OrderUtils', () => {
         DF.namedNode('p-not-in-dict'),
         DF.namedNode('o'),
         DF.namedNode('g'),
-      ], dict)).toEqual(undefined);
+      ], dict)).toBeUndefined();
     });
 
     it('should return for quoted patterns without variables', () => {
@@ -425,7 +436,10 @@ describe('OrderUtils', () => {
         DF.namedNode('o'),
         DF.namedNode('g'),
       ], dict)).toEqual([
-        0, 4, 2, 3,
+        0,
+        4,
+        2,
+        3,
       ]);
     });
 
@@ -436,7 +450,10 @@ describe('OrderUtils', () => {
         DF.namedNode('o'),
         DF.namedNode('g'),
       ], dict)).toEqual([
-        0, undefined, 2, 3,
+        0,
+        undefined,
+        2,
+        3,
       ]);
     });
   });

@@ -49,14 +49,9 @@ const allComponentOrders: QuadTermName[][][][] = [
 
 describe('RdfStore', () => {
   let store: RdfStore<number>;
-  each(allComponentOrders).describe('with one index in %o order', indexCombinations => {
-    each(Object.keys(indexClazzToInstance)).describe('for index type %s', indexClazz => {
-      each(Object.keys(dictClazzToInstance)).describe('for dictionary type %s', dictClazz => {
-        // Uncomment the following and comment the three above to disable test combinations
-        // describe('with one index in %o order', () => { const indexCombinations: any = allComponentOrders[2][0];
-        //   describe('for index type %s', () => { const indexClazz: any = Object.keys(indexClazzToInstance)[0];
-        //     describe('for dictionary type %s', () => { const dictClazz: any = Object.keys(dictClazzToInstance)[0];
-
+  each(allComponentOrders).describe('with one index in %o order', (indexCombinations) => {
+    each(Object.keys(indexClazzToInstance)).describe('for index type %s', (indexClazz) => {
+      each(Object.keys(dictClazzToInstance)).describe('for dictionary type %s', (dictClazz) => {
         beforeEach(() => {
           store = new RdfStore<number>({
             indexCombinations,
@@ -69,19 +64,19 @@ describe('RdfStore', () => {
         describe('that is empty', () => {
           describe('find', () => {
             it('should produce no results', async() => {
-              expect(await arrayifyStream(store.match())).toEqual([]);
+              await expect(arrayifyStream(store.match())).resolves.toEqual([]);
             });
           });
 
           describe('matchBindings', () => {
             it('should produce no results', async() => {
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.variable('s'),
                 DF.variable('p'),
                 DF.variable('o'),
                 DF.variable('g'),
-              ))).toEqual([]);
+              ))).resolves.toEqual([]);
             });
           });
 
@@ -169,83 +164,83 @@ describe('RdfStore', () => {
 
           describe('countDistinctTerms', () => {
             it('should return distinct subjects', async() => {
-              expect(store.countDistinctTerms([ 'subject' ])).toEqual(0);
+              expect(store.countDistinctTerms([ 'subject' ])).toBe(0);
             });
 
             it('should return distinct subjects and objects', async() => {
-              expect(store.countDistinctTerms([ 'subject', 'object' ])).toEqual(0);
+              expect(store.countDistinctTerms([ 'subject', 'object' ])).toBe(0);
             });
 
             it('should return distinct subjects and objects and predicates', async() => {
-              expect(store.countDistinctTerms([ 'subject', 'object', 'predicate' ])).toEqual(0);
+              expect(store.countDistinctTerms([ 'subject', 'object', 'predicate' ])).toBe(0);
             });
 
             it('should return distinct subjects and predicates and objects', async() => {
-              expect(store.countDistinctTerms([ 'subject', 'predicate', 'object' ])).toEqual(0);
+              expect(store.countDistinctTerms([ 'subject', 'predicate', 'object' ])).toBe(0);
             });
 
             it('should return distinct subjects and graphs and predicates and objects', async() => {
-              expect(store.countDistinctTerms([ 'subject', 'graph', 'predicate', 'object' ])).toEqual(0);
+              expect(store.countDistinctTerms([ 'subject', 'graph', 'predicate', 'object' ])).toBe(0);
             });
 
             it('should return distinct predicates', async() => {
-              expect(store.countDistinctTerms([ 'predicate' ])).toEqual(0);
+              expect(store.countDistinctTerms([ 'predicate' ])).toBe(0);
             });
 
             it('should return distinct predicates and objects', async() => {
-              expect(store.countDistinctTerms([ 'predicate', 'object' ])).toEqual(0);
+              expect(store.countDistinctTerms([ 'predicate', 'object' ])).toBe(0);
             });
 
             it('should return distinct predicates and objects and subjects', async() => {
-              expect(store.countDistinctTerms([ 'predicate', 'object', 'subject' ])).toEqual(0);
+              expect(store.countDistinctTerms([ 'predicate', 'object', 'subject' ])).toBe(0);
             });
 
             it('should return distinct predicates and subjects and objects', async() => {
-              expect(store.countDistinctTerms([ 'predicate', 'subject', 'object' ])).toEqual(0);
+              expect(store.countDistinctTerms([ 'predicate', 'subject', 'object' ])).toBe(0);
             });
 
             it('should return distinct predicates and objects and subjects and graphs', async() => {
-              expect(store.countDistinctTerms([ 'predicate', 'object', 'subject', 'graph' ])).toEqual(0);
+              expect(store.countDistinctTerms([ 'predicate', 'object', 'subject', 'graph' ])).toBe(0);
             });
 
             it('should return distinct predicates and subjects and graphs and objects', async() => {
-              expect(store.countDistinctTerms([ 'predicate', 'subject', 'graph', 'object' ])).toEqual(0);
+              expect(store.countDistinctTerms([ 'predicate', 'subject', 'graph', 'object' ])).toBe(0);
             });
 
             it('should return distinct objects', async() => {
-              expect(store.countDistinctTerms([ 'object' ])).toEqual(0);
+              expect(store.countDistinctTerms([ 'object' ])).toBe(0);
             });
 
             it('should return distinct objects and graphs', async() => {
-              expect(store.countDistinctTerms([ 'object', 'graph' ])).toEqual(0);
+              expect(store.countDistinctTerms([ 'object', 'graph' ])).toBe(0);
             });
 
             it('should return distinct objects and predicates and graphs', async() => {
-              expect(store.countDistinctTerms([ 'object', 'predicate', 'graph' ])).toEqual(0);
+              expect(store.countDistinctTerms([ 'object', 'predicate', 'graph' ])).toBe(0);
             });
 
             it('should return distinct objects and graphs and predicates', async() => {
-              expect(store.countDistinctTerms([ 'object', 'graph', 'predicate' ])).toEqual(0);
+              expect(store.countDistinctTerms([ 'object', 'graph', 'predicate' ])).toBe(0);
             });
 
             it('should return distinct objects and predicates and graphs and subjects', async() => {
-              expect(store.countDistinctTerms([ 'object', 'predicate', 'graph', 'subject' ])).toEqual(0);
+              expect(store.countDistinctTerms([ 'object', 'predicate', 'graph', 'subject' ])).toBe(0);
             });
 
             it('should return distinct graphs', async() => {
-              expect(store.countDistinctTerms([ 'graph' ])).toEqual(0);
+              expect(store.countDistinctTerms([ 'graph' ])).toBe(0);
             });
 
             it('should return distinct graphs and objects', async() => {
-              expect(store.countDistinctTerms([ 'graph', 'object' ])).toEqual(0);
+              expect(store.countDistinctTerms([ 'graph', 'object' ])).toBe(0);
             });
 
             it('should return distinct graphs and objects and subjects', async() => {
-              expect(store.countDistinctTerms([ 'graph', 'object', 'subject' ])).toEqual(0);
+              expect(store.countDistinctTerms([ 'graph', 'object', 'subject' ])).toBe(0);
             });
 
             it('should return distinct graphs and objects and subjects and predicates', async() => {
-              expect(store.countDistinctTerms([ 'graph', 'object', 'subject', 'predicate' ])).toEqual(0);
+              expect(store.countDistinctTerms([ 'graph', 'object', 'subject', 'predicate' ])).toBe(0);
             });
           });
         });
@@ -282,7 +277,7 @@ describe('RdfStore', () => {
 
           describe('size', () => {
             it('should be 1', () => {
-              expect(store.size).toEqual(1);
+              expect(store.size).toBe(1);
             });
           });
 
@@ -301,13 +296,13 @@ describe('RdfStore', () => {
 
           describe('countQuads', () => {
             it('should return 1 for a variable pattern', () => {
-              expect(store.countQuads()).toEqual(1);
+              expect(store.countQuads()).toBe(1);
             });
           });
 
           describe('find', () => {
             it('should produce 1 result for a variable pattern', async() => {
-              expect(await arrayifyStream(store.match())).toEqual([
+              await expect(arrayifyStream(store.match())).resolves.toEqual([
                 DF.quad(
                   DF.namedNode('s'),
                   DF.namedNode('p'),
@@ -318,12 +313,12 @@ describe('RdfStore', () => {
             });
 
             it('should produce 1 result for an exact match', async() => {
-              expect(await arrayifyStream(store.match(
+              await expect(arrayifyStream(store.match(
                 DF.namedNode('s'),
                 DF.namedNode('p'),
                 DF.namedNode('o'),
                 DF.namedNode('g'),
-              ))).toEqual([
+              ))).resolves.toEqual([
                 DF.quad(
                   DF.namedNode('s'),
                   DF.namedNode('p'),
@@ -334,12 +329,12 @@ describe('RdfStore', () => {
             });
 
             it('should produce 1 result for a partial match', async() => {
-              expect(await arrayifyStream(store.match(
+              await expect(arrayifyStream(store.match(
                 undefined,
                 DF.namedNode('p'),
                 undefined,
                 DF.namedNode('g'),
-              ))).toEqual([
+              ))).resolves.toEqual([
                 DF.quad(
                   DF.namedNode('s'),
                   DF.namedNode('p'),
@@ -350,24 +345,24 @@ describe('RdfStore', () => {
             });
 
             it('should produce 0 results for a partial non-match', async() => {
-              expect(await arrayifyStream(store.match(
+              await expect(arrayifyStream(store.match(
                 undefined,
                 DF.namedNode('p1'),
                 undefined,
                 DF.namedNode('g'),
-              ))).toEqual([]);
+              ))).resolves.toEqual([]);
             });
           });
 
           describe('matchBindings', () => {
             it('should produce 1 result for a variable pattern', async() => {
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.variable('s'),
                 DF.variable('p'),
                 DF.variable('o'),
                 DF.variable('g'),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({
                   s: DF.namedNode('s'),
                   p: DF.namedNode('p'),
@@ -378,25 +373,25 @@ describe('RdfStore', () => {
             });
 
             it('should produce 1 result for an exact match', async() => {
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.namedNode('s'),
                 DF.namedNode('p'),
                 DF.namedNode('o'),
                 DF.namedNode('g'),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({}),
               ]);
             });
 
             it('should produce 1 result for a partial match', async() => {
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.variable('s'),
                 DF.namedNode('p'),
                 DF.variable('o'),
                 DF.namedNode('g'),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({
                   s: DF.namedNode('s'),
                   o: DF.namedNode('o'),
@@ -405,13 +400,13 @@ describe('RdfStore', () => {
             });
 
             it('should produce 0 results for a partial non-match', async() => {
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.variable('s'),
                 DF.namedNode('p1'),
                 DF.variable('o'),
                 DF.namedNode('g'),
-              ))).toEqualBindingsArray([]);
+              ))).resolves.toEqualBindingsArray([]);
             });
           });
 
@@ -441,11 +436,11 @@ describe('RdfStore', () => {
                 DF.namedNode('s'),
                 DF.namedNode('s'),
                 DF.namedNode('s'),
-              ))).toEqual(false);
+              ))).toBe(false);
 
               // Store should not be changed
-              expect(store.size).toEqual(1);
-              expect(await arrayifyStream(store.match())).toEqual([
+              expect(store.size).toBe(1);
+              await expect(arrayifyStream(store.match())).resolves.toEqual([
                 DF.quad(
                   DF.namedNode('s'),
                   DF.namedNode('p'),
@@ -461,11 +456,11 @@ describe('RdfStore', () => {
                 DF.namedNode('s-non'),
                 DF.namedNode('s-non'),
                 DF.namedNode('s-non'),
-              ))).toEqual(false);
+              ))).toBe(false);
 
               // Store should not be changed
-              expect(store.size).toEqual(1);
-              expect(await arrayifyStream(store.match())).toEqual([
+              expect(store.size).toBe(1);
+              await expect(arrayifyStream(store.match())).resolves.toEqual([
                 DF.quad(
                   DF.namedNode('s'),
                   DF.namedNode('p'),
@@ -481,11 +476,11 @@ describe('RdfStore', () => {
                 DF.namedNode('p'),
                 DF.namedNode('o'),
                 DF.namedNode('g'),
-              ))).toEqual(true);
+              ))).toBe(true);
 
               // Store should be changed
-              expect(store.size).toEqual(0);
-              expect(await arrayifyStream(store.match())).toEqual([]);
+              expect(store.size).toBe(0);
+              await expect(arrayifyStream(store.match())).resolves.toEqual([]);
             });
 
             it('should remove an existing quad just once', async() => {
@@ -494,18 +489,18 @@ describe('RdfStore', () => {
                 DF.namedNode('p'),
                 DF.namedNode('o'),
                 DF.namedNode('g'),
-              ))).toEqual(true);
+              ))).toBe(true);
 
               expect(store.removeQuad(DF.quad(
                 DF.namedNode('s'),
                 DF.namedNode('p'),
                 DF.namedNode('o'),
                 DF.namedNode('g'),
-              ))).toEqual(false);
+              ))).toBe(false);
 
               // Store should be changed
-              expect(store.size).toEqual(0);
-              expect(await arrayifyStream(store.match())).toEqual([]);
+              expect(store.size).toBe(0);
+              await expect(arrayifyStream(store.match())).resolves.toEqual([]);
             });
           });
 
@@ -633,83 +628,83 @@ describe('RdfStore', () => {
 
           describe('countDistinctTerms', () => {
             it('should return distinct subjects', async() => {
-              expect(store.countDistinctTerms([ 'subject' ])).toEqual(1);
+              expect(store.countDistinctTerms([ 'subject' ])).toBe(1);
             });
 
             it('should return distinct subjects and objects', async() => {
-              expect(store.countDistinctTerms([ 'subject', 'object' ])).toEqual(1);
+              expect(store.countDistinctTerms([ 'subject', 'object' ])).toBe(1);
             });
 
             it('should return distinct subjects and objects and predicates', async() => {
-              expect(store.countDistinctTerms([ 'subject', 'object', 'predicate' ])).toEqual(1);
+              expect(store.countDistinctTerms([ 'subject', 'object', 'predicate' ])).toBe(1);
             });
 
             it('should return distinct subjects and predicates and objects', async() => {
-              expect(store.countDistinctTerms([ 'subject', 'predicate', 'object' ])).toEqual(1);
+              expect(store.countDistinctTerms([ 'subject', 'predicate', 'object' ])).toBe(1);
             });
 
             it('should return distinct subjects and graphs and predicates and objects', async() => {
-              expect(store.countDistinctTerms([ 'subject', 'graph', 'predicate', 'object' ])).toEqual(1);
+              expect(store.countDistinctTerms([ 'subject', 'graph', 'predicate', 'object' ])).toBe(1);
             });
 
             it('should return distinct predicates', async() => {
-              expect(store.countDistinctTerms([ 'predicate' ])).toEqual(1);
+              expect(store.countDistinctTerms([ 'predicate' ])).toBe(1);
             });
 
             it('should return distinct predicates and objects', async() => {
-              expect(store.countDistinctTerms([ 'predicate', 'object' ])).toEqual(1);
+              expect(store.countDistinctTerms([ 'predicate', 'object' ])).toBe(1);
             });
 
             it('should return distinct predicates and objects and subjects', async() => {
-              expect(store.countDistinctTerms([ 'predicate', 'object', 'subject' ])).toEqual(1);
+              expect(store.countDistinctTerms([ 'predicate', 'object', 'subject' ])).toBe(1);
             });
 
             it('should return distinct predicates and subjects and objects', async() => {
-              expect(store.countDistinctTerms([ 'predicate', 'subject', 'object' ])).toEqual(1);
+              expect(store.countDistinctTerms([ 'predicate', 'subject', 'object' ])).toBe(1);
             });
 
             it('should return distinct predicates and objects and subjects and graphs', async() => {
-              expect(store.countDistinctTerms([ 'predicate', 'object', 'subject', 'graph' ])).toEqual(1);
+              expect(store.countDistinctTerms([ 'predicate', 'object', 'subject', 'graph' ])).toBe(1);
             });
 
             it('should return distinct predicates and subjects and graphs and objects', async() => {
-              expect(store.countDistinctTerms([ 'predicate', 'subject', 'graph', 'object' ])).toEqual(1);
+              expect(store.countDistinctTerms([ 'predicate', 'subject', 'graph', 'object' ])).toBe(1);
             });
 
             it('should return distinct objects', async() => {
-              expect(store.countDistinctTerms([ 'object' ])).toEqual(1);
+              expect(store.countDistinctTerms([ 'object' ])).toBe(1);
             });
 
             it('should return distinct objects and graphs', async() => {
-              expect(store.countDistinctTerms([ 'object', 'graph' ])).toEqual(1);
+              expect(store.countDistinctTerms([ 'object', 'graph' ])).toBe(1);
             });
 
             it('should return distinct objects and predicates and graphs', async() => {
-              expect(store.countDistinctTerms([ 'object', 'predicate', 'graph' ])).toEqual(1);
+              expect(store.countDistinctTerms([ 'object', 'predicate', 'graph' ])).toBe(1);
             });
 
             it('should return distinct objects and graphs and predicates', async() => {
-              expect(store.countDistinctTerms([ 'object', 'graph', 'predicate' ])).toEqual(1);
+              expect(store.countDistinctTerms([ 'object', 'graph', 'predicate' ])).toBe(1);
             });
 
             it('should return distinct objects and predicates and graphs and subjects', async() => {
-              expect(store.countDistinctTerms([ 'object', 'predicate', 'graph', 'subject' ])).toEqual(1);
+              expect(store.countDistinctTerms([ 'object', 'predicate', 'graph', 'subject' ])).toBe(1);
             });
 
             it('should return distinct graphs', async() => {
-              expect(store.countDistinctTerms([ 'graph' ])).toEqual(1);
+              expect(store.countDistinctTerms([ 'graph' ])).toBe(1);
             });
 
             it('should return distinct graphs and objects', async() => {
-              expect(store.countDistinctTerms([ 'graph', 'object' ])).toEqual(1);
+              expect(store.countDistinctTerms([ 'graph', 'object' ])).toBe(1);
             });
 
             it('should return distinct graphs and objects and subjects', async() => {
-              expect(store.countDistinctTerms([ 'graph', 'object', 'subject' ])).toEqual(1);
+              expect(store.countDistinctTerms([ 'graph', 'object', 'subject' ])).toBe(1);
             });
 
             it('should return distinct graphs and objects and subjects and predicates', async() => {
-              expect(store.countDistinctTerms([ 'graph', 'object', 'subject', 'predicate' ])).toEqual(1);
+              expect(store.countDistinctTerms([ 'graph', 'object', 'subject', 'predicate' ])).toBe(1);
             });
           });
         });
@@ -747,13 +742,13 @@ describe('RdfStore', () => {
 
           describe('size', () => {
             it('should be 4', () => {
-              expect(store.size).toEqual(4);
+              expect(store.size).toBe(4);
             });
           });
 
           describe('find', () => {
             it('should produce all results for a variable pattern', async() => {
-              expect(await arrayifyStream(store.match())).toBeRdfIsomorphic([
+              await expect(arrayifyStream(store.match())).resolves.toBeRdfIsomorphic([
                 DF.quad(
                   DF.namedNode('s1'),
                   DF.namedNode('p1'),
@@ -782,12 +777,12 @@ describe('RdfStore', () => {
             });
 
             it('should produce 1 result for exact matches', async() => {
-              expect(await arrayifyStream(store.match(
+              await expect(arrayifyStream(store.match(
                 DF.namedNode('s1'),
                 DF.namedNode('p1'),
                 DF.namedNode('o1'),
                 DF.namedNode('g1'),
-              ))).toEqual([
+              ))).resolves.toEqual([
                 DF.quad(
                   DF.namedNode('s1'),
                   DF.namedNode('p1'),
@@ -796,12 +791,12 @@ describe('RdfStore', () => {
                 ),
               ]);
 
-              expect(await arrayifyStream(store.match(
+              await expect(arrayifyStream(store.match(
                 DF.namedNode('s1'),
                 DF.namedNode('p2'),
                 DF.namedNode('o2'),
                 DF.namedNode('g1'),
-              ))).toEqual([
+              ))).resolves.toEqual([
                 DF.quad(
                   DF.namedNode('s1'),
                   DF.namedNode('p2'),
@@ -810,12 +805,12 @@ describe('RdfStore', () => {
                 ),
               ]);
 
-              expect(await arrayifyStream(store.match(
+              await expect(arrayifyStream(store.match(
                 DF.namedNode('s2'),
                 DF.namedNode('p1'),
                 DF.namedNode('o1'),
                 DF.namedNode('g1'),
-              ))).toEqual([
+              ))).resolves.toEqual([
                 DF.quad(
                   DF.namedNode('s2'),
                   DF.namedNode('p1'),
@@ -824,12 +819,12 @@ describe('RdfStore', () => {
                 ),
               ]);
 
-              expect(await arrayifyStream(store.match(
+              await expect(arrayifyStream(store.match(
                 DF.namedNode('s2'),
                 DF.namedNode('p2'),
                 DF.namedNode('o2'),
                 DF.namedNode('g2'),
-              ))).toEqual([
+              ))).resolves.toEqual([
                 DF.quad(
                   DF.namedNode('s2'),
                   DF.namedNode('p2'),
@@ -840,9 +835,9 @@ describe('RdfStore', () => {
             });
 
             it('should produce results for partial matches', async() => {
-              expect(await arrayifyStream(store.match(
+              await expect(arrayifyStream(store.match(
                 DF.namedNode('s1'),
-              ))).toEqual([
+              ))).resolves.toEqual([
                 DF.quad(
                   DF.namedNode('s1'),
                   DF.namedNode('p1'),
@@ -857,9 +852,9 @@ describe('RdfStore', () => {
                 ),
               ]);
 
-              expect(await arrayifyStream(store.match(
+              await expect(arrayifyStream(store.match(
                 DF.namedNode('s2'),
-              ))).toEqual([
+              ))).resolves.toEqual([
                 DF.quad(
                   DF.namedNode('s2'),
                   DF.namedNode('p1'),
@@ -874,10 +869,10 @@ describe('RdfStore', () => {
                 ),
               ]);
 
-              expect(await arrayifyStream(store.match(
+              await expect(arrayifyStream(store.match(
                 undefined,
                 DF.namedNode('p1'),
-              ))).toEqual([
+              ))).resolves.toEqual([
                 DF.quad(
                   DF.namedNode('s1'),
                   DF.namedNode('p1'),
@@ -892,10 +887,10 @@ describe('RdfStore', () => {
                 ),
               ]);
 
-              expect(await arrayifyStream(store.match(
+              await expect(arrayifyStream(store.match(
                 DF.namedNode('s2'),
                 DF.namedNode('p1'),
-              ))).toEqual([
+              ))).resolves.toEqual([
                 DF.quad(
                   DF.namedNode('s2'),
                   DF.namedNode('p1'),
@@ -904,12 +899,12 @@ describe('RdfStore', () => {
                 ),
               ]);
 
-              expect(await arrayifyStream(store.match(
+              await expect(arrayifyStream(store.match(
                 DF.namedNode('s2'),
                 undefined,
                 undefined,
                 DF.namedNode('g2'),
-              ))).toEqual([
+              ))).resolves.toEqual([
                 DF.quad(
                   DF.namedNode('s2'),
                   DF.namedNode('p2'),
@@ -918,12 +913,12 @@ describe('RdfStore', () => {
                 ),
               ]);
 
-              expect(await arrayifyStream(store.match(
+              await expect(arrayifyStream(store.match(
                 DF.namedNode('s2'),
                 DF.variable('v1'),
                 DF.variable('v2'),
                 DF.namedNode('g2'),
-              ))).toEqual([
+              ))).resolves.toEqual([
                 DF.quad(
                   DF.namedNode('s2'),
                   DF.namedNode('p2'),
@@ -932,24 +927,24 @@ describe('RdfStore', () => {
                 ),
               ]);
 
-              expect(await arrayifyStream(store.match(
+              await expect(arrayifyStream(store.match(
                 DF.namedNode('s2'),
                 undefined,
                 undefined,
                 DF.namedNode('g3'),
-              ))).toEqual([]);
+              ))).resolves.toEqual([]);
             });
           });
 
           describe('matchBindings', () => {
             it('should produce all results for a variable pattern', async() => {
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.variable('s'),
                 DF.variable('p'),
                 DF.variable('o'),
                 DF.variable('g'),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({
                   s: DF.namedNode('s1'),
                   p: DF.namedNode('p1'),
@@ -978,55 +973,55 @@ describe('RdfStore', () => {
             });
 
             it('should produce 1 result for exact matches', async() => {
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.namedNode('s1'),
                 DF.namedNode('p1'),
                 DF.namedNode('o1'),
                 DF.namedNode('g1'),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({}),
               ]);
 
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.namedNode('s1'),
                 DF.namedNode('p2'),
                 DF.namedNode('o2'),
                 DF.namedNode('g1'),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({}),
               ]);
 
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.namedNode('s2'),
                 DF.namedNode('p1'),
                 DF.namedNode('o1'),
                 DF.namedNode('g1'),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({}),
               ]);
 
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.namedNode('s2'),
                 DF.namedNode('p2'),
                 DF.namedNode('o2'),
                 DF.namedNode('g2'),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({}),
               ]);
             });
 
             it('should produce results for partial matches', async() => {
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.namedNode('s1'),
                 DF.variable('p'),
                 DF.variable('o'),
                 DF.variable('g'),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({
                   p: DF.namedNode('p1'),
                   o: DF.namedNode('o1'),
@@ -1039,13 +1034,13 @@ describe('RdfStore', () => {
                 }),
               ], true);
 
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.namedNode('s2'),
                 DF.variable('p'),
                 DF.variable('o'),
                 DF.variable('g'),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({
                   p: DF.namedNode('p1'),
                   o: DF.namedNode('o1'),
@@ -1058,13 +1053,13 @@ describe('RdfStore', () => {
                 }),
               ], true);
 
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.variable('s'),
                 DF.namedNode('p1'),
                 DF.variable('o'),
                 DF.variable('g'),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({
                   s: DF.namedNode('s1'),
                   o: DF.namedNode('o1'),
@@ -1077,58 +1072,58 @@ describe('RdfStore', () => {
                 }),
               ], true);
 
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.namedNode('s2'),
                 DF.namedNode('p1'),
                 DF.variable('o'),
                 DF.variable('g'),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({
                   o: DF.namedNode('o1'),
                   g: DF.namedNode('g1'),
                 }),
               ], true);
 
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.namedNode('s2'),
                 DF.variable('p'),
                 DF.variable('o'),
                 DF.namedNode('g2'),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({
                   p: DF.namedNode('p2'),
                   o: DF.namedNode('o2'),
                 }),
               ], true);
 
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.namedNode('s2'),
                 DF.variable('v1'),
                 DF.variable('v2'),
                 DF.namedNode('g2'),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({
                   v1: DF.namedNode('p2'),
                   v2: DF.namedNode('o2'),
                 }),
               ], true);
 
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.namedNode('s2'),
                 DF.variable('p'),
                 DF.variable('o'),
                 DF.namedNode('g3'),
-              ))).toEqualBindingsArray([], true);
+              ))).resolves.toEqualBindingsArray([], true);
             });
           });
 
           describe('countQuads', () => {
             it('should produce all results for a variable pattern', async() => {
-              expect(store.countQuads()).toEqual(4);
+              expect(store.countQuads()).toBe(4);
             });
 
             it('should produce 1 result for exact matches', async() => {
@@ -1137,69 +1132,69 @@ describe('RdfStore', () => {
                 DF.namedNode('p1'),
                 DF.namedNode('o1'),
                 DF.namedNode('g1'),
-              )).toEqual(1);
+              )).toBe(1);
 
               expect(store.countQuads(
                 DF.namedNode('s1'),
                 DF.namedNode('p2'),
                 DF.namedNode('o2'),
                 DF.namedNode('g1'),
-              )).toEqual(1);
+              )).toBe(1);
 
               expect(store.countQuads(
                 DF.namedNode('s2'),
                 DF.namedNode('p1'),
                 DF.namedNode('o1'),
                 DF.namedNode('g1'),
-              )).toEqual(1);
+              )).toBe(1);
 
               expect(store.countQuads(
                 DF.namedNode('s2'),
                 DF.namedNode('p2'),
                 DF.namedNode('o2'),
                 DF.namedNode('g2'),
-              )).toEqual(1);
+              )).toBe(1);
             });
 
             it('should produce results for partial matches', async() => {
               expect(store.countQuads(
                 DF.namedNode('s1'),
-              )).toEqual(2);
+              )).toBe(2);
 
               expect(store.countQuads(
                 DF.namedNode('s2'),
-              )).toEqual(2);
+              )).toBe(2);
 
               expect(store.countQuads(
                 undefined,
                 DF.namedNode('p1'),
-              )).toEqual(2);
+              )).toBe(2);
 
               expect(store.countQuads(
                 DF.namedNode('s2'),
                 DF.namedNode('p1'),
-              )).toEqual(1);
+              )).toBe(1);
 
               expect(store.countQuads(
                 DF.namedNode('s2'),
                 undefined,
                 undefined,
                 DF.namedNode('g2'),
-              )).toEqual(1);
+              )).toBe(1);
 
               expect(store.countQuads(
                 DF.namedNode('s2'),
                 DF.variable('v1'),
                 DF.variable('v2'),
                 DF.namedNode('g2'),
-              )).toEqual(1);
+              )).toBe(1);
 
               expect(store.countQuads(
                 DF.namedNode('s2'),
                 undefined,
                 undefined,
                 DF.namedNode('g3'),
-              )).toEqual(0);
+              )).toBe(0);
             });
           });
 
@@ -1210,11 +1205,11 @@ describe('RdfStore', () => {
                 DF.namedNode('s1'),
                 DF.namedNode('s1'),
                 DF.namedNode('s1'),
-              ))).toEqual(false);
+              ))).toBe(false);
 
               // Store should not be changed
-              expect(store.size).toEqual(4);
-              expect((await arrayifyStream(store.match())).length).toEqual(4);
+              expect(store.size).toBe(4);
+              await expect((arrayifyStream(store.match()))).resolves.toHaveLength(4);
             });
 
             it('should not remove a non-existing quad that is not encoded', async() => {
@@ -1223,11 +1218,11 @@ describe('RdfStore', () => {
                 DF.namedNode('s-non'),
                 DF.namedNode('s-non'),
                 DF.namedNode('s-non'),
-              ))).toEqual(false);
+              ))).toBe(false);
 
               // Store should not be changed
-              expect(store.size).toEqual(4);
-              expect((await arrayifyStream(store.match())).length).toEqual(4);
+              expect(store.size).toBe(4);
+              await expect((arrayifyStream(store.match()))).resolves.toHaveLength(4);
             });
 
             it('should remove an existing quad', async() => {
@@ -1236,44 +1231,44 @@ describe('RdfStore', () => {
                 DF.namedNode('p2'),
                 DF.namedNode('o2'),
                 DF.namedNode('g2'),
-              ))).toEqual(true);
+              ))).toBe(true);
 
               // Store should be changed
-              expect(store.size).toEqual(3);
-              expect((await arrayifyStream(store.match())).length).toEqual(3);
+              expect(store.size).toBe(3);
+              await expect((arrayifyStream(store.match()))).resolves.toHaveLength(3);
 
               expect(store.removeQuad(DF.quad(
                 DF.namedNode('s2'),
                 DF.namedNode('p1'),
                 DF.namedNode('o1'),
                 DF.namedNode('g1'),
-              ))).toEqual(true);
+              ))).toBe(true);
 
               // Store should be changed
-              expect(store.size).toEqual(2);
-              expect((await arrayifyStream(store.match())).length).toEqual(2);
+              expect(store.size).toBe(2);
+              await expect((arrayifyStream(store.match()))).resolves.toHaveLength(2);
 
               expect(store.removeQuad(DF.quad(
                 DF.namedNode('s1'),
                 DF.namedNode('p2'),
                 DF.namedNode('o2'),
                 DF.namedNode('g1'),
-              ))).toEqual(true);
+              ))).toBe(true);
 
               // Store should be changed
-              expect(store.size).toEqual(1);
-              expect((await arrayifyStream(store.match())).length).toEqual(1);
+              expect(store.size).toBe(1);
+              await expect((arrayifyStream(store.match()))).resolves.toHaveLength(1);
 
               expect(store.removeQuad(DF.quad(
                 DF.namedNode('s1'),
                 DF.namedNode('p1'),
                 DF.namedNode('o1'),
                 DF.namedNode('g1'),
-              ))).toEqual(true);
+              ))).toBe(true);
 
               // Store should be changed
-              expect(store.size).toEqual(0);
-              expect((await arrayifyStream(store.match())).length).toEqual(0);
+              expect(store.size).toBe(0);
+              await expect((arrayifyStream(store.match()))).resolves.toHaveLength(0);
             });
 
             it('should remove an existing quad just once', async() => {
@@ -1282,18 +1277,18 @@ describe('RdfStore', () => {
                 DF.namedNode('p2'),
                 DF.namedNode('o2'),
                 DF.namedNode('g2'),
-              ))).toEqual(true);
+              ))).toBe(true);
 
               expect(store.removeQuad(DF.quad(
                 DF.namedNode('s2'),
                 DF.namedNode('p2'),
                 DF.namedNode('o2'),
                 DF.namedNode('g2'),
-              ))).toEqual(false);
+              ))).toBe(false);
 
               // Store should be changed
-              expect(store.size).toEqual(3);
-              expect((await arrayifyStream(store.match())).length).toEqual(3);
+              expect(store.size).toBe(3);
+              await expect((arrayifyStream(store.match()))).resolves.toHaveLength(3);
             });
           });
 
@@ -1302,8 +1297,8 @@ describe('RdfStore', () => {
               await new Promise(resolve => store.remove(streamifyArray([])).on('end', resolve));
 
               // Store should not be changed
-              expect(store.size).toEqual(4);
-              expect((await arrayifyStream(store.match())).length).toEqual(4);
+              expect(store.size).toBe(4);
+              await expect((arrayifyStream(store.match()))).resolves.toHaveLength(4);
             });
 
             it('should remove quads for an non-empty stream', async() => {
@@ -1323,8 +1318,8 @@ describe('RdfStore', () => {
               ])).on('end', resolve));
 
               // Store should not be changed
-              expect(store.size).toEqual(2);
-              expect(await arrayifyStream(store.match())).toEqual([
+              expect(store.size).toBe(2);
+              await expect(arrayifyStream(store.match())).resolves.toEqual([
                 DF.quad(
                   DF.namedNode('s2'),
                   DF.namedNode('p1'),
@@ -1346,8 +1341,8 @@ describe('RdfStore', () => {
               await new Promise(resolve => store.removeMatches(DF.namedNode('no')).on('end', resolve));
 
               // Store should not be changed
-              expect(store.size).toEqual(4);
-              expect((await arrayifyStream(store.match())).length).toEqual(4);
+              expect(store.size).toBe(4);
+              await expect((arrayifyStream(store.match()))).resolves.toHaveLength(4);
             });
 
             it('should remove quads for matching quads', async() => {
@@ -1359,8 +1354,8 @@ describe('RdfStore', () => {
               ).on('end', resolve));
 
               // Store should not be changed
-              expect(store.size).toEqual(2);
-              expect(await arrayifyStream(store.match())).toEqual([
+              expect(store.size).toBe(2);
+              await expect(arrayifyStream(store.match())).resolves.toEqual([
                 DF.quad(
                   DF.namedNode('s2'),
                   DF.namedNode('p1'),
@@ -1382,16 +1377,16 @@ describe('RdfStore', () => {
               await new Promise(resolve => store.deleteGraph(DF.namedNode('no')).on('end', resolve));
 
               // Store should not be changed
-              expect(store.size).toEqual(4);
-              expect((await arrayifyStream(store.match())).length).toEqual(4);
+              expect(store.size).toBe(4);
+              await expect((arrayifyStream(store.match()))).resolves.toHaveLength(4);
             });
 
             it('should remove quads for the matching graph', async() => {
               await new Promise(resolve => store.deleteGraph(DF.namedNode('g1')).on('end', resolve));
 
               // Store should not be changed
-              expect(store.size).toEqual(1);
-              expect(await arrayifyStream(store.match())).toEqual([
+              expect(store.size).toBe(1);
+              await expect(arrayifyStream(store.match())).resolves.toEqual([
                 DF.quad(
                   DF.namedNode('s2'),
                   DF.namedNode('p2'),
@@ -1405,8 +1400,8 @@ describe('RdfStore', () => {
               await new Promise(resolve => store.deleteGraph('g1').on('end', resolve));
 
               // Store should not be changed
-              expect(store.size).toEqual(1);
-              expect(await arrayifyStream(store.match())).toEqual([
+              expect(store.size).toBe(1);
+              await expect(arrayifyStream(store.match())).resolves.toEqual([
                 DF.quad(
                   DF.namedNode('s2'),
                   DF.namedNode('p2'),
@@ -1596,83 +1591,83 @@ describe('RdfStore', () => {
 
           describe('countDistinctTerms', () => {
             it('should return distinct subjects', async() => {
-              expect(store.countDistinctTerms([ 'subject' ])).toEqual(2);
+              expect(store.countDistinctTerms([ 'subject' ])).toBe(2);
             });
 
             it('should return distinct subjects and objects', async() => {
-              expect(store.countDistinctTerms([ 'subject', 'object' ])).toEqual(4);
+              expect(store.countDistinctTerms([ 'subject', 'object' ])).toBe(4);
             });
 
             it('should return distinct subjects and objects and predicates', async() => {
-              expect(store.countDistinctTerms([ 'subject', 'object', 'predicate' ])).toEqual(4);
+              expect(store.countDistinctTerms([ 'subject', 'object', 'predicate' ])).toBe(4);
             });
 
             it('should return distinct subjects and predicates and objects', async() => {
-              expect(store.countDistinctTerms([ 'subject', 'predicate', 'object' ])).toEqual(4);
+              expect(store.countDistinctTerms([ 'subject', 'predicate', 'object' ])).toBe(4);
             });
 
             it('should return distinct subjects and graphs and predicates and objects', async() => {
-              expect(store.countDistinctTerms([ 'subject', 'graph', 'predicate', 'object' ])).toEqual(4);
+              expect(store.countDistinctTerms([ 'subject', 'graph', 'predicate', 'object' ])).toBe(4);
             });
 
             it('should return distinct predicates', async() => {
-              expect(store.countDistinctTerms([ 'predicate' ])).toEqual(2);
+              expect(store.countDistinctTerms([ 'predicate' ])).toBe(2);
             });
 
             it('should return distinct predicates and objects', async() => {
-              expect(store.countDistinctTerms([ 'predicate', 'object' ])).toEqual(2);
+              expect(store.countDistinctTerms([ 'predicate', 'object' ])).toBe(2);
             });
 
             it('should return distinct predicates and objects and subjects', async() => {
-              expect(store.countDistinctTerms([ 'predicate', 'object', 'subject' ])).toEqual(4);
+              expect(store.countDistinctTerms([ 'predicate', 'object', 'subject' ])).toBe(4);
             });
 
             it('should return distinct predicates and subjects and objects', async() => {
-              expect(store.countDistinctTerms([ 'predicate', 'subject', 'object' ])).toEqual(4);
+              expect(store.countDistinctTerms([ 'predicate', 'subject', 'object' ])).toBe(4);
             });
 
             it('should return distinct predicates and objects and subjects and graphs', async() => {
-              expect(store.countDistinctTerms([ 'predicate', 'object', 'subject', 'graph' ])).toEqual(4);
+              expect(store.countDistinctTerms([ 'predicate', 'object', 'subject', 'graph' ])).toBe(4);
             });
 
             it('should return distinct predicates and subjects and graphs and objects', async() => {
-              expect(store.countDistinctTerms([ 'predicate', 'subject', 'graph', 'object' ])).toEqual(4);
+              expect(store.countDistinctTerms([ 'predicate', 'subject', 'graph', 'object' ])).toBe(4);
             });
 
             it('should return distinct objects', async() => {
-              expect(store.countDistinctTerms([ 'object' ])).toEqual(2);
+              expect(store.countDistinctTerms([ 'object' ])).toBe(2);
             });
 
             it('should return distinct objects and graphs', async() => {
-              expect(store.countDistinctTerms([ 'object', 'graph' ])).toEqual(3);
+              expect(store.countDistinctTerms([ 'object', 'graph' ])).toBe(3);
             });
 
             it('should return distinct objects and predicates and graphs', async() => {
-              expect(store.countDistinctTerms([ 'object', 'predicate', 'graph' ])).toEqual(3);
+              expect(store.countDistinctTerms([ 'object', 'predicate', 'graph' ])).toBe(3);
             });
 
             it('should return distinct objects and graphs and predicates', async() => {
-              expect(store.countDistinctTerms([ 'object', 'graph', 'predicate' ])).toEqual(3);
+              expect(store.countDistinctTerms([ 'object', 'graph', 'predicate' ])).toBe(3);
             });
 
             it('should return distinct objects and predicates and graphs and subjects', async() => {
-              expect(store.countDistinctTerms([ 'object', 'predicate', 'graph', 'subject' ])).toEqual(4);
+              expect(store.countDistinctTerms([ 'object', 'predicate', 'graph', 'subject' ])).toBe(4);
             });
 
             it('should return distinct graphs', async() => {
-              expect(store.countDistinctTerms([ 'graph' ])).toEqual(2);
+              expect(store.countDistinctTerms([ 'graph' ])).toBe(2);
             });
 
             it('should return distinct graphs and objects', async() => {
-              expect(store.countDistinctTerms([ 'graph', 'object' ])).toEqual(3);
+              expect(store.countDistinctTerms([ 'graph', 'object' ])).toBe(3);
             });
 
             it('should return distinct graphs and objects and subjects', async() => {
-              expect(store.countDistinctTerms([ 'graph', 'object', 'subject' ])).toEqual(4);
+              expect(store.countDistinctTerms([ 'graph', 'object', 'subject' ])).toBe(4);
             });
 
             it('should return distinct graphs and objects and subjects and predicates', async() => {
-              expect(store.countDistinctTerms([ 'graph', 'object', 'subject', 'predicate' ])).toEqual(4);
+              expect(store.countDistinctTerms([ 'graph', 'object', 'subject', 'predicate' ])).toBe(4);
             });
           });
 
@@ -1688,7 +1683,7 @@ describe('RdfStore', () => {
 
             describe('size', () => {
               it('to return the store size', () => {
-                expect(dataset.size).toEqual(4);
+                expect(dataset.size).toBe(4);
               });
             });
 
@@ -1707,8 +1702,8 @@ describe('RdfStore', () => {
                   DF.namedNode('g4'),
                 ));
 
-                expect(dataset.size).toEqual(6);
-                expect(store.size).toEqual(6);
+                expect(dataset.size).toBe(6);
+                expect(store.size).toBe(6);
               });
             });
 
@@ -1727,8 +1722,8 @@ describe('RdfStore', () => {
                   DF.namedNode('g2'),
                 ));
 
-                expect(dataset.size).toEqual(2);
-                expect(store.size).toEqual(2);
+                expect(dataset.size).toBe(2);
+                expect(store.size).toBe(2);
               });
             });
 
@@ -1739,19 +1734,19 @@ describe('RdfStore', () => {
                   DF.namedNode('p1'),
                   DF.namedNode('o1'),
                   DF.namedNode('g1'),
-                ))).toEqual(true);
+                ))).toBe(true);
                 expect(dataset.has(DF.quad(
                   DF.namedNode('s2'),
                   DF.namedNode('p2'),
                   DF.namedNode('o2'),
                   DF.namedNode('g2'),
-                ))).toEqual(true);
+                ))).toBe(true);
                 expect(dataset.has(DF.quad(
                   DF.namedNode('s3'),
                   DF.namedNode('p3'),
                   DF.namedNode('o3'),
                   DF.namedNode('g3'),
-                ))).toEqual(false);
+                ))).toBe(false);
               });
             });
 
@@ -1762,32 +1757,32 @@ describe('RdfStore', () => {
                 expect(dataset2).not.toBe(dataset);
                 expect(dataset2.store).not.toBe(dataset.store);
                 expect(dataset2.store.dictionary).toBe(dataset.store.dictionary);
-                expect(dataset2.size).toEqual(3);
+                expect(dataset2.size).toBe(3);
 
                 expect(dataset2.has(DF.quad(
                   DF.namedNode('s1'),
                   DF.namedNode('p1'),
                   DF.namedNode('o1'),
                   DF.namedNode('g1'),
-                ))).toEqual(true);
+                ))).toBe(true);
                 expect(dataset2.has(DF.quad(
                   DF.namedNode('s1'),
                   DF.namedNode('p2'),
                   DF.namedNode('o2'),
                   DF.namedNode('g1'),
-                ))).toEqual(true);
+                ))).toBe(true);
                 expect(dataset2.has(DF.quad(
                   DF.namedNode('s2'),
                   DF.namedNode('p1'),
                   DF.namedNode('o1'),
                   DF.namedNode('g1'),
-                ))).toEqual(true);
+                ))).toBe(true);
                 expect(dataset2.has(DF.quad(
                   DF.namedNode('s2'),
                   DF.namedNode('p2'),
                   DF.namedNode('o2'),
                   DF.namedNode('g2'),
-                ))).toEqual(false);
+                ))).toBe(false);
               });
             });
 
@@ -1881,13 +1876,13 @@ describe('RdfStore', () => {
 
           describe('matchBindings', () => {
             it('should match a subset', async() => {
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.namedNode('t1'),
                 DF.variable('p'),
                 DF.variable('o'),
                 DF.variable('g'),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({
                   p: DF.namedNode('t1'),
                   o: DF.namedNode('t1'),
@@ -1912,13 +1907,13 @@ describe('RdfStore', () => {
             });
 
             it('should for all reused variables', async() => {
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.variable('t'),
                 DF.variable('t'),
                 DF.variable('t'),
                 DF.variable('t'),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({
                   t: DF.namedNode('t1'),
                 }),
@@ -1926,13 +1921,13 @@ describe('RdfStore', () => {
             });
 
             it('should for all some reused variables', async() => {
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.variable('ta'),
                 DF.variable('tb'),
                 DF.variable('ta'),
                 DF.variable('tb'),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({
                   ta: DF.namedNode('t1'),
                   tb: DF.namedNode('t1'),
@@ -2069,7 +2064,7 @@ describe('RdfStore', () => {
                   DF.namedNode('ex:name'),
                   DF.variable('name'),
                 ),
-              )).toEqual(2);
+              )).toBe(2);
             });
 
             it('should produce results for a quoted predicate variable', () => {
@@ -2119,13 +2114,13 @@ describe('RdfStore', () => {
 
           describe('matchBindings', () => {
             it('should produce results for a top-level pattern', async() => {
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.variable('s'),
                 DF.namedNode('ex:says'),
                 DF.variable('o'),
                 DF.defaultGraph(),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({
                   s: DF.namedNode('ex:alice'),
                   o: DF.quad(
@@ -2146,7 +2141,7 @@ describe('RdfStore', () => {
             });
 
             it('should produce results for a quoted triple', async() => {
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.variable('s'),
                 DF.namedNode('ex:says'),
@@ -2156,7 +2151,7 @@ describe('RdfStore', () => {
                   DF.literal('"Bob"'),
                 ),
                 DF.defaultGraph(),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({
                   s: DF.namedNode('ex:alice'),
                 }),
@@ -2164,7 +2159,7 @@ describe('RdfStore', () => {
             });
 
             it('should produce results for a quoted object variable', async() => {
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.variable('s'),
                 DF.namedNode('ex:says'),
@@ -2174,7 +2169,7 @@ describe('RdfStore', () => {
                   DF.variable('name'),
                 ),
                 DF.defaultGraph(),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({
                   s: DF.namedNode('ex:alice'),
                   name: DF.literal('"Bob"'),
@@ -2187,7 +2182,7 @@ describe('RdfStore', () => {
             });
 
             it('should produce results for a quoted predicate variable', async() => {
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.variable('s'),
                 DF.namedNode('ex:says'),
@@ -2197,7 +2192,7 @@ describe('RdfStore', () => {
                   DF.literal('"Bob"'),
                 ),
                 DF.defaultGraph(),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({
                   s: DF.namedNode('ex:alice'),
                   name: DF.namedNode('ex:name'),
@@ -2206,7 +2201,7 @@ describe('RdfStore', () => {
             });
 
             it('should produce results for a quoted variable with partial match', async() => {
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.variable('s'),
                 DF.namedNode('ex:says'),
@@ -2216,7 +2211,7 @@ describe('RdfStore', () => {
                   DF.literal('"Bob"'),
                 ),
                 DF.defaultGraph(),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({
                   s: DF.namedNode('ex:alice'),
                   person: DF.namedNode('ex:bob'),
@@ -2225,7 +2220,7 @@ describe('RdfStore', () => {
             });
 
             it('should produce results for reused variables in quoted triple', async() => {
-              expect(await arrayifyStream(store.matchBindings(
+              await expect(arrayifyStream(store.matchBindings(
                 BF,
                 DF.variable('s'),
                 DF.variable('p'),
@@ -2235,7 +2230,7 @@ describe('RdfStore', () => {
                   DF.variable('name'),
                 ),
                 DF.defaultGraph(),
-              ))).toEqualBindingsArray([
+              ))).resolves.toEqualBindingsArray([
                 BF.fromRecord({
                   s: DF.namedNode('ex:carol'),
                   p: DF.namedNode('ex:thinks'),
@@ -2260,28 +2255,29 @@ describe('RdfStore', () => {
     });
 
     it('countNodes should throw', () => {
-      expect(() => store.countNodes(DF.namedNode('g'))).toThrow();
+      expect(() => store.countNodes(DF.namedNode('g')))
+        .toThrow('Nodes can only be read when the store was constructed');
     });
 
     it('readNodes should throw', () => {
-      expect(() => [ ...store.readNodes(DF.namedNode('g')) ]).toThrow();
+      expect(() => [ ...store.readNodes(DF.namedNode('g')) ])
+        .toThrow('Nodes can only be read when the store was constructed');
     });
 
     it('getNodes should throw', () => {
-      expect(() => store.getNodes(DF.namedNode('g'))).toThrow();
+      expect(() => store.getNodes(DF.namedNode('g')))
+        .toThrow('Nodes can only be read when the store was constructed');
     });
 
     it('matchNodes should throw', async() => {
-      expect(() => store.matchNodes(DF.namedNode('g'))).toThrow();
+      expect(() => store.matchNodes(DF.namedNode('g')))
+        .toThrow('Nodes can only be read when the store was constructed');
     });
   });
 
   describe('createDefault with nodes: true', () => {
-    beforeEach(() => {
-      store = RdfStore.createDefault(true);
-    });
-
     beforeEach(async() => {
+      store = RdfStore.createDefault(true);
       const ret = store.import(streamifyArray([
         DF.quad(
           DF.namedNode('s1'),
@@ -2341,15 +2337,15 @@ describe('RdfStore', () => {
     });
 
     it('countNodes should return 4 for variable g', () => {
-      expect(store.countNodes(DF.variable('g'))).toEqual(6);
+      expect(store.countNodes(DF.variable('g'))).toBe(6);
     });
 
     it('countNodes should return 2 for an existing g', () => {
-      expect(store.countNodes(DF.namedNode('g1'))).toEqual(4);
+      expect(store.countNodes(DF.namedNode('g1'))).toBe(4);
     });
 
     it('countNodes should return 0 for a non-existing g', () => {
-      expect(store.countNodes(DF.namedNode('gother'))).toEqual(0);
+      expect(store.countNodes(DF.namedNode('gother'))).toBe(0);
     });
 
     it('readNodes should return all nodes for variable g', () => {
@@ -2388,7 +2384,7 @@ describe('RdfStore', () => {
     });
 
     it('matchNodes should return all nodes for variable g', async() => {
-      expect(await store.matchNodes(DF.variable('g')).toArray()).toEqual([
+      await expect(store.matchNodes(DF.variable('g')).toArray()).resolves.toEqual([
         [ DF.namedNode('g1'), DF.namedNode('s1') ],
         [ DF.namedNode('g1'), DF.namedNode('o1') ],
         [ DF.namedNode('g1'), DF.namedNode('o2') ],

@@ -9,8 +9,8 @@ const DF = new DataFactory();
 describe('Quoted triples', () => {
   let store: RdfStore<number>;
 
-  each(Object.keys(indexClazzToInstance)).describe('%s', indexClazz => {
-    each([ 'TermDictionaryQuoted', 'TermDictionaryQuotedIndexed' ]).describe('%s', dictClazz => {
+  each(Object.keys(indexClazzToInstance)).describe('%s', (indexClazz) => {
+    each([ 'TermDictionaryQuoted', 'TermDictionaryQuotedIndexed' ]).describe('%s', (dictClazz) => {
       // Describe('RdfStoreIndexNestedMapQuoted', () => {
       //   let clazz = 'RdfStoreIndexNestedMapQuoted';
       beforeEach(() => {
@@ -46,7 +46,7 @@ describe('Quoted triples', () => {
         });
 
         it('should handle regular the empty triple pattern', async() => {
-          expect(await arrayifyStream(store.match())).toEqual([
+          await expect(arrayifyStream(store.match())).resolves.toEqual([
             DF.quad(
               DF.namedNode('Alice'),
               DF.namedNode('says'),
@@ -70,10 +70,10 @@ describe('Quoted triples', () => {
         });
 
         it('should handle regular unquoted triple patterns', async() => {
-          expect(await arrayifyStream(store.match(
+          await expect(arrayifyStream(store.match(
             DF.namedNode('Alice'),
             DF.namedNode('says'),
-          ))).toEqual([
+          ))).resolves.toEqual([
             DF.quad(
               DF.namedNode('Alice'),
               DF.namedNode('says'),
@@ -86,10 +86,10 @@ describe('Quoted triples', () => {
             ),
           ]);
 
-          expect(await arrayifyStream(store.match(
+          await expect(arrayifyStream(store.match(
             DF.namedNode('Bob'),
             DF.namedNode('says'),
-          ))).toEqual([
+          ))).resolves.toEqual([
             DF.quad(
               DF.namedNode('Bob'),
               DF.namedNode('says'),
@@ -103,11 +103,11 @@ describe('Quoted triples', () => {
         });
 
         it('should handle quoted triple patterns without variables', async() => {
-          expect(await arrayifyStream(store.match(
+          await expect(arrayifyStream(store.match(
             DF.namedNode('Alice'),
             DF.namedNode('says'),
             DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
-          ))).toEqual([
+          ))).resolves.toEqual([
             DF.quad(
               DF.namedNode('Alice'),
               DF.namedNode('says'),
@@ -115,7 +115,7 @@ describe('Quoted triples', () => {
             ),
           ]);
 
-          expect(await arrayifyStream(store.match(
+          await expect(arrayifyStream(store.match(
             DF.namedNode('Bob'),
             DF.namedNode('says'),
             DF.quad(
@@ -123,7 +123,7 @@ describe('Quoted triples', () => {
               DF.namedNode('says'),
               DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Yellow')),
             ),
-          ))).toEqual([
+          ))).resolves.toEqual([
             DF.quad(
               DF.namedNode('Bob'),
               DF.namedNode('says'),
@@ -137,11 +137,11 @@ describe('Quoted triples', () => {
         });
 
         it('should handle quoted triple patterns', async() => {
-          expect(await arrayifyStream(store.match(
+          await expect(arrayifyStream(store.match(
             DF.namedNode('Alice'),
             DF.namedNode('says'),
             DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
-          ))).toEqual([
+          ))).resolves.toEqual([
             DF.quad(
               DF.namedNode('Alice'),
               DF.namedNode('says'),
@@ -156,7 +156,7 @@ describe('Quoted triples', () => {
         });
 
         it('should handle nested quoted triple patterns', async() => {
-          expect(await arrayifyStream(store.match(
+          await expect(arrayifyStream(store.match(
             DF.namedNode('Bob'),
             DF.namedNode('says'),
             DF.quad(
@@ -164,7 +164,7 @@ describe('Quoted triples', () => {
               DF.namedNode('says'),
               DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
             ),
-          ))).toEqual([
+          ))).resolves.toEqual([
             DF.quad(
               DF.namedNode('Bob'),
               DF.namedNode('says'),
@@ -178,11 +178,11 @@ describe('Quoted triples', () => {
         });
 
         it('should handle nested quoted triple patterns with an outer variable', async() => {
-          expect(await arrayifyStream(store.match(
+          await expect(arrayifyStream(store.match(
             undefined,
             DF.namedNode('says'),
             DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.variable('color')),
-          ))).toEqual([
+          ))).resolves.toEqual([
             DF.quad(
               DF.namedNode('Alice'),
               DF.namedNode('says'),

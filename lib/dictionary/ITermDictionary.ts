@@ -4,7 +4,7 @@ import type * as RDF from '@rdfjs/types';
  * A term dictionary is able to encode RDF terms into values of type E,
  * and decode values of type E into RDF terms.
  */
-export interface ITermDictionary<E> {
+export interface ITermDictionary<TE> {
   /**
    * A record indicating supported features of this index.
    */
@@ -19,23 +19,23 @@ export interface ITermDictionary<E> {
    * Multiple invocations of this method with the same term MUST return the same value.
    * @param term An RDF term.
    */
-  encode: (term: RDF.Term) => E;
+  encode: (term: RDF.Term) => TE;
   /**
    * Return the encoding of the given RDF term, but do not create a new encoding if it doesn't exist,
    * but return undefined.
    * @param term An RDF term.
    */
-  encodeOptional: (term: RDF.Term) => E | undefined;
+  encodeOptional: (term: RDF.Term) => TE | undefined;
   /**
    * Decode the given encoded value into an RDF term.
    * Multiple invocations of this method with the same term MUST return the same value.
    * @param encoding An encoded RDF term.
    */
-  decode: (encoding: E) => RDF.Term;
+  decode: (encoding: TE) => RDF.Term;
   /**
    * Return all encoded terms.
    */
-  encodings: () => IterableIterator<E>;
+  encodings: () => IterableIterator<TE>;
   /**
    * Find all quoted triples in this dictionary that match with the given triple pattern.
    * @param quotedTriplePattern A triple pattern to match with quoted triples.
@@ -45,5 +45,5 @@ export interface ITermDictionary<E> {
    * Find all encoded quoted triples in this dictionary that match with the given triple pattern.
    * @param quotedTriplePattern A triple pattern to match with quoted triples.
    */
-  findQuotedTriplesEncoded: (quotedTriplePattern: RDF.Quad) => IterableIterator<E>;
+  findQuotedTriplesEncoded: (quotedTriplePattern: RDF.Quad) => IterableIterator<TE>;
 }

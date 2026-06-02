@@ -1,8 +1,9 @@
 import { hideBin } from 'yargs/helpers';
+import yargs from 'yargs/yargs';
 import { PerformanceTest } from './PerformanceTest';
 import { makeTests } from './tests';
 
-const argv = require('yargs/yargs')(hideBin(process.argv))
+const argv = yargs(hideBin(process.argv))
   .options({
     dimension: {
       type: 'number',
@@ -23,8 +24,8 @@ const argv = require('yargs/yargs')(hideBin(process.argv))
       describe: 'Which tests must be executed',
       default: 'all',
     },
-  }).argv;
+  }).parseSync();
 
 const test = new PerformanceTest(makeTests(argv.optimal), argv.dimension);
-// eslint-disable-next-line @typescript-eslint/no-floating-promises
-test.run(argv.tests);
+// eslint-disable-next-line ts/no-unsafe-argument, no-console
+test.run(<any>argv.tests).catch(console.error);

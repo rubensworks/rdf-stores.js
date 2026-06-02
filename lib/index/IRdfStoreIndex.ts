@@ -4,7 +4,7 @@ import type { EncodedQuadTerms, QuadPatternTerms, QuadTerms } from '../PatternTe
  * An RDF store index is a low-level index that can be used inside an RDF store.
  * It maps quads to values of a certain type V.
  */
-export interface IRdfStoreIndex<E, V> {
+export interface IRdfStoreIndex<TE, TV> {
   /**
    * A record indicating supported features of this index.
    */
@@ -22,25 +22,25 @@ export interface IRdfStoreIndex<E, V> {
    * @param value The value to set for the given key.
    * @return boolean If the mapping was not yet present in the index.
    */
-  set: (key: EncodedQuadTerms<E>, value: V) => boolean;
+  set: (key: EncodedQuadTerms<TE>, value: TV) => boolean;
   /**
    * Remove a key from the index.
    * @param key An array of encoded terms, ordered in the component order of this index.
    * @return boolean If the quad was present in the index.
    */
-  remove: (key: EncodedQuadTerms<E>) => boolean;
+  remove: (key: EncodedQuadTerms<TE>) => boolean;
   /**
    * Get the value for the given key (a non-encoded quad).
    * @param key The non-encoded quad terms.
    * @return V The stored value, or undefined if no mapping is present.
    */
-  get: (key: QuadTerms) => V | undefined;
+  get: (key: QuadTerms) => TV | undefined;
   /**
    * Get the value for the given key (an encoded quad).
    * @param key An array of encoded terms, ordered in the component order of this index.
    * @return V The stored value, or undefined if no mapping is present.
    */
-  getEncoded: (key: EncodedQuadTerms<E>) => V | undefined;
+  getEncoded: (key: EncodedQuadTerms<TE>) => TV | undefined;
   /**
    * Find all keys matching the given key terms.
    * Quads are represented as an array of terms, in the component order of this index.
@@ -53,7 +53,8 @@ export interface IRdfStoreIndex<E, V> {
    * @param ids An iterable of encoded pattern terms, ordered in the component order of this index.
    * @param terms An iterable of pattern terms, ordered in the component order of this index.
    */
-  findEncoded: (ids: EncodedQuadTerms<E | undefined>, terms: QuadPatternTerms) => IterableIterator<EncodedQuadTerms<E>>;
+  findEncoded: (ids: EncodedQuadTerms<TE | undefined>, terms: QuadPatternTerms) =>
+  IterableIterator<EncodedQuadTerms<TE>>;
   /**
    * Returns a generator producing arrays of terms that exist in the index.
    * Each returned array corresponds to the terms specified by given quad term names.
@@ -64,7 +65,7 @@ export interface IRdfStoreIndex<E, V> {
    *
    * @param matchTerms An array of booleans indicating which terms to match. Length may be shorter than 4.
    */
-  findTerms: (matchTerms: boolean[]) => IterableIterator<E[]>;
+  findTerms: (matchTerms: boolean[]) => IterableIterator<TE[]>;
   /**
    * Count the keys matching the given terms.
    * Quads are represented as an array of terms, in the component order of this index.
