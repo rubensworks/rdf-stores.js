@@ -496,9 +496,11 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * Returns the number of distinct terms that exist in the store.
    *
    * @param terms An array of quad term names
+   * @param filters An optional array of quad components that must be matched.
    */
   public countDistinctTerms(
     terms: QuadTermName[],
+    filters?: (RDF.Term | undefined)[],
   ): number {
     // Determine the best index for this pattern
     const bestIndex = getBestIndexTerms(this.indexesWrappedComponentOrders, terms);
@@ -534,10 +536,16 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * For example, when requesting the terms `[ 'subject', 'predicate' ]`,
    * a produced array could be `[ 'ex:s', 'ex:p' ]`,
    *
+   * For example, if filters is in the form of `[ undefined, DF.namedNode('ex:p'), undefined, DF.defaultGraph() ]`,
+   * this means that only those distinct terms must be returned if they originate from quads with predicate 'ex:p'
+   * and in the default graph.
+   *
    * @param terms An array of quad term names
+   * @param filters An optional array of quad components that must be matched.
    */
   public* readDistinctTerms(
     terms: QuadTermName[],
+    filters?: (RDF.Term | undefined)[],
   ): IterableIterator<RDF.Term[]> {
     // Determine the best index for this pattern
     const bestIndex = getBestIndexTerms(this.indexesWrappedComponentOrders, terms);
@@ -601,12 +609,18 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * For example, when requesting the terms `[ 'subject', 'predicate' ]`,
    * a produced array could be `[ 'ex:s', 'ex:p' ]`,
    *
+   * For example, if filters is in the form of `[ undefined, DF.namedNode('ex:p'), undefined, DF.defaultGraph() ]`,
+   * this means that only those distinct terms must be returned if they originate from quads with predicate 'ex:p'
+   * and in the default graph.
+   *
    * @param terms An array of quad term names
+   * @param filters An optional array of quad components that must be matched.
    */
   public getDistinctTerms(
     terms: QuadTermName[],
+    filters?: (RDF.Term | undefined)[],
   ): RDF.Term[][] {
-    return [ ...this.readDistinctTerms(terms) ];
+    return [ ...this.readDistinctTerms(terms, filters) ];
   }
 
   /**
@@ -616,12 +630,18 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * For example, when requesting the terms `[ 'subject', 'predicate' ]`,
    * a produced array could be `[ 'ex:s', 'ex:p' ]`,
    *
+   * For example, if filters is in the form of `[ undefined, DF.namedNode('ex:p'), undefined, DF.defaultGraph() ]`,
+   * this means that only those distinct terms must be returned if they originate from quads with predicate 'ex:p'
+   * and in the default graph.
+   *
    * @param terms An array of quad term names
+   * @param filters An optional array of quad components that must be matched.
    */
   public matchDistinctTerms(
     terms: QuadTermName[],
+    filters?: (RDF.Term | undefined)[],
   ): AsyncIterator<RDF.Term[]> {
-    return wrap(this.readDistinctTerms(terms));
+    return wrap(this.readDistinctTerms(terms, filters));
   }
 
   /**

@@ -64,8 +64,9 @@ export interface IRdfStoreIndex<TE, TV> {
    * a produced array could be `[ 'ex:s', 'ex:p' ]`,
    *
    * @param matchTerms An array of booleans indicating which terms to match. Length may be shorter than 4.
+   * @param filterTerms An iterable of encoded pattern terms to filter by, ordered in the component order of this index.
    */
-  findTerms: (matchTerms: boolean[]) => IterableIterator<TE[]>;
+  findTerms: (matchTerms: boolean[], filterTerms?: EncodedQuadTerms<TE | undefined>) => IterableIterator<TE[]>;
   /**
    * Count the keys matching the given terms.
    * Quads are represented as an array of terms, in the component order of this index.
@@ -77,6 +78,7 @@ export interface IRdfStoreIndex<TE, TV> {
    * Each returned array corresponds to the terms specified by given quad term names.
    * This corresponds to the semantics of {@link #findTerms}, and returns counts instead of terms.
    * @param terms An array of booleans indicating which terms to match. Length may be shorter than 4.
+   * @param filterTerms An iterable of encoded pattern terms to filter by, ordered in the component order of this index.
    */
-  countTerms: (matchTerms: boolean[]) => number;
+  countTerms: (matchTerms: boolean[], filterTerms?: EncodedQuadTerms<TE | undefined>) => number;
 }
