@@ -1,7 +1,7 @@
 /* eslint-disable ts/no-unsafe-assignment */
 import type { ITermDictionary } from '../dictionary/ITermDictionary';
 import type { IRdfStoreOptions } from '../IRdfStoreOptions';
-import { encodeOptionalTerms } from '../OrderUtils';
+import { computeEndDepth, encodeOptionalTerms } from '../OrderUtils';
 import type { EncodedQuadTerms, PatternTerm, QuadPatternTerms, QuadTerms } from '../PatternTerm';
 import type { IRdfStoreIndex } from './IRdfStoreIndex';
 import type { NestedMapActual } from './RdfStoreIndexNestedMap';
@@ -153,28 +153,113 @@ export class RdfStoreIndexNestedMapRecursive<TE, TV> implements IRdfStoreIndex<T
     }
   }
 
+  protected existsPath(
+    depth: number,
+    endDepth: number,
+    map: NestedMapActual<TE, TV>,
+    filterTerms?: (TE | undefined)[],
+  ): boolean {
+    if (depth >= endDepth) {
+      return true;
+    }
+    const filterTerm = filterTerms?.[depth];
+    if (filterTerm !== undefined) {
+      const subMap = map.get(filterTerm);
+      return subMap !== undefined &&
+        this.existsPath(depth + 1, endDepth, <NestedMapActual<TE, TV>> subMap, filterTerms);
+    }
+    for (const subMap of map.values()) {
+      if (this.existsPath(depth + 1, endDepth, <NestedMapActual<TE, TV>> subMap, filterTerms)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   protected* findTermsInner(
     depth: number,
+    endDepth: number,
     map: NestedMapActual<TE, TV>,
     matchTerms: boolean[],
     partialResult: TE[],
+    filterTerms?: (TE | undefined)[],
   ): IterableIterator<TE[]> {
-    if (matchTerms[depth]) {
-      for (const [ key1, subMap ] of map.entries()) {
-        const newPartialResult = [ ...partialResult, key1 ];
-        yield* this.findTermsInner(depth + 1, <NestedMapActual<TE, TV>> subMap, matchTerms, newPartialResult);
-      }
-    } else if (depth < matchTerms.length) {
-      for (const subMap of map.values()) {
-        yield* this.findTermsInner(depth + 1, <NestedMapActual<TE, TV>> subMap, matchTerms, partialResult);
+    if (depth >= endDepth) {
+      yield partialResult;
+      return;
+    }
+    const isMatch = depth < matchTerms.length && matchTerms[depth];
+    const isLastMatch = depth === matchTerms.length - 1;
+    const deepFilter = isLastMatch && endDepth > matchTerms.length;
+    const filterTerm = filterTerms?.[depth];
+    if (filterTerm === undefined) {
+      if (isMatch) {
+        for (const [ key1, subMap ] of map.entries()) {
+          if (deepFilter && !this.existsPath(depth + 1, endDepth, <NestedMapActual<TE, TV>> subMap, filterTerms)) {
+            continue;
+          }
+          const newPartialResult = [ ...partialResult, key1 ];
+          if (deepFilter) {
+            yield newPartialResult;
+          } else {
+            yield* this.findTermsInner(
+              depth + 1,
+              endDepth,
+<NestedMapActual<TE, TV>> subMap,
+matchTerms,
+newPartialResult,
+filterTerms,
+            );
+          }
+        }
+      } else {
+        for (const subMap of map.values()) {
+          yield* this.findTermsInner(
+            depth + 1,
+            endDepth,
+<NestedMapActual<TE, TV>> subMap,
+matchTerms,
+partialResult,
+filterTerms,
+          );
+        }
       }
     } else {
-      yield partialResult;
+      const subMap = map.get(filterTerm);
+      if (subMap) {
+        if (isMatch) {
+          const newPartialResult = [ ...partialResult, filterTerm ];
+          if (deepFilter) {
+            if (this.existsPath(depth + 1, endDepth, <NestedMapActual<TE, TV>> subMap, filterTerms)) {
+              yield newPartialResult;
+            }
+          } else {
+            yield* this.findTermsInner(
+              depth + 1,
+              endDepth,
+<NestedMapActual<TE, TV>> subMap,
+matchTerms,
+newPartialResult,
+filterTerms,
+            );
+          }
+        } else {
+          yield* this.findTermsInner(
+            depth + 1,
+            endDepth,
+<NestedMapActual<TE, TV>> subMap,
+matchTerms,
+partialResult,
+filterTerms,
+          );
+        }
+      }
     }
   }
 
-  public findTerms(matchTerms: boolean[]): IterableIterator<TE[]> {
-    return this.findTermsInner(0, this.nestedMap, matchTerms, []);
+  public findTerms(matchTerms: boolean[], filterTerms?: (TE | undefined)[]): IterableIterator<TE[]> {
+    const endDepth = computeEndDepth(matchTerms, filterTerms);
+    return this.findTermsInner(0, endDepth, this.nestedMap, matchTerms, [], filterTerms);
   }
 
   public count(terms: QuadPatternTerms): number {
@@ -221,21 +306,48 @@ export class RdfStoreIndexNestedMapRecursive<TE, TV> implements IRdfStoreIndex<T
 
   protected countTermsInner(
     depth: number,
+    endDepth: number,
     map: NestedMapActual<TE, TV>,
     matchTerms: boolean[],
+    filterTerms?: (TE | undefined)[],
   ): number {
-    if (depth === matchTerms.length - 1) {
+    if (depth >= endDepth) {
+      return 1;
+    }
+    const isLastMatch = depth === matchTerms.length - 1;
+    const deepFilter = isLastMatch && endDepth > matchTerms.length;
+    const filterTerm = filterTerms?.[depth];
+    if (filterTerm !== undefined) {
+      const subMap = map.get(filterTerm);
+      if (!subMap) {
+        return 0;
+      }
+      if (deepFilter) {
+        return this.existsPath(depth + 1, endDepth, <NestedMapActual<TE, TV>> subMap, filterTerms) ? 1 : 0;
+      }
+      return this.countTermsInner(depth + 1, endDepth, <NestedMapActual<TE, TV>> subMap, matchTerms, filterTerms);
+    }
+    if (deepFilter) {
+      let count = 0;
+      for (const subMap of map.values()) {
+        if (this.existsPath(depth + 1, endDepth, <NestedMapActual<TE, TV>> subMap, filterTerms)) {
+          count++;
+        }
+      }
+      return count;
+    }
+    if (depth === endDepth - 1) {
       return map.size;
     }
-
     let count = 0;
     for (const subMap of map.values()) {
-      count += this.countTermsInner(depth + 1, <NestedMapActual<TE, TV>> subMap, matchTerms);
+      count += this.countTermsInner(depth + 1, endDepth, <NestedMapActual<TE, TV>> subMap, matchTerms, filterTerms);
     }
     return count;
   }
 
-  public countTerms(matchTerms: boolean[]): number {
-    return this.countTermsInner(0, this.nestedMap, matchTerms);
+  public countTerms(matchTerms: boolean[], filterTerms?: (TE | undefined)[]): number {
+    const endDepth = computeEndDepth(matchTerms, filterTerms);
+    return this.countTermsInner(0, endDepth, this.nestedMap, matchTerms, filterTerms);
   }
 }

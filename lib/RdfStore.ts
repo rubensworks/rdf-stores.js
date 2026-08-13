@@ -18,6 +18,7 @@ import type { IRdfStoreIndex } from './index/IRdfStoreIndex';
 import { RdfStoreIndexNestedMapQuoted } from './index/RdfStoreIndexNestedMapQuoted';
 import type { IRdfStoreOptions } from './IRdfStoreOptions';
 import {
+  encodeAndExtendFilters,
   encodeOptionalTerms,
   getBestIndex,
   getBestIndexTerms,
@@ -518,15 +519,27 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     const termsOrdered: QuadTermName[] = termsOrderedUnfiltered.filter(t => t !== undefined);
 
     // Determine path of terms to follow in the index
-    const matchTerms = getIndexMatchTermsPath(indexWrapped.componentOrder, termsOrdered);
+    let matchTerms = getIndexMatchTermsPath(indexWrapped.componentOrder, termsOrdered);
 
-    // Ensure distinctness (this can only occur when insufficient indexes are available)
+    // Encode filters if provided
+    let filterTermsEncoded: EncodedQuadTerms<TE | undefined> | undefined;
+    if (filters) {
+      const encodedFilters = encodeAndExtendFilters(filters, matchTerms, indexWrapped.componentOrder, this.dictionary);
+      if (encodedFilters === null) {
+        // Filter term not in dictionary → no results
+        return 0;
+      }
+      ({ filterTermsEncoded, matchTerms } = encodedFilters);
+    }
+
+    // Ensure distinctness (this can only occur when insufficient indexes are available,
+    // or when filters go beyond match depths)
     if (matchTerms.includes(false)) {
-      return this.getDistinctTerms(terms).length;
+      return this.getDistinctTerms(terms, filters).length;
     }
 
     // Call the best index's count method
-    return indexWrapped.index.countTerms(matchTerms);
+    return indexWrapped.index.countTerms(matchTerms, filterTermsEncoded);
   }
 
   /**
@@ -567,9 +580,21 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     }
 
     // Determine path of terms to follow in the index
-    const matchTerms = getIndexMatchTermsPath(indexWrapped.componentOrder, termsOrdered);
+    let matchTerms = getIndexMatchTermsPath(indexWrapped.componentOrder, termsOrdered);
 
-    // Ensure distinctness (this can only occur when insufficient indexes are available)
+    // Encode filters if provided
+    let filterTermsEncoded: EncodedQuadTerms<TE | undefined> | undefined;
+    if (filters) {
+      const encodedFilters = encodeAndExtendFilters(filters, matchTerms, indexWrapped.componentOrder, this.dictionary);
+      if (encodedFilters === null) {
+        // Filter term not in dictionary → no results
+        return;
+      }
+      ({ filterTermsEncoded, matchTerms } = encodedFilters);
+    }
+
+    // Ensure distinctness (this can only occur when insufficient indexes are available,
+    // or when filters go beyond match depths)
     let distinctTerms: Set<string> | undefined;
     if (matchTerms.includes(false)) {
       // TODO: if the first index level (e.g. graph) has just one term, distinctness is already guaranteed and we can
@@ -578,7 +603,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     }
 
     // Call the best index's find method
-    for (const readTerms of indexWrapped.index.findTerms(matchTerms)) {
+    for (const readTerms of indexWrapped.index.findTerms(matchTerms, filterTermsEncoded)) {
       // Inverse term ordering
       const readTermsInversed: TE[] = [];
       for (let i = 0; i < readTerms.length; i++) {
