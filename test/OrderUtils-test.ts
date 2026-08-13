@@ -3,6 +3,7 @@ import type { QuadTermName } from 'rdf-terms';
 import type { ITermDictionary } from '../lib/dictionary/ITermDictionary';
 import { TermDictionaryNumberRecordFullTerms } from '../lib/dictionary/TermDictionaryNumberRecordFullTerms';
 import {
+  computeEndDepth,
   encodeOptionalTerms,
   getBestIndex,
   getBestIndexTerms,
@@ -606,6 +607,37 @@ describe('OrderUtils', () => {
           DF.variable('o'),
         ),
       ))).toBe(true);
+    });
+  });
+
+  describe('computeEndDepth', () => {
+    it('returns matchTerms.length when no filterTerms are given', () => {
+      expect(computeEndDepth([ true, true, true ])).toBe(3);
+      expect(computeEndDepth([ true ])).toBe(1);
+      expect(computeEndDepth([])).toBe(0);
+    });
+
+    it('returns matchTerms.length when filterTerms are all undefined', () => {
+      expect(computeEndDepth([ true, true ], [ undefined, undefined, undefined, undefined ])).toBe(2);
+    });
+
+    it('returns matchTerms.length when last defined filter does not exceed it', () => {
+      expect(computeEndDepth([ true, true, true, true ], [ 1, undefined, undefined, undefined ])).toBe(4);
+      expect(computeEndDepth([ true, true, true, true ], [ undefined, undefined, undefined, 1 ])).toBe(4);
+    });
+
+    it('returns filter depth + 1 when last defined filter exceeds matchTerms.length', () => {
+      // MatchTerms has length 1, but filter is defined at index 3 → endDepth should be 4
+      expect(computeEndDepth([ true ], [ undefined, undefined, undefined, 1 ])).toBe(4);
+      // MatchTerms has length 2, filter defined at index 2 → endDepth should be 3
+      expect(computeEndDepth([ true, true ], [ undefined, undefined, 1, undefined ])).toBe(3);
+    });
+
+    it('ignores trailing undefined filterTerms when scanning for last defined', () => {
+      // Last defined is at index 1, which equals matchTerms.length (2) - 1, so endDepth stays 2
+      expect(computeEndDepth([ true, true ], [ undefined, 1, undefined, undefined ])).toBe(2);
+      // Last defined is at index 0, endDepth stays at matchTerms.length (3)
+      expect(computeEndDepth([ true, true, true ], [ 1, undefined, undefined, undefined ])).toBe(3);
     });
   });
 });

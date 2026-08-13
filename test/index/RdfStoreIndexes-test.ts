@@ -1412,6 +1412,135 @@ describe('RdfStoreIndexes', () => {
               ],
             ]);
           });
+
+          it('should filter subjects by predicate', () => {
+            expect([ ...index.findTerms([
+              true,
+            ], [
+              undefined,
+              dictionary.encode(DF.namedNode('p1')),
+              undefined,
+              undefined,
+            ]) ]).toEqual([
+              [ dictionary.encode(DF.namedNode('s1')) ],
+              [ dictionary.encode(DF.namedNode('s2')) ],
+            ]);
+
+            expect([ ...index.findTerms([
+              true,
+            ], [
+              undefined,
+              dictionary.encode(DF.namedNode('p2')),
+              undefined,
+              undefined,
+            ]) ]).toEqual([
+              [ dictionary.encode(DF.namedNode('s1')) ],
+              [ dictionary.encode(DF.namedNode('s2')) ],
+            ]);
+          });
+
+          it('should filter subjects by graph', () => {
+            expect([ ...index.findTerms([
+              true,
+            ], [
+              undefined,
+              undefined,
+              undefined,
+              dictionary.encode(DF.namedNode('g1')),
+            ]) ]).toEqual([
+              [ dictionary.encode(DF.namedNode('s1')) ],
+              [ dictionary.encode(DF.namedNode('s2')) ],
+            ]);
+
+            expect([ ...index.findTerms([
+              true,
+            ], [
+              undefined,
+              undefined,
+              undefined,
+              dictionary.encode(DF.namedNode('g2')),
+            ]) ]).toEqual([
+              [ dictionary.encode(DF.namedNode('s2')) ],
+            ]);
+          });
+
+          it('should filter subjects by non-existent graph', () => {
+            expect([ ...index.findTerms([
+              true,
+            ], [
+              undefined,
+              undefined,
+              undefined,
+              dictionary.encode(DF.namedNode('g-nonexistent')),
+            ]) ]).toEqual([]);
+          });
+
+          it('should filter subject-predicate pairs by graph', () => {
+            expect([ ...index.findTerms([
+              true,
+              true,
+            ], [
+              undefined,
+              undefined,
+              undefined,
+              dictionary.encode(DF.namedNode('g1')),
+            ]) ]).toEqual([
+              [ dictionary.encode(DF.namedNode('s1')), dictionary.encode(DF.namedNode('p1')) ],
+              [ dictionary.encode(DF.namedNode('s1')), dictionary.encode(DF.namedNode('p2')) ],
+              [ dictionary.encode(DF.namedNode('s2')), dictionary.encode(DF.namedNode('p1')) ],
+            ]);
+          });
+
+          it('should filter subjects by specific subject filter', () => {
+            expect([ ...index.findTerms([
+              true,
+            ], [
+              dictionary.encode(DF.namedNode('s1')),
+              undefined,
+              undefined,
+              undefined,
+            ]) ]).toEqual([
+              [ dictionary.encode(DF.namedNode('s1')) ],
+            ]);
+          });
+
+          it('should filter subjects by specific subject and deep graph filter', () => {
+            // S1 is in g1 → yields [s1Id]
+            expect([ ...index.findTerms([
+              true,
+            ], [
+              dictionary.encode(DF.namedNode('s1')),
+              undefined,
+              undefined,
+              dictionary.encode(DF.namedNode('g1')),
+            ]) ]).toEqual([
+              [ dictionary.encode(DF.namedNode('s1')) ],
+            ]);
+
+            // S1 is not in g2 → yields nothing
+            expect([ ...index.findTerms([
+              true,
+            ], [
+              dictionary.encode(DF.namedNode('s1')),
+              undefined,
+              undefined,
+              dictionary.encode(DF.namedNode('g2')),
+            ]) ]).toEqual([]);
+          });
+
+          it('should produce no results with undefined filter', () => {
+            expect([ ...index.findTerms([
+              true,
+            ], [
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+            ]) ]).toEqual([
+              [ dictionary.encode(DF.namedNode('s1')) ],
+              [ dictionary.encode(DF.namedNode('s2')) ],
+            ]);
+          });
         });
 
         describe('count', () => {
@@ -1650,6 +1779,126 @@ describe('RdfStoreIndexes', () => {
               false,
               true,
             ])).toBe(4);
+          });
+
+          it('should filter subjects count by predicate', () => {
+            expect(index.countTerms([
+              true,
+            ], [
+              undefined,
+              dictionary.encode(DF.namedNode('p1')),
+              undefined,
+              undefined,
+            ])).toBe(2);
+          });
+
+          it('should filter subjects count by graph', () => {
+            expect(index.countTerms([
+              true,
+            ], [
+              undefined,
+              undefined,
+              undefined,
+              dictionary.encode(DF.namedNode('g1')),
+            ])).toBe(2);
+
+            expect(index.countTerms([
+              true,
+            ], [
+              undefined,
+              undefined,
+              undefined,
+              dictionary.encode(DF.namedNode('g2')),
+            ])).toBe(1);
+          });
+
+          it('should filter subjects count by non-existent graph', () => {
+            expect(index.countTerms([
+              true,
+            ], [
+              undefined,
+              undefined,
+              undefined,
+              dictionary.encode(DF.namedNode('g-nonexistent')),
+            ])).toBe(0);
+          });
+
+          it('should filter subject-predicate count by graph', () => {
+            expect(index.countTerms([
+              true,
+              true,
+            ], [
+              undefined,
+              undefined,
+              undefined,
+              dictionary.encode(DF.namedNode('g1')),
+            ])).toBe(3);
+          });
+
+          it('should filter by specific subject', () => {
+            expect(index.countTerms([
+              true,
+            ], [
+              dictionary.encode(DF.namedNode('s1')),
+              undefined,
+              undefined,
+              undefined,
+            ])).toBe(1);
+          });
+
+          it('should return 0 when filter term at match depth is not in index', () => {
+            // Encode a subject that is not stored in the index
+            expect(index.countTerms([
+              true,
+            ], [
+              dictionary.encode(DF.namedNode('sNotInIndex')),
+              undefined,
+              undefined,
+              undefined,
+            ])).toBe(0);
+          });
+
+          it('should filter subjects count by specific subject and deep graph filter', () => {
+            // S1 is in g1 → 1
+            expect(index.countTerms([
+              true,
+            ], [
+              dictionary.encode(DF.namedNode('s1')),
+              undefined,
+              undefined,
+              dictionary.encode(DF.namedNode('g1')),
+            ])).toBe(1);
+
+            // S1 is not in g2 → 0
+            expect(index.countTerms([
+              true,
+            ], [
+              dictionary.encode(DF.namedNode('s1')),
+              undefined,
+              undefined,
+              dictionary.encode(DF.namedNode('g2')),
+            ])).toBe(0);
+
+            // S2 is in g2 → 1
+            expect(index.countTerms([
+              true,
+            ], [
+              dictionary.encode(DF.namedNode('s2')),
+              undefined,
+              undefined,
+              dictionary.encode(DF.namedNode('g2')),
+            ])).toBe(1);
+          });
+
+          it('should produce full count with all-undefined filter', () => {
+            expect(index.countTerms([
+              true,
+            ], [
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+            ])).toBe(2);
           });
         });
 

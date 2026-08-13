@@ -250,6 +250,19 @@ Count the given distinct terms that exist in the store.
 store.countDistinctTerms([ 'subject', 'predicate' ]);
 ```
 
+An optional `filters` array (in SPOG order) can be passed to count only those distinct terms
+that originate from quads matching the given components.
+Each entry in the array corresponds to `subject`, `predicate`, `object`, and `graph` respectively,
+where `undefined` means that component is unconstrained.
+
+```typescript
+// Count distinct subjects that appear in the default graph
+store.countDistinctTerms([ 'subject' ], [ undefined, undefined, undefined, DF.defaultGraph() ]);
+
+// Count distinct subject–predicate pairs with a specific predicate
+store.countDistinctTerms([ 'subject', 'predicate' ], [ undefined, DF.namedNode('ex:p1'), undefined, undefined ]);
+```
+
 ### `readDistinctTerms`
 
 Returns an iterable iterator producing distinct arrays of terms that exist in the store.
@@ -268,6 +281,24 @@ for (const [ subjectTerm, predicateTerm ] of store.readDistinctTerms([ 'subject'
 }
 ```
 
+An optional `filters` array (in SPOG order) can be passed to return only those distinct terms
+that originate from quads matching the given components.
+Each entry in the array corresponds to `subject`, `predicate`, `object`, and `graph` respectively,
+where `undefined` means that component is unconstrained.
+
+```typescript
+// Iterate over all distinct subjects that appear in the default graph
+for (const [ subjectTerm ] of store.readDistinctTerms([ 'subject' ], [ undefined, undefined, undefined, DF.defaultGraph() ])) {
+  console.log(subjectTerm.value);
+}
+
+// Iterate over distinct subject–predicate pairs for a specific predicate
+for (const [ subjectTerm, predicateTerm ] of store.readDistinctTerms([ 'subject', 'predicate' ], [ undefined, DF.namedNode('ex:p1'), undefined, undefined ])) {
+  console.log(subjectTerm.value);
+  console.log(predicateTerm.value);
+}
+```
+
 ### `getDistinctTerms`
 
 Returns an array containing distinct arrays of terms that exist in the store.
@@ -276,6 +307,17 @@ Each returned array corresponds to the terms specified by given quad term names.
 ```typescript
 const array = store.getDistinctTerms([ 'subject', 'predicate' ]);
 console.log(array);
+```
+
+An optional `filters` array (in SPOG order) can be passed to return only those distinct terms
+that originate from quads matching the given components.
+Each entry in the array corresponds to `subject`, `predicate`, `object`, and `graph` respectively,
+where `undefined` means that component is unconstrained.
+
+```typescript
+// All distinct subjects in the default graph
+const subjects = store.getDistinctTerms([ 'subject' ], [ undefined, undefined, undefined, DF.defaultGraph() ]);
+console.log(subjects);
 ```
 
 ### `matchDistinctTerms`
@@ -289,6 +331,23 @@ const stream = store.matchDistinctTerms([ 'subject', 'predicate' ]);
 stream.on('data', ([ subjectTerm, predicateTerm ]) => {
   console.log(subjectTerm.value);
   console.log(predicateTerm.value);
+});
+stream.on('end', () => {
+  console.log('Done!');
+});
+```
+
+An optional `filters` array (in SPOG order) can be passed to return only those distinct terms
+that originate from quads matching the given components.
+Each entry in the array corresponds to `subject`, `predicate`, `object`, and `graph` respectively,
+where `undefined` means that component is unconstrained.
+
+```typescript
+// Stream all distinct subjects in the default graph
+const stream = store.matchDistinctTerms([ 'subject' ], [ undefined, undefined, undefined, DF.defaultGraph() ]);
+
+stream.on('data', ([ subjectTerm ]) => {
+  console.log(subjectTerm.value);
 });
 stream.on('end', () => {
   console.log('Done!');

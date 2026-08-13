@@ -1671,6 +1671,103 @@ describe('RdfStore', () => {
             });
           });
 
+          describe('getDistinctTerms with filters', () => {
+            it('should filter distinct subjects by graph', async() => {
+              expectToEqualTerms(store.getDistinctTerms(
+                [ 'subject' ],
+                [ undefined, undefined, undefined, DF.namedNode('g1') ],
+              ), [
+                [ DF.namedNode('s1') ],
+                [ DF.namedNode('s2') ],
+              ]);
+              expectToEqualTerms(store.getDistinctTerms(
+                [ 'subject' ],
+                [ undefined, undefined, undefined, DF.namedNode('g2') ],
+              ), [
+                [ DF.namedNode('s2') ],
+              ]);
+            });
+
+            it('should filter distinct subjects by predicate', async() => {
+              expectToEqualTerms(store.getDistinctTerms(
+                [ 'subject' ],
+                [ undefined, DF.namedNode('p1'), undefined, undefined ],
+              ), [
+                [ DF.namedNode('s1') ],
+                [ DF.namedNode('s2') ],
+              ]);
+            });
+
+            it('should filter distinct subject-predicate pairs by graph', async() => {
+              expectToEqualTerms(store.getDistinctTerms(
+                [ 'subject', 'predicate' ],
+                [ undefined, undefined, undefined, DF.namedNode('g1') ],
+              ), [
+                [ DF.namedNode('s1'), DF.namedNode('p1') ],
+                [ DF.namedNode('s1'), DF.namedNode('p2') ],
+                [ DF.namedNode('s2'), DF.namedNode('p1') ],
+              ]);
+            });
+
+            it('should return empty when filter term is not in the dictionary', async() => {
+              expectToEqualTerms(store.getDistinctTerms(
+                [ 'subject' ],
+                [ undefined, undefined, undefined, DF.namedNode('g-nonexistent') ],
+              ), []);
+            });
+
+            it('should ignore all-undefined filter', async() => {
+              expectToEqualTerms(store.getDistinctTerms(
+                [ 'subject' ],
+                [ undefined, undefined, undefined, undefined ],
+              ), [
+                [ DF.namedNode('s1') ],
+                [ DF.namedNode('s2') ],
+              ]);
+            });
+          });
+
+          describe('countDistinctTerms with filters', () => {
+            it('should filter distinct subject count by graph', async() => {
+              expect(store.countDistinctTerms(
+                [ 'subject' ],
+                [ undefined, undefined, undefined, DF.namedNode('g1') ],
+              )).toBe(2);
+              expect(store.countDistinctTerms(
+                [ 'subject' ],
+                [ undefined, undefined, undefined, DF.namedNode('g2') ],
+              )).toBe(1);
+            });
+
+            it('should filter distinct subject count by predicate', async() => {
+              expect(store.countDistinctTerms(
+                [ 'subject' ],
+                [ undefined, DF.namedNode('p1'), undefined, undefined ],
+              )).toBe(2);
+            });
+
+            it('should filter distinct subject-predicate count by graph', async() => {
+              expect(store.countDistinctTerms(
+                [ 'subject', 'predicate' ],
+                [ undefined, undefined, undefined, DF.namedNode('g1') ],
+              )).toBe(3);
+            });
+
+            it('should return 0 when filter term is not in the dictionary', async() => {
+              expect(store.countDistinctTerms(
+                [ 'subject' ],
+                [ undefined, undefined, undefined, DF.namedNode('g-nonexistent') ],
+              )).toBe(0);
+            });
+
+            it('should ignore all-undefined filter', async() => {
+              expect(store.countDistinctTerms(
+                [ 'subject' ],
+                [ undefined, undefined, undefined, undefined ],
+              )).toBe(2);
+            });
+          });
+
           describe('asDataset', () => {
             let dataset: DatasetCoreWrapper;
             beforeEach(() => {

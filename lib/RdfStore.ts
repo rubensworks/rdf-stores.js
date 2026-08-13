@@ -18,6 +18,7 @@ import type { IRdfStoreIndex } from './index/IRdfStoreIndex';
 import { RdfStoreIndexNestedMapQuoted } from './index/RdfStoreIndexNestedMapQuoted';
 import type { IRdfStoreOptions } from './IRdfStoreOptions';
 import {
+  encodeAndExtendFilters,
   encodeOptionalTerms,
   getBestIndex,
   getBestIndexTerms,
@@ -496,9 +497,11 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * Returns the number of distinct terms that exist in the store.
    *
    * @param terms An array of quad term names
+   * @param filters An optional array of quad components that must be matched.
    */
   public countDistinctTerms(
     terms: QuadTermName[],
+    filters?: (RDF.Term | undefined)[],
   ): number {
     // Determine the best index for this pattern
     const bestIndex = getBestIndexTerms(this.indexesWrappedComponentOrders, terms);
@@ -516,15 +519,27 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     const termsOrdered: QuadTermName[] = termsOrderedUnfiltered.filter(t => t !== undefined);
 
     // Determine path of terms to follow in the index
-    const matchTerms = getIndexMatchTermsPath(indexWrapped.componentOrder, termsOrdered);
+    let matchTerms = getIndexMatchTermsPath(indexWrapped.componentOrder, termsOrdered);
 
-    // Ensure distinctness (this can only occur when insufficient indexes are available)
+    // Encode filters if provided
+    let filterTermsEncoded: EncodedQuadTerms<TE | undefined> | undefined;
+    if (filters) {
+      const encodedFilters = encodeAndExtendFilters(filters, matchTerms, indexWrapped.componentOrder, this.dictionary);
+      if (encodedFilters === null) {
+        // Filter term not in dictionary → no results
+        return 0;
+      }
+      ({ filterTermsEncoded, matchTerms } = encodedFilters);
+    }
+
+    // Ensure distinctness (this can only occur when insufficient indexes are available,
+    // or when filters go beyond match depths)
     if (matchTerms.includes(false)) {
-      return this.getDistinctTerms(terms).length;
+      return this.getDistinctTerms(terms, filters).length;
     }
 
     // Call the best index's count method
-    return indexWrapped.index.countTerms(matchTerms);
+    return indexWrapped.index.countTerms(matchTerms, filterTermsEncoded);
   }
 
   /**
@@ -534,10 +549,16 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * For example, when requesting the terms `[ 'subject', 'predicate' ]`,
    * a produced array could be `[ 'ex:s', 'ex:p' ]`,
    *
+   * For example, if filters is in the form of `[ undefined, DF.namedNode('ex:p'), undefined, DF.defaultGraph() ]`,
+   * this means that only those distinct terms must be returned if they originate from quads with predicate 'ex:p'
+   * and in the default graph.
+   *
    * @param terms An array of quad term names
+   * @param filters An optional array of quad components that must be matched.
    */
   public* readDistinctTerms(
     terms: QuadTermName[],
+    filters?: (RDF.Term | undefined)[],
   ): IterableIterator<RDF.Term[]> {
     // Determine the best index for this pattern
     const bestIndex = getBestIndexTerms(this.indexesWrappedComponentOrders, terms);
@@ -559,9 +580,21 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     }
 
     // Determine path of terms to follow in the index
-    const matchTerms = getIndexMatchTermsPath(indexWrapped.componentOrder, termsOrdered);
+    let matchTerms = getIndexMatchTermsPath(indexWrapped.componentOrder, termsOrdered);
 
-    // Ensure distinctness (this can only occur when insufficient indexes are available)
+    // Encode filters if provided
+    let filterTermsEncoded: EncodedQuadTerms<TE | undefined> | undefined;
+    if (filters) {
+      const encodedFilters = encodeAndExtendFilters(filters, matchTerms, indexWrapped.componentOrder, this.dictionary);
+      if (encodedFilters === null) {
+        // Filter term not in dictionary → no results
+        return;
+      }
+      ({ filterTermsEncoded, matchTerms } = encodedFilters);
+    }
+
+    // Ensure distinctness (this can only occur when insufficient indexes are available,
+    // or when filters go beyond match depths)
     let distinctTerms: Set<string> | undefined;
     if (matchTerms.includes(false)) {
       // TODO: if the first index level (e.g. graph) has just one term, distinctness is already guaranteed and we can
@@ -570,7 +603,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     }
 
     // Call the best index's find method
-    for (const readTerms of indexWrapped.index.findTerms(matchTerms)) {
+    for (const readTerms of indexWrapped.index.findTerms(matchTerms, filterTermsEncoded)) {
       // Inverse term ordering
       const readTermsInversed: TE[] = [];
       for (let i = 0; i < readTerms.length; i++) {
@@ -601,12 +634,18 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * For example, when requesting the terms `[ 'subject', 'predicate' ]`,
    * a produced array could be `[ 'ex:s', 'ex:p' ]`,
    *
+   * For example, if filters is in the form of `[ undefined, DF.namedNode('ex:p'), undefined, DF.defaultGraph() ]`,
+   * this means that only those distinct terms must be returned if they originate from quads with predicate 'ex:p'
+   * and in the default graph.
+   *
    * @param terms An array of quad term names
+   * @param filters An optional array of quad components that must be matched.
    */
   public getDistinctTerms(
     terms: QuadTermName[],
+    filters?: (RDF.Term | undefined)[],
   ): RDF.Term[][] {
-    return [ ...this.readDistinctTerms(terms) ];
+    return [ ...this.readDistinctTerms(terms, filters) ];
   }
 
   /**
@@ -616,12 +655,18 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * For example, when requesting the terms `[ 'subject', 'predicate' ]`,
    * a produced array could be `[ 'ex:s', 'ex:p' ]`,
    *
+   * For example, if filters is in the form of `[ undefined, DF.namedNode('ex:p'), undefined, DF.defaultGraph() ]`,
+   * this means that only those distinct terms must be returned if they originate from quads with predicate 'ex:p'
+   * and in the default graph.
+   *
    * @param terms An array of quad term names
+   * @param filters An optional array of quad components that must be matched.
    */
   public matchDistinctTerms(
     terms: QuadTermName[],
+    filters?: (RDF.Term | undefined)[],
   ): AsyncIterator<RDF.Term[]> {
-    return wrap(this.readDistinctTerms(terms));
+    return wrap(this.readDistinctTerms(terms, filters));
   }
 
   /**

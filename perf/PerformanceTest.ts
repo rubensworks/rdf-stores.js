@@ -67,6 +67,8 @@ export class PerformanceTest {
         this.countTerms3(this.dimension / 4, store);
         this.findTerms4(this.dimension / 4, store);
         this.countTerms4(this.dimension / 4, store);
+        this.findTerms1WithFilter(this.dimension / 4, store);
+        this.countTerms1WithFilter(this.dimension / 4, store);
         console.log();
       }
 
@@ -443,6 +445,34 @@ export class PerformanceTest {
     for (let i = 0; i < dimension; i++) {
       for (let j = 0; j < dimension; j++) {
         assert.equal(store.getNodes(this.dataFactory.namedNode(`${this.prefix}${i}`)).length, dimension);
+      }
+    }
+    console.timeEnd(TEST);
+  }
+
+  public findTerms1WithFilter(dimension: number, store: RdfStore): void {
+    const TEST = `- Finding all ${dimension} terms (1) filtered by graph ${dimension * dimension} times`;
+    console.time(TEST);
+    for (let i = 0; i < dimension; i++) {
+      for (let j = 0; j < dimension; j++) {
+        const graphFilter = this.dataFactory.namedNode(`${this.prefix}${i}`);
+        assert.ok(
+          store.getDistinctTerms([ 'subject' ], [ undefined, undefined, undefined, graphFilter ]).length <= dimension,
+        );
+      }
+    }
+    console.timeEnd(TEST);
+  }
+
+  public countTerms1WithFilter(dimension: number, store: RdfStore): void {
+    const TEST = `- Counting all ${dimension} terms (1) filtered by graph ${dimension * dimension} times`;
+    console.time(TEST);
+    for (let i = 0; i < dimension; i++) {
+      for (let j = 0; j < dimension; j++) {
+        const graphFilter = this.dataFactory.namedNode(`${this.prefix}${i}`);
+        assert.ok(
+          store.countDistinctTerms([ 'subject' ], [ undefined, undefined, undefined, graphFilter ]) <= dimension,
+        );
       }
     }
     console.timeEnd(TEST);

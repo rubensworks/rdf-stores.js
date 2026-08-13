@@ -2,7 +2,7 @@ import type * as RDF from '@rdfjs/types';
 import type { QuadTermName } from 'rdf-terms';
 import { QUAD_TERM_NAMES } from 'rdf-terms';
 import type { ITermDictionary } from './dictionary/ITermDictionary';
-import type { QuadPatternTerms } from './PatternTerm';
+import type { EncodedQuadTerms, QuadPatternTerms } from './PatternTerm';
 
 // eslint-disable-next-line ts/no-unsafe-assignment
 export const QUAD_TERM_NAMES_INVERSE: Record<QuadTermName, number> =
@@ -213,4 +213,76 @@ export function quadHasVariables(currentTerm: RDF.Quad): boolean {
  */
 export function arePatternsQuoted(terms: QuadPatternTerms): boolean[] {
   return terms.map(term => term?.termType === 'Quad' && quadHasVariables(term));
+}
+
+/**
+ * Compute the deepest level to navigate to, based on matchTerms and filterTerms.
+ * @param matchTerms An array of booleans indicating which terms to collect.
+ * @param filterTerms An optional array of filter terms.
+ */
+export function computeEndDepth<TE>(matchTerms: boolean[], filterTerms?: (TE | undefined)[]): number {
+  let endDepth = matchTerms.length;
+  if (filterTerms) {
+    for (let i = filterTerms.length - 1; i >= 0; i--) {
+      if (filterTerms[i] !== undefined) {
+        if (i + 1 > endDepth) {
+          endDepth = i + 1;
+        }
+        break;
+      }
+    }
+  }
+  return endDepth;
+}
+
+/**
+ * Encode filter terms and extend the matchTerms path if needed.
+ *
+ * Reorders the filters from SPOG order to the index's component order, encodes each defined
+ * filter term using the dictionary, and pads `matchTerms` with `false` entries when filters
+ * reach deeper into the index than the current path.
+ *
+ * @param filters An array of quad components (SPOG order) to filter on.
+ * @param matchTerms The current index-path boolean array (mutated copy is returned).
+ * @param componentOrder The index's component order.
+ * @param dictionary The term dictionary used for encoding.
+ * @returns An object with the encoded filter array and the (possibly extended) matchTerms,
+ *          or `null` when a filter term is absent from the dictionary (meaning no results exist).
+ */
+export function encodeAndExtendFilters<TE>(
+  filters: (RDF.Term | undefined)[],
+  matchTerms: boolean[],
+  componentOrder: QuadTermName[],
+  dictionary: ITermDictionary<TE>,
+): { filterTermsEncoded: EncodedQuadTerms<TE | undefined>; matchTerms: boolean[] } | null {
+  // Reorder filters from SPOG order to the index's component order
+  const filtersOrdered = orderQuadComponents(componentOrder, filters);
+  const encoded: (TE | undefined)[] = [];
+  let lastFilterDepth = -1;
+  for (let filterI = 0; filterI < filtersOrdered.length; filterI++) {
+    const term = filtersOrdered[filterI];
+    if (term) {
+      const encodedTerm = dictionary.encodeOptional(term);
+      if (encodedTerm === undefined) {
+        // Filter term not in dictionary → no results
+        return null;
+      }
+      encoded.push(encodedTerm);
+      lastFilterDepth = filterI;
+    } else {
+      encoded.push(undefined);
+    }
+  }
+  const filterTermsEncoded = <EncodedQuadTerms<TE | undefined>> encoded;
+
+  // Extend matchTerms with false entries to cover filter depths beyond the current matchTerms
+  if (lastFilterDepth >= matchTerms.length) {
+    const extendedMatchTerms = [ ...matchTerms ];
+    while (extendedMatchTerms.length <= lastFilterDepth) {
+      extendedMatchTerms.push(false);
+    }
+    matchTerms = extendedMatchTerms;
+  }
+
+  return { filterTermsEncoded, matchTerms };
 }

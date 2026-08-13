@@ -2,7 +2,7 @@
 import type * as RDF from '@rdfjs/types';
 import type { ITermDictionary } from '../dictionary/ITermDictionary';
 import type { IRdfStoreOptions } from '../IRdfStoreOptions';
-import { encodeOptionalTerms } from '../OrderUtils';
+import { computeEndDepth, encodeOptionalTerms } from '../OrderUtils';
 import type { QuadPatternTerms, QuadTerms, EncodedQuadTerms } from '../PatternTerm';
 import type { IRdfStoreIndex } from './IRdfStoreIndex';
 
@@ -157,28 +157,114 @@ export class RdfStoreIndexNestedRecord<TE extends number, TV> implements IRdfSto
     }
   }
 
+  protected existsPath(
+    depth: number,
+    endDepth: number,
+    map: NestedRecordActual<TE>,
+    filterTerms?: (TE | undefined)[],
+  ): boolean {
+    if (depth >= endDepth) {
+      return true;
+    }
+    const filterTerm = filterTerms?.[depth];
+    if (filterTerm !== undefined) {
+      const subMap = map[filterTerm];
+      return subMap !== undefined &&
+        this.existsPath(depth + 1, endDepth, <NestedRecordActual<TE>> subMap, filterTerms);
+    }
+    for (const subMap of Object.values(map)) {
+      if (this.existsPath(depth + 1, endDepth, <NestedRecordActual<TE>> subMap, filterTerms)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   protected* findTermsInner(
     depth: number,
+    endDepth: number,
     map: NestedRecordActual<TE>,
     matchTerms: boolean[],
     partialResult: TE[],
+    filterTerms?: (TE | undefined)[],
   ): IterableIterator<TE[]> {
-    if (matchTerms[depth]) {
-      for (const [ key1, subMap ] of Object.entries(map)) {
-        const newPartialResult = [ ...partialResult, <TE> Number.parseInt(key1, 10) ];
-        yield* this.findTermsInner(depth + 1, <NestedRecordActual<TE>> subMap, matchTerms, newPartialResult);
-      }
-    } else if (depth < matchTerms.length) {
-      for (const subMap of Object.values(map)) {
-        yield* this.findTermsInner(depth + 1, <NestedRecordActual<TE>> subMap, matchTerms, partialResult);
+    if (depth >= endDepth) {
+      yield partialResult;
+      return;
+    }
+    const isMatch = depth < matchTerms.length && matchTerms[depth];
+    const isLastMatch = depth === matchTerms.length - 1;
+    const deepFilter = isLastMatch && endDepth > matchTerms.length;
+    const filterTerm = filterTerms?.[depth];
+    if (filterTerm === undefined) {
+      if (isMatch) {
+        for (const [ key1, subMap ] of Object.entries(map)) {
+          const key = <TE> Number.parseInt(key1, 10);
+          if (deepFilter && !this.existsPath(depth + 1, endDepth, <NestedRecordActual<TE>> subMap, filterTerms)) {
+            continue;
+          }
+          const newPartialResult = [ ...partialResult, key ];
+          if (deepFilter) {
+            yield newPartialResult;
+          } else {
+            yield* this.findTermsInner(
+              depth + 1,
+              endDepth,
+<NestedRecordActual<TE>> subMap,
+matchTerms,
+newPartialResult,
+filterTerms,
+            );
+          }
+        }
+      } else {
+        for (const subMap of Object.values(map)) {
+          yield* this.findTermsInner(
+            depth + 1,
+            endDepth,
+<NestedRecordActual<TE>> subMap,
+matchTerms,
+partialResult,
+filterTerms,
+          );
+        }
       }
     } else {
-      yield partialResult;
+      const subMap = map[filterTerm];
+      if (subMap) {
+        if (isMatch) {
+          const newPartialResult = [ ...partialResult, filterTerm ];
+          if (deepFilter) {
+            if (this.existsPath(depth + 1, endDepth, <NestedRecordActual<TE>> subMap, filterTerms)) {
+              yield newPartialResult;
+            }
+          } else {
+            yield* this.findTermsInner(
+              depth + 1,
+              endDepth,
+<NestedRecordActual<TE>> subMap,
+matchTerms,
+newPartialResult,
+filterTerms,
+            );
+          }
+        } else {
+          yield* this.findTermsInner(
+            depth + 1,
+            endDepth,
+<NestedRecordActual<TE>> subMap,
+matchTerms,
+partialResult,
+filterTerms,
+          );
+        }
+      }
     }
   }
 
-  public findTerms(matchTerms: boolean[]): IterableIterator<TE[]> {
-    return this.findTermsInner(0, this.nestedRecords, matchTerms, []);
+  public findTerms(matchTerms: boolean[], filterTerms?: (TE | undefined)[]): IterableIterator<TE[]> {
+    const endDepth = computeEndDepth(matchTerms, filterTerms);
+    return this.findTermsInner(0, endDepth, this.nestedRecords, matchTerms, [], filterTerms);
   }
 
   public count(terms: QuadPatternTerms): number {
@@ -221,22 +307,49 @@ export class RdfStoreIndexNestedRecord<TE extends number, TV> implements IRdfSto
 
   protected countTermsInner(
     depth: number,
+    endDepth: number,
     map: NestedRecordActual<TE>,
     matchTerms: boolean[],
+    filterTerms?: (TE | undefined)[],
   ): number {
-    if (depth === matchTerms.length - 1) {
+    if (depth >= endDepth) {
+      return 1;
+    }
+    const isLastMatch = depth === matchTerms.length - 1;
+    const deepFilter = isLastMatch && endDepth > matchTerms.length;
+    const filterTerm = filterTerms?.[depth];
+    if (filterTerm !== undefined) {
+      const subMap = map[filterTerm];
+      if (!subMap) {
+        return 0;
+      }
+      if (deepFilter) {
+        return this.existsPath(depth + 1, endDepth, <NestedRecordActual<TE>> subMap, filterTerms) ? 1 : 0;
+      }
+      return this.countTermsInner(depth + 1, endDepth, <NestedRecordActual<TE>> subMap, matchTerms, filterTerms);
+    }
+    if (deepFilter) {
+      let count = 0;
+      for (const subMap of Object.values(map)) {
+        if (this.existsPath(depth + 1, endDepth, <NestedRecordActual<TE>> subMap, filterTerms)) {
+          count++;
+        }
+      }
+      return count;
+    }
+    if (depth === endDepth - 1) {
       return Object.keys(map).length;
     }
-
     let count = 0;
     for (const subMap of Object.values(map)) {
-      count += this.countTermsInner(depth + 1, <NestedRecordActual<TE>> subMap, matchTerms);
+      count += this.countTermsInner(depth + 1, endDepth, <NestedRecordActual<TE>> subMap, matchTerms, filterTerms);
     }
     return count;
   }
 
-  public countTerms(matchTerms: boolean[]): number {
-    return this.countTermsInner(0, this.nestedRecords, matchTerms);
+  public countTerms(matchTerms: boolean[], filterTerms?: (TE | undefined)[]): number {
+    const endDepth = computeEndDepth(matchTerms, filterTerms);
+    return this.countTermsInner(0, endDepth, this.nestedRecords, matchTerms, filterTerms);
   }
 }
 
