@@ -1,4 +1,4 @@
-import arrayifyStream from 'arrayify-stream';
+import { arrayifyStream } from 'arrayify-stream';
 import each from 'jest-each';
 import { DataFactory } from 'rdf-data-factory';
 import { RdfStore } from '../lib/RdfStore';
