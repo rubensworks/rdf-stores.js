@@ -3,6 +3,7 @@ import arrayifyStream from 'arrayify-stream';
 import each from 'jest-each';
 import { DataFactory } from 'rdf-data-factory';
 import type { QuadTermName } from 'rdf-terms';
+import { streamifyArray } from 'streamify-array';
 import type { DatasetCoreWrapper } from '../lib/dataset/DatasetCoreWrapper';
 import { TermDictionaryNumberRecordFullTerms } from '../lib/dictionary/TermDictionaryNumberRecordFullTerms';
 import { RdfStoreIndexNestedRecord } from '../lib/index/RdfStoreIndexNestedRecord';
@@ -10,8 +11,6 @@ import { RdfStore } from '../lib/RdfStore';
 import 'jest-rdf';
 import '@comunica/utils-jest';
 import { dictClazzToInstance, expectToEqualTerms, indexClazzToInstance } from './testUtil';
-
-const streamifyArray = require('streamify-array');
 
 const DF = new DataFactory();
 const BF = new BindingsFactory(DF);
