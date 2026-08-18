@@ -79,5 +79,6 @@ jobs:
       - name: Run benchmarks
         uses: CodSpeedHQ/action@v5
         with:
+          mode: simulation
           run: node perf/benchmark.js
           token: ${{ secrets.CODSPEED_TOKEN }}
