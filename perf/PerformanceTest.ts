@@ -3,7 +3,7 @@
 import * as assert from 'node:assert';
 import { BindingsFactory } from '@comunica/utils-bindings-factory';
 import type * as RDF from '@rdfjs/types';
-import arrayifyStream from 'arrayify-stream';
+import { arrayifyStream } from 'arrayify-stream';
 import { Store } from 'n3';
 import { DataFactory } from 'rdf-data-factory';
 import { QUAD_TERM_NAMES } from 'rdf-terms';

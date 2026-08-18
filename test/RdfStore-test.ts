@@ -1,5 +1,5 @@
 import { BindingsFactory } from '@comunica/utils-bindings-factory';
-import arrayifyStream from 'arrayify-stream';
+import { arrayifyStream } from 'arrayify-stream';
 import each from 'jest-each';
 import { DataFactory } from 'rdf-data-factory';
 import type { QuadTermName } from 'rdf-terms';
