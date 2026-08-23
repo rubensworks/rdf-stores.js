@@ -188,8 +188,11 @@ export class RdfStoreIndexNestedRecord<TE extends number, TV> implements IRdfSto
     partialResult: TE[],
     filterTerms?: (TE | undefined)[],
   ): IterableIterator<TE[]> {
+    // `partialResult` is a scratch buffer that is pushed to and popped from while descending,
+    // and only copied when a complete result is produced.
+    // This avoids allocating one intermediate array per matched term per result.
     if (depth >= endDepth) {
-      yield partialResult;
+      yield [ ...partialResult ];
       return;
     }
     const isMatch = depth < matchTerms.length && matchTerms[depth];
@@ -203,19 +206,20 @@ export class RdfStoreIndexNestedRecord<TE extends number, TV> implements IRdfSto
           if (deepFilter && !this.existsPath(depth + 1, endDepth, <NestedRecordActual<TE>> subMap, filterTerms)) {
             continue;
           }
-          const newPartialResult = [ ...partialResult, key ];
+          partialResult.push(key);
           if (deepFilter) {
-            yield newPartialResult;
+            yield [ ...partialResult ];
           } else {
             yield* this.findTermsInner(
               depth + 1,
               endDepth,
 <NestedRecordActual<TE>> subMap,
 matchTerms,
-newPartialResult,
+partialResult,
 filterTerms,
             );
           }
+          partialResult.pop();
         }
       } else {
         for (const subMap of Object.values(map)) {
@@ -233,10 +237,10 @@ filterTerms,
       const subMap = map[filterTerm];
       if (subMap) {
         if (isMatch) {
-          const newPartialResult = [ ...partialResult, filterTerm ];
+          partialResult.push(filterTerm);
           if (deepFilter) {
             if (this.existsPath(depth + 1, endDepth, <NestedRecordActual<TE>> subMap, filterTerms)) {
-              yield newPartialResult;
+              yield [ ...partialResult ];
             }
           } else {
             yield* this.findTermsInner(
@@ -244,10 +248,11 @@ filterTerms,
               endDepth,
 <NestedRecordActual<TE>> subMap,
 matchTerms,
-newPartialResult,
+partialResult,
 filterTerms,
             );
           }
+          partialResult.pop();
         } else {
           yield* this.findTermsInner(
             depth + 1,
