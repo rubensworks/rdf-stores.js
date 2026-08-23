@@ -79,9 +79,53 @@ export class RdfStoreIndexNestedRecord<TE extends number, TV> implements IRdfSto
     return this.nestedRecords[ids[0]]?.[ids[1]]?.[ids[2]]?.[ids[3]];
   }
 
+  /**
+   * Check if all four pattern terms are plain (non-quoted) defined terms,
+   * in which case the pattern can be resolved by a straight chain of record lookups.
+   * @param terms The pattern terms.
+   */
+  protected isExactPattern(terms: QuadPatternTerms): boolean {
+    for (let i = 0; i < 4; i++) {
+      const term = terms[i];
+      if (term === undefined || term.termType === 'Quad') {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Resolve a fully defined pattern by directly walking down the nested records.
+   * @param ids The encoded pattern terms.
+   * @return boolean If the quad is present in this index.
+   */
+  protected hasExact(ids: EncodedQuadTerms<TE | undefined>): boolean {
+    const map1 = this.nestedRecords[<TE> ids[0]];
+    if (map1 === undefined) {
+      return false;
+    }
+    const map2 = map1[<TE> ids[1]];
+    if (map2 === undefined) {
+      return false;
+    }
+    const map3 = map2[<TE> ids[2]];
+    if (map3 === undefined) {
+      return false;
+    }
+    return <TE> ids[3] in map3;
+  }
+
   public* find(terms: QuadPatternTerms): IterableIterator<QuadTerms> {
     const ids = encodeOptionalTerms(terms, this.dictionary);
     if (!ids) {
+      return;
+    }
+
+    // Fully defined patterns are just a membership check, which avoids setting up the loops below.
+    if (this.isExactPattern(terms)) {
+      if (this.hasExact(<EncodedQuadTerms<TE | undefined>> ids)) {
+        yield <QuadTerms> [ terms[0]!, terms[1]!, terms[2]!, terms[3]! ];
+      }
       return;
     }
 
@@ -127,6 +171,14 @@ export class RdfStoreIndexNestedRecord<TE extends number, TV> implements IRdfSto
     // eslint-disable-next-line ts/naming-convention
     _terms: QuadPatternTerms,
   ): IterableIterator<EncodedQuadTerms<TE>> {
+    // Fully defined patterns are just a membership check, which avoids setting up the loops below.
+    if (ids[0] !== undefined && ids[1] !== undefined && ids[2] !== undefined && ids[3] !== undefined) {
+      if (this.hasExact(ids)) {
+        yield <EncodedQuadTerms<TE>> ids;
+      }
+      return;
+    }
+
     const [ id0, id1, id2, id3 ] = ids;
 
     let map1: NestedRecordActual<TE>;
@@ -172,8 +224,8 @@ export class RdfStoreIndexNestedRecord<TE extends number, TV> implements IRdfSto
       return subMap !== undefined &&
         this.existsPath(depth + 1, endDepth, <NestedRecordActual<TE>> subMap, filterTerms);
     }
-    for (const subMap of Object.values(map)) {
-      if (this.existsPath(depth + 1, endDepth, <NestedRecordActual<TE>> subMap, filterTerms)) {
+    for (const key in map) {
+      if (this.existsPath(depth + 1, endDepth, <NestedRecordActual<TE>> map[<TE> <any> key], filterTerms)) {
         return true;
       }
     }
@@ -201,7 +253,8 @@ export class RdfStoreIndexNestedRecord<TE extends number, TV> implements IRdfSto
     const filterTerm = filterTerms?.[depth];
     if (filterTerm === undefined) {
       if (isMatch) {
-        for (const [ key1, subMap ] of Object.entries(map)) {
+        for (const key1 in map) {
+          const subMap = map[<TE> <any> key1];
           const key = <TE> Number.parseInt(key1, 10);
           if (deepFilter && !this.existsPath(depth + 1, endDepth, <NestedRecordActual<TE>> subMap, filterTerms)) {
             continue;
@@ -222,11 +275,11 @@ filterTerms,
           partialResult.pop();
         }
       } else {
-        for (const subMap of Object.values(map)) {
+        for (const key1 in map) {
           yield* this.findTermsInner(
             depth + 1,
             endDepth,
-<NestedRecordActual<TE>> subMap,
+<NestedRecordActual<TE>> map[<TE> <any> key1],
 matchTerms,
 partialResult,
 filterTerms,
@@ -279,6 +332,12 @@ filterTerms,
     if (!ids) {
       return 0;
     }
+
+    // Fully defined patterns are just a membership check, which avoids setting up the loops below.
+    if (this.isExactPattern(terms)) {
+      return this.hasExact(<EncodedQuadTerms<TE | undefined>> ids) ? 1 : 0;
+    }
+
     const id0 = ids[0];
     const id1 = ids[1];
     const id2 = ids[2];
@@ -335,8 +394,8 @@ filterTerms,
     }
     if (deepFilter) {
       let count = 0;
-      for (const subMap of Object.values(map)) {
-        if (this.existsPath(depth + 1, endDepth, <NestedRecordActual<TE>> subMap, filterTerms)) {
+      for (const key in map) {
+        if (this.existsPath(depth + 1, endDepth, <NestedRecordActual<TE>> map[<TE> <any> key], filterTerms)) {
           count++;
         }
       }
@@ -346,8 +405,14 @@ filterTerms,
       return Object.keys(map).length;
     }
     let count = 0;
-    for (const subMap of Object.values(map)) {
-      count += this.countTermsInner(depth + 1, endDepth, <NestedRecordActual<TE>> subMap, matchTerms, filterTerms);
+    for (const key in map) {
+      count += this.countTermsInner(
+        depth + 1,
+        endDepth,
+<NestedRecordActual<TE>> map[<TE> <any> key],
+matchTerms,
+filterTerms,
+      );
     }
     return count;
   }

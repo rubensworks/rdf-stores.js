@@ -31,6 +31,14 @@ export class RdfStoreIndexNestedRecordQuoted<TE extends number, TV> extends RdfS
       return;
     }
 
+    // Fully defined patterns are just a membership check, which avoids setting up the loops below.
+    if (this.isExactPattern(terms)) {
+      if (this.hasExact(<EncodedQuadTerms<TE | undefined>> ids)) {
+        yield <QuadTerms> [ terms[0]!, terms[1]!, terms[2]!, terms[3]! ];
+      }
+      return;
+    }
+
     const [ id0, id1, id2, id3 ] = ids;
     const [ term0, term1, term2, term3 ] = terms;
     const quotedTerm0 = isPatternQuoted(terms[0]);
@@ -86,6 +94,14 @@ export class RdfStoreIndexNestedRecordQuoted<TE extends number, TV> extends RdfS
     ids: EncodedQuadTerms<TE | undefined>,
     terms: QuadPatternTerms,
   ): IterableIterator<EncodedQuadTerms<TE>> {
+    // Fully defined patterns are just a membership check, which avoids setting up the loops below.
+    if (this.isExactPattern(terms)) {
+      if (this.hasExact(ids)) {
+        yield <EncodedQuadTerms<TE>> ids;
+      }
+      return;
+    }
+
     const [ id0, id1, id2, id3 ] = ids;
     const [ term0, term1, term2, term3 ] = terms;
     const quotedTerm0 = isPatternQuoted(terms[0]);
@@ -135,6 +151,11 @@ export class RdfStoreIndexNestedRecordQuoted<TE extends number, TV> extends RdfS
     const ids = encodeOptionalTerms(terms, this.dictionary);
     if (!ids) {
       return 0;
+    }
+
+    // Fully defined patterns are just a membership check, which avoids setting up the loops below.
+    if (this.isExactPattern(terms)) {
+      return this.hasExact(<EncodedQuadTerms<TE | undefined>> ids) ? 1 : 0;
     }
     const [ id0, id1, id2, id3 ] = ids;
     const [ term0, term1, term2, term3 ] = terms;
