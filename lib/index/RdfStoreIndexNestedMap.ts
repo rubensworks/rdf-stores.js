@@ -7,6 +7,14 @@ import type { EncodedQuadTerms, QuadPatternTerms, QuadTerms } from '../PatternTe
 import type { IRdfStoreIndex } from './IRdfStoreIndex';
 
 /**
+ * A shared single-element array that is iterated over when a term is fully defined,
+ * so that no per-lookup array has to be allocated for the single matching key.
+ * Its element value is never read: the defined term is used instead.
+ * Sharing this array is safe because iterating an array does not modify it.
+ */
+export const SINGLE_ELEMENT: readonly [null] = [ null ];
+
+/**
  * An RDF store index that is implemented using nested Maps.
  */
 export class RdfStoreIndexNestedMap<TE, TV> implements IRdfStoreIndex<TE, TV> {
@@ -100,14 +108,59 @@ export class RdfStoreIndexNestedMap<TE, TV> implements IRdfStoreIndex<TE, TV> {
     return <TV | undefined> map3.get(ids[3]);
   }
 
+  /**
+   * Check if all four pattern terms are plain (non-quoted) defined terms,
+   * in which case the pattern can be resolved by a straight chain of map lookups.
+   * @param terms The pattern terms.
+   */
+  protected isExactPattern(terms: QuadPatternTerms): boolean {
+    for (let i = 0; i < 4; i++) {
+      const term = terms[i];
+      if (term === undefined || term.termType === 'Quad') {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Resolve a fully defined pattern by directly walking down the nested maps.
+   * @param ids The encoded pattern terms.
+   * @return boolean If the quad is present in this index.
+   */
+  protected hasExact(ids: EncodedQuadTerms<TE | undefined>): boolean {
+    const map1: NestedMapActual<TE, TV> | undefined = <any> this.nestedMap.get(<TE> ids[0]);
+    if (map1 === undefined) {
+      return false;
+    }
+    const map2: NestedMapActual<TE, TV> | undefined = <any> map1.get(<TE> ids[1]);
+    if (map2 === undefined) {
+      return false;
+    }
+    const map3: NestedMapActual<TE, TV> | undefined = <any> map2.get(<TE> ids[2]);
+    if (map3 === undefined) {
+      return false;
+    }
+    return map3.has(<TE> ids[3]);
+  }
+
   public* find(terms: QuadPatternTerms): IterableIterator<QuadTerms> {
     const ids = encodeOptionalTerms(terms, this.dictionary);
     if (!ids) {
       return;
     }
 
+    // Fully defined patterns are just a membership check, which avoids setting up the loops below.
+    if (this.isExactPattern(terms)) {
+      if (this.hasExact(<EncodedQuadTerms<TE | undefined>> ids)) {
+        yield <QuadTerms> [ terms[0]!, terms[1]!, terms[2]!, terms[3]! ];
+      }
+      return;
+    }
+
     const [ id0, id1, id2, id3 ] = ids;
     const [ term0, term1, term2, term3 ] = terms;
+    const dictionary = this.dictionary;
 
     let partialQuad0: RDF.Term;
     let partialQuad1: RDF.Term;
@@ -119,21 +172,44 @@ export class RdfStoreIndexNestedMap<TE, TV> implements IRdfStoreIndex<TE, TV> {
     let map3: NestedMapActual<TE, TV>;
 
     const map0: NestedMapActual<TE, TV> = this.nestedMap;
-    const map0Keys = id0 === undefined ? map0.keys() : (map0.has(id0) ? [ id0 ] : []);
-    for (const key1 of map0Keys) {
-      map1 = <any>map0.get(key1);
-      partialQuad0 = term0 ?? this.dictionary.decode(key1);
-      const map1Keys = id1 === undefined ? map1.keys() : (map1.has(id1) ? [ id1 ] : []);
-      for (const key2 of map1Keys) {
-        map2 = <any>map1.get(key2);
-        partialQuad1 = term1 ?? this.dictionary.decode(key2);
-        const map2Keys = id2 === undefined ? map2.keys() : (map2.has(id2) ? [ id2 ] : []);
-        for (const key3 of map2Keys) {
-          map3 = <any>map2.get(key3);
-          partialQuad2 = term2 ?? this.dictionary.decode(key3);
-          const map3Keys = id3 === undefined ? map3.keys() : (map3.has(id3) ? [ id3 ] : []);
-          for (const key4 of map3Keys) {
-            partialQuad3 = term3 ?? this.dictionary.decode(key4);
+    let fixed1: NestedMapActual<TE, TV> | undefined;
+    if (id0 !== undefined) {
+      fixed1 = <any> map0.get(id0);
+      if (fixed1 === undefined) {
+        return;
+      }
+    }
+    for (const key1 of <Iterable<TE>> (id0 === undefined ? map0.keys() : SINGLE_ELEMENT)) {
+      map1 = id0 === undefined ? <any>map0.get(key1) : fixed1!;
+      partialQuad0 = id0 === undefined ? (term0 ?? dictionary.decode(key1)) : term0!;
+      let fixed2: NestedMapActual<TE, TV> | undefined;
+      if (id1 !== undefined) {
+        fixed2 = <any> map1.get(id1);
+        if (fixed2 === undefined) {
+          continue;
+        }
+      }
+      for (const key2 of <Iterable<TE>> (id1 === undefined ? map1.keys() : SINGLE_ELEMENT)) {
+        map2 = id1 === undefined ? <any>map1.get(key2) : fixed2!;
+        partialQuad1 = id1 === undefined ? (term1 ?? dictionary.decode(key2)) : term1!;
+        let fixed3: NestedMapActual<TE, TV> | undefined;
+        if (id2 !== undefined) {
+          fixed3 = <any> map2.get(id2);
+          if (fixed3 === undefined) {
+            continue;
+          }
+        }
+        for (const key3 of <Iterable<TE>> (id2 === undefined ? map2.keys() : SINGLE_ELEMENT)) {
+          map3 = id2 === undefined ? <any>map2.get(key3) : fixed3!;
+          partialQuad2 = id2 === undefined ? (term2 ?? dictionary.decode(key3)) : term2!;
+          if (id3 !== undefined) {
+            if (map3.has(id3)) {
+              yield <any>[ partialQuad0, partialQuad1, partialQuad2, term3! ];
+            }
+            continue;
+          }
+          for (const key4 of map3.keys()) {
+            partialQuad3 = term3 ?? dictionary.decode(key4);
             yield <any>[ partialQuad0, partialQuad1, partialQuad2, partialQuad3 ];
           }
         }
@@ -148,25 +224,62 @@ export class RdfStoreIndexNestedMap<TE, TV> implements IRdfStoreIndex<TE, TV> {
     // eslint-disable-next-line ts/naming-convention
     _terms: QuadPatternTerms,
   ): IterableIterator<EncodedQuadTerms<TE>> {
+    // Fully defined patterns are just a membership check, which avoids setting up the loops below.
+    if (ids[0] !== undefined && ids[1] !== undefined && ids[2] !== undefined && ids[3] !== undefined) {
+      if (this.hasExact(ids)) {
+        yield <EncodedQuadTerms<TE>> ids;
+      }
+      return;
+    }
+
     const [ id0, id1, id2, id3 ] = ids;
 
+    let key1: TE;
+    let key2: TE;
+    let key3: TE;
     let map1: NestedMapActual<TE, TV>;
     let map2: NestedMapActual<TE, TV>;
     let map3: NestedMapActual<TE, TV>;
 
     const map0: NestedMapActual<TE, TV> = this.nestedMap;
-    const map0Keys = id0 === undefined ? map0.keys() : (map0.has(id0) ? [ id0 ] : []);
-    for (const key1 of map0Keys) {
-      map1 = <any>map0.get(key1);
-      const map1Keys = id1 === undefined ? map1.keys() : (map1.has(id1) ? [ id1 ] : []);
-      for (const key2 of map1Keys) {
-        map2 = <any>map1.get(key2);
-        const map2Keys = id2 === undefined ? map2.keys() : (map2.has(id2) ? [ id2 ] : []);
-        for (const key3 of map2Keys) {
-          map3 = <any>map2.get(key3);
-          const map3Keys = id3 === undefined ? map3.keys() : (map3.has(id3) ? [ id3 ] : []);
-          for (const key4 of map3Keys) {
-            yield [ <TE> key1, <TE> key2, <TE> key3, <TE> key4 ];
+    let fixed1: NestedMapActual<TE, TV> | undefined;
+    if (id0 !== undefined) {
+      fixed1 = <any> map0.get(id0);
+      if (fixed1 === undefined) {
+        return;
+      }
+    }
+    for (const iterKey1 of <Iterable<TE>> (id0 === undefined ? map0.keys() : SINGLE_ELEMENT)) {
+      key1 = id0 ?? iterKey1;
+      map1 = id0 === undefined ? <any>map0.get(key1) : fixed1!;
+      let fixed2: NestedMapActual<TE, TV> | undefined;
+      if (id1 !== undefined) {
+        fixed2 = <any> map1.get(id1);
+        if (fixed2 === undefined) {
+          continue;
+        }
+      }
+      for (const iterKey2 of <Iterable<TE>> (id1 === undefined ? map1.keys() : SINGLE_ELEMENT)) {
+        key2 = id1 ?? iterKey2;
+        map2 = id1 === undefined ? <any>map1.get(key2) : fixed2!;
+        let fixed3: NestedMapActual<TE, TV> | undefined;
+        if (id2 !== undefined) {
+          fixed3 = <any> map2.get(id2);
+          if (fixed3 === undefined) {
+            continue;
+          }
+        }
+        for (const iterKey3 of <Iterable<TE>> (id2 === undefined ? map2.keys() : SINGLE_ELEMENT)) {
+          key3 = id2 ?? iterKey3;
+          map3 = id2 === undefined ? <any>map2.get(key3) : fixed3!;
+          if (id3 !== undefined) {
+            if (map3.has(id3)) {
+              yield [ key1, key2, key3, id3 ];
+            }
+            continue;
+          }
+          for (const key4 of map3.keys()) {
+            yield [ key1, key2, key3, key4 ];
           }
         }
       }
@@ -289,6 +402,12 @@ filterTerms,
     if (!ids) {
       return 0;
     }
+
+    // Fully defined patterns are just a membership check, which avoids setting up the loops below.
+    if (this.isExactPattern(terms)) {
+      return this.hasExact(<EncodedQuadTerms<TE | undefined>> ids) ? 1 : 0;
+    }
+
     const id0 = ids[0];
     const id1 = ids[1];
     const id2 = ids[2];
@@ -299,15 +418,33 @@ filterTerms,
     let map3: NestedMapActual<TE, TV>;
 
     const map0: NestedMapActual<TE, TV> = this.nestedMap;
-    const map0Keys = id0 === undefined ? map0.keys() : (map0.has(id0) ? [ id0 ] : []);
-    for (const key1 of map0Keys) {
-      map1 = <any>map0.get(key1);
-      const map1Keys = id1 === undefined ? map1.keys() : (map1.has(id1) ? [ id1 ] : []);
-      for (const key2 of map1Keys) {
-        map2 = <any>map1.get(key2);
-        const map2Keys = id2 === undefined ? map2.keys() : (map2.has(id2) ? [ id2 ] : []);
-        for (const key3 of map2Keys) {
-          map3 = <any>map2.get(key3);
+    let fixed1: NestedMapActual<TE, TV> | undefined;
+    if (id0 !== undefined) {
+      fixed1 = <any> map0.get(id0);
+      if (fixed1 === undefined) {
+        return 0;
+      }
+    }
+    for (const key1 of <Iterable<TE>> (id0 === undefined ? map0.keys() : SINGLE_ELEMENT)) {
+      map1 = id0 === undefined ? <any>map0.get(key1) : fixed1!;
+      let fixed2: NestedMapActual<TE, TV> | undefined;
+      if (id1 !== undefined) {
+        fixed2 = <any> map1.get(id1);
+        if (fixed2 === undefined) {
+          continue;
+        }
+      }
+      for (const key2 of <Iterable<TE>> (id1 === undefined ? map1.keys() : SINGLE_ELEMENT)) {
+        map2 = id1 === undefined ? <any>map1.get(key2) : fixed2!;
+        let fixed3: NestedMapActual<TE, TV> | undefined;
+        if (id2 !== undefined) {
+          fixed3 = <any> map2.get(id2);
+          if (fixed3 === undefined) {
+            continue;
+          }
+        }
+        for (const key3 of <Iterable<TE>> (id2 === undefined ? map2.keys() : SINGLE_ELEMENT)) {
+          map3 = id2 === undefined ? <any>map2.get(key3) : fixed3!;
           if (id3 === undefined) {
             count += map3.size;
           } else if (map3.has(id3)) {
