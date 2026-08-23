@@ -32,6 +32,14 @@ export class RdfStoreIndexNestedMapQuoted<TE, TV> extends RdfStoreIndexNestedMap
       return;
     }
 
+    // Fully defined patterns are just a membership check, which avoids setting up the loops below.
+    if (this.isExactPattern(terms)) {
+      if (this.hasExact(<EncodedQuadTerms<TE | undefined>> ids)) {
+        yield <QuadTerms> [ terms[0]!, terms[1]!, terms[2]!, terms[3]! ];
+      }
+      return;
+    }
+
     const [ id0, id1, id2, id3 ] = ids;
     const [ term0, term1, term2, term3 ] = terms;
     const [ quotedTerm0, quotedTerm1, quotedTerm2, quotedTerm3 ] = arePatternsQuoted(terms);
@@ -82,6 +90,14 @@ export class RdfStoreIndexNestedMapQuoted<TE, TV> extends RdfStoreIndexNestedMap
     ids: EncodedQuadTerms<TE | undefined>,
     terms: QuadPatternTerms,
   ): IterableIterator<EncodedQuadTerms<TE>> {
+    // Fully defined patterns are just a membership check, which avoids setting up the loops below.
+    if (this.isExactPattern(terms)) {
+      if (this.hasExact(ids)) {
+        yield <EncodedQuadTerms<TE>> ids;
+      }
+      return;
+    }
+
     const [ id0, id1, id2, id3 ] = ids;
     const [ term0, term1, term2, term3 ] = terms;
     const [ quotedTerm0, quotedTerm1, quotedTerm2, quotedTerm3 ] = arePatternsQuoted(terms);
@@ -110,12 +126,9 @@ export class RdfStoreIndexNestedMapQuoted<TE, TV> extends RdfStoreIndexNestedMap
             map3.keys() :
               (quotedTerm3 ? this.getQuotedPatternKeys(map3, term3) : (map3.has(id3!) ? [ id3 ] : [])));
           for (const key4 of map3Keys) {
-            yield [
-              <TE>Number.parseInt(<string>key1, 10),
-              <TE>Number.parseInt(<string>key2, 10),
-              <TE>Number.parseInt(<string>key3, 10),
-              <TE>Number.parseInt(<string>key4, 10),
-            ];
+            // Unlike the record-based indexes, map keys are the encoded terms themselves,
+            // so no string-to-number conversion is needed here.
+            yield [ key1, key2, key3, key4 ];
           }
         }
       }
@@ -129,6 +142,12 @@ export class RdfStoreIndexNestedMapQuoted<TE, TV> extends RdfStoreIndexNestedMap
     if (!ids) {
       return 0;
     }
+
+    // Fully defined patterns are just a membership check, which avoids setting up the loops below.
+    if (this.isExactPattern(terms)) {
+      return this.hasExact(<EncodedQuadTerms<TE | undefined>> ids) ? 1 : 0;
+    }
+
     const [ id0, id1, id2, id3 ] = ids;
     const [ term0, term1, term2, term3 ] = terms;
     const [ quotedTerm0, quotedTerm1, quotedTerm2, quotedTerm3 ] = arePatternsQuoted(terms);
