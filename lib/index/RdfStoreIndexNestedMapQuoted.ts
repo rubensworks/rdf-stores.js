@@ -1,7 +1,7 @@
 /* eslint-disable ts/no-unsafe-assignment */
 import type * as RDF from '@rdfjs/types';
 import type { IRdfStoreOptions } from '../IRdfStoreOptions';
-import { arePatternsQuoted, encodeOptionalTerms } from '../OrderUtils';
+import { encodeOptionalTerms, isPatternQuoted } from '../OrderUtils';
 import type { EncodedQuadTerms, QuadPatternTerms, PatternTerm, QuadTerms } from '../PatternTerm';
 import type { NestedMapActual } from './RdfStoreIndexNestedMap';
 import { RdfStoreIndexNestedMap } from './RdfStoreIndexNestedMap';
@@ -42,7 +42,10 @@ export class RdfStoreIndexNestedMapQuoted<TE, TV> extends RdfStoreIndexNestedMap
 
     const [ id0, id1, id2, id3 ] = ids;
     const [ term0, term1, term2, term3 ] = terms;
-    const [ quotedTerm0, quotedTerm1, quotedTerm2, quotedTerm3 ] = arePatternsQuoted(terms);
+    const quotedTerm0 = isPatternQuoted(terms[0]);
+    const quotedTerm1 = isPatternQuoted(terms[1]);
+    const quotedTerm2 = isPatternQuoted(terms[2]);
+    const quotedTerm3 = isPatternQuoted(terms[3]);
 
     let partialQuad0: RDF.Term;
     let partialQuad1: RDF.Term;
@@ -100,7 +103,10 @@ export class RdfStoreIndexNestedMapQuoted<TE, TV> extends RdfStoreIndexNestedMap
 
     const [ id0, id1, id2, id3 ] = ids;
     const [ term0, term1, term2, term3 ] = terms;
-    const [ quotedTerm0, quotedTerm1, quotedTerm2, quotedTerm3 ] = arePatternsQuoted(terms);
+    const quotedTerm0 = isPatternQuoted(terms[0]);
+    const quotedTerm1 = isPatternQuoted(terms[1]);
+    const quotedTerm2 = isPatternQuoted(terms[2]);
+    const quotedTerm3 = isPatternQuoted(terms[3]);
 
     let map1: NestedMapActual<TE, TV>;
     let map2: NestedMapActual<TE, TV>;
@@ -150,7 +156,10 @@ export class RdfStoreIndexNestedMapQuoted<TE, TV> extends RdfStoreIndexNestedMap
 
     const [ id0, id1, id2, id3 ] = ids;
     const [ term0, term1, term2, term3 ] = terms;
-    const [ quotedTerm0, quotedTerm1, quotedTerm2, quotedTerm3 ] = arePatternsQuoted(terms);
+    const quotedTerm0 = isPatternQuoted(terms[0]);
+    const quotedTerm1 = isPatternQuoted(terms[1]);
+    const quotedTerm2 = isPatternQuoted(terms[2]);
+    const quotedTerm3 = isPatternQuoted(terms[3]);
 
     let map1: NestedMapActual<TE, TV>;
     let map2: NestedMapActual<TE, TV>;
