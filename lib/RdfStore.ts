@@ -445,24 +445,42 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
       [ subject, predicate, object, graph ],
     );
     const variableIndexes: number[] = [];
+    const variableIsQuad: boolean[] = [];
     for (let i = 0; i < terms.length; i++) {
-      if (terms[i].termType === 'Variable' || terms[i].termType === 'Quad') {
+      const termType = terms[i].termType;
+      if (termType === 'Variable' || termType === 'Quad') {
         variableIndexes.push(i);
+        variableIsQuad.push(termType === 'Quad');
       }
     }
 
-    // Check if we need to do post-filtering for overlapping variables
+    // Check if we need to do post-filtering for overlapping variables.
+    // Overlapping variables are rare, so the per-component filter lists are only
+    // materialized once an overlap is known to exist.
     let shouldFilterIndexes = false;
-    const filterIndexes = terms.map((variable, i) => {
-      const equalVariables = [];
+    for (let i = 0; i < terms.length && !shouldFilterIndexes; i++) {
       for (let j = i + 1; j < terms.length; j++) {
-        if (variable.equals(terms[j])) {
-          equalVariables.push(j);
+        if (terms[i].equals(terms[j])) {
           shouldFilterIndexes = true;
+          break;
         }
       }
-      return equalVariables;
-    });
+    }
+    let filterIndexes: number[][] | undefined;
+    if (shouldFilterIndexes) {
+      filterIndexes = terms.map((variable, i) => {
+        const equalVariables = [];
+        for (let j = i + 1; j < terms.length; j++) {
+          if (variable.equals(terms[j])) {
+            equalVariables.push(j);
+          }
+        }
+        return equalVariables;
+      });
+    }
+
+    const dictionary = this.dictionary;
+    const variableCount = variableIndexes.length;
 
     // Call the best index's find method.
     for (const decomposedQuadEncoded of indexWrapped.index
@@ -470,9 +488,10 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
       let skipBinding = false;
       let checkForBindingConflicts = false;
       const bindingsEntries: [RDF.Variable, RDF.Term][] = [];
-      for (const i of variableIndexes) {
+      for (let variableI = 0; variableI < variableCount; variableI++) {
+        const i = variableIndexes[variableI];
         // If we had overlapping variables, potentially exclude this binding if values for variable are unequal
-        if (shouldFilterIndexes) {
+        if (filterIndexes) {
           const filterI = filterIndexes[i];
           for (const j of filterI) {
             if (decomposedQuadEncoded[i] !== decomposedQuadEncoded[j]) {
@@ -485,16 +504,17 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
           }
         }
 
-        const decodedTerm = this.dictionary.decode(decomposedQuadEncoded[i]);
+        const decodedTerm = dictionary.decode(decomposedQuadEncoded[i]);
 
         // Handle quoted triples
         // TODO: it may be possible to implement a more efficient of findEncoded if requireQuotedTripleFiltering is
         //  false that would return bindings instead of quads. The following could then be skipped.
         //  variableIndexes would also need to be changed to check requireQuotedTripleFiltering (see readQuads).
-        if (terms[i].termType === 'Quad') {
+        if (variableIsQuad[variableI]) {
           // If the term is a quad, it may also contain nested variables,
           // so we need to extract those additional bindings.
-          const additionalBindings = matchPatternMappings(<RDF.Quad> decodedTerm, terms[i], { returnMappings: true });
+          const additionalBindings =
+            matchPatternMappings(<RDF.Quad> decodedTerm, <RDF.Quad> terms[i], { returnMappings: true });
           if (additionalBindings) {
             checkForBindingConflicts = true;
             for (const [ key, value ] of Object.entries(additionalBindings)) {
@@ -546,7 +566,11 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     object: RDF.Term,
     graph: RDF.Term,
   ): RDF.Bindings[] {
-    return [ ...this.readBindings(bindingsFactory, subject, predicate, object, graph) ];
+    const bindings: RDF.Bindings[] = [];
+    for (const binding of this.readBindings(bindingsFactory, subject, predicate, object, graph)) {
+      bindings.push(binding);
+    }
+    return bindings;
   }
 
   /**
