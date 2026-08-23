@@ -6,13 +6,31 @@ import {
   computeEndDepth,
   encodeOptionalTerms,
   getBestIndex,
+  getBestIndexLookupTable,
   getBestIndexTerms,
+  getComponentOrderPermutation,
   getComponentOrderScore,
   getIndexMatchTermsPath,
   orderQuadComponents,
+  orderQuadComponentsPermutation,
   quadHasVariables,
   quadToPattern,
 } from '../lib/OrderUtils';
+
+const QUAD_TERM_NAME_PERMUTATIONS: QuadTermName[][] = (function permute(
+  remaining: QuadTermName[],
+): QuadTermName[][] {
+  if (remaining.length <= 1) {
+    return [ remaining ];
+  }
+  const permutations: QuadTermName[][] = [];
+  for (let i = 0; i < remaining.length; i++) {
+    for (const sub of permute([ ...remaining.slice(0, i), ...remaining.slice(i + 1) ])) {
+      permutations.push([ remaining[i], ...sub ]);
+    }
+  }
+  return permutations;
+})([ 'subject', 'predicate', 'object', 'graph' ]);
 
 const DF = new DataFactory();
 
@@ -138,6 +156,65 @@ describe('OrderUtils', () => {
         undefined,
       ]))
         .toBe(0);
+    });
+  });
+
+  describe('getBestIndexLookupTable', () => {
+    it('returns all-zeroes for a single order', () => {
+      const table = getBestIndexLookupTable([[ 'graph', 'subject', 'predicate', 'object' ]]);
+      expect(table).toHaveLength(16);
+      expect([ ...table ]).toEqual(Array.from({ length: 16 }).fill(0));
+    });
+
+    it('agrees with getBestIndex for every combination of up to 3 orders', () => {
+      const orderCombinations: QuadTermName[][][] = [];
+      for (let i = 0; i < QUAD_TERM_NAME_PERMUTATIONS.length; i++) {
+        orderCombinations.push([ QUAD_TERM_NAME_PERMUTATIONS[i] ]);
+        for (let j = i + 1; j < QUAD_TERM_NAME_PERMUTATIONS.length; j++) {
+          orderCombinations.push([ QUAD_TERM_NAME_PERMUTATIONS[i], QUAD_TERM_NAME_PERMUTATIONS[j] ]);
+          for (let k = j + 1; k < QUAD_TERM_NAME_PERMUTATIONS.length; k++) {
+            orderCombinations.push([
+              QUAD_TERM_NAME_PERMUTATIONS[i],
+              QUAD_TERM_NAME_PERMUTATIONS[j],
+              QUAD_TERM_NAME_PERMUTATIONS[k],
+            ]);
+          }
+        }
+      }
+
+      for (const orders of orderCombinations) {
+        const table = getBestIndexLookupTable(orders);
+        for (let mask = 0; mask < 16; mask++) {
+          const pattern: any = [ undefined, undefined, undefined, undefined ];
+          for (let component = 0; component < 4; component++) {
+            if ((mask & (1 << component)) !== 0) {
+              pattern[component] = DF.namedNode(`t${component}`);
+            }
+          }
+          expect(table[mask]).toBe(getBestIndex(orders, pattern));
+        }
+      }
+    });
+  });
+
+  describe('getComponentOrderPermutation', () => {
+    it('determines the SPOG permutation of a component order', () => {
+      expect(getComponentOrderPermutation([ 'subject', 'predicate', 'object', 'graph' ]))
+        .toEqual([ 0, 1, 2, 3 ]);
+      expect(getComponentOrderPermutation([ 'graph', 'subject', 'predicate', 'object' ]))
+        .toEqual([ 3, 0, 1, 2 ]);
+      expect(getComponentOrderPermutation([ 'graph', 'object', 'subject', 'predicate' ]))
+        .toEqual([ 3, 2, 0, 1 ]);
+    });
+  });
+
+  describe('orderQuadComponentsPermutation', () => {
+    it('orders equally to orderQuadComponents for every component order', () => {
+      const quad = [ 's', 'p', 'o', 'g' ];
+      for (const order of QUAD_TERM_NAME_PERMUTATIONS) {
+        expect(orderQuadComponentsPermutation(getComponentOrderPermutation(order), quad))
+          .toEqual(orderQuadComponents(order, quad));
+      }
     });
   });
 
