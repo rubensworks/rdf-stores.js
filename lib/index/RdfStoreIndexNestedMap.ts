@@ -317,8 +317,11 @@ export class RdfStoreIndexNestedMap<TE, TV> implements IRdfStoreIndex<TE, TV> {
     partialResult: TE[],
     filterTerms?: (TE | undefined)[],
   ): IterableIterator<TE[]> {
+    // `partialResult` is a scratch buffer that is pushed to and popped from while descending,
+    // and only copied when a complete result is produced.
+    // This avoids allocating one intermediate array per matched term per result.
     if (depth >= endDepth) {
-      yield partialResult;
+      yield [ ...partialResult ];
       return;
     }
     const isMatch = depth < matchTerms.length && matchTerms[depth];
@@ -331,19 +334,20 @@ export class RdfStoreIndexNestedMap<TE, TV> implements IRdfStoreIndex<TE, TV> {
           if (deepFilter && !this.existsPath(depth + 1, endDepth, <NestedMapActual<TE, TV>> entry[1], filterTerms)) {
             continue;
           }
-          const newPartialResult = [ ...partialResult, entry[0] ];
+          partialResult.push(entry[0]);
           if (deepFilter) {
-            yield newPartialResult;
+            yield [ ...partialResult ];
           } else {
             yield* this.findTermsInner(
               depth + 1,
               endDepth,
 <NestedMapActual<TE, TV>> entry[1],
 matchTerms,
-newPartialResult,
+partialResult,
 filterTerms,
             );
           }
+          partialResult.pop();
         }
       } else {
         for (const subMap of map.values()) {
@@ -361,10 +365,10 @@ filterTerms,
       const subMap = map.get(filterTerm);
       if (subMap) {
         if (isMatch) {
-          const newPartialResult = [ ...partialResult, filterTerm ];
+          partialResult.push(filterTerm);
           if (deepFilter) {
             if (this.existsPath(depth + 1, endDepth, <NestedMapActual<TE, TV>> subMap, filterTerms)) {
-              yield newPartialResult;
+              yield [ ...partialResult ];
             }
           } else {
             yield* this.findTermsInner(
@@ -372,10 +376,11 @@ filterTerms,
               endDepth,
 <NestedMapActual<TE, TV>> subMap,
 matchTerms,
-newPartialResult,
+partialResult,
 filterTerms,
             );
           }
+          partialResult.pop();
         } else {
           yield* this.findTermsInner(
             depth + 1,

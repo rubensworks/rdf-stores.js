@@ -3,7 +3,6 @@ import type * as RDF from '@rdfjs/types';
 import type { AsyncIterator } from 'asynciterator';
 import { wrap } from 'asynciterator';
 import { DataFactory } from 'rdf-data-factory';
-import { termToString } from 'rdf-string';
 import type { QuadTermName } from 'rdf-terms';
 import {
   matchPattern,
@@ -649,9 +648,10 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
       termsOrderedUnfiltered[termOrderInToIndex[i]] = terms[i];
     }
     const termsOrdered: QuadTermName[] = termsOrderedUnfiltered.filter(t => t !== undefined);
-    const termOrderOrderedToIn: number[] = [];
+    // For every output position, the position it has within the index-ordered results.
+    const termOrderInToOrdered: number[] = [];
     for (let i = 0; i < termsOrdered.length; i++) {
-      termOrderOrderedToIn[i] = terms.indexOf(termsOrdered[i]);
+      termOrderInToOrdered[terms.indexOf(termsOrdered[i])] = i;
     }
 
     // Determine path of terms to follow in the index
@@ -670,32 +670,45 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
 
     // Ensure distinctness (this can only occur when insufficient indexes are available,
     // or when filters go beyond match depths)
-    let distinctTerms: Set<string> | undefined;
+    // Distinctness is tracked on the *encoded* terms, in a trie of nested Maps.
+    // Dictionaries encode every distinct term to a distinct value, so this is equivalent to
+    // comparing the string representations of the decoded terms, but needs no string building at all.
+    let distinctTerms: Map<TE, any> | undefined;
     if (matchTerms.includes(false)) {
       // TODO: if the first index level (e.g. graph) has just one term, distinctness is already guaranteed and we can
       //  skip this step. Also applies to countDistinctTerms.
-      distinctTerms = new Set<string>();
+      distinctTerms = new Map<TE, any>();
     }
+
+    const dictionary = this.dictionary;
 
     // Call the best index's find method
     for (const readTerms of indexWrapped.index.findTerms(matchTerms, filterTermsEncoded)) {
-      // Inverse term ordering
-      const readTermsInversed: TE[] = [];
-      for (let i = 0; i < readTerms.length; i++) {
-        readTermsInversed[termOrderOrderedToIn[i]] = readTerms[i];
-      }
-
-      // Decode terms
-      const decodedTerms = readTermsInversed.map(t => this.dictionary.decode(t));
-
       // Filter to ensure distinct terms are returned
       if (distinctTerms) {
-        // TODO: it may be possible to optimize this by filtering using the encoded terms.
-        const decodedTermsId = decodedTerms.map(element => termToString(element)).join(',');
-        if (distinctTerms.has(decodedTermsId)) {
+        const lastI = readTerms.length - 1;
+        let node = distinctTerms;
+        for (let i = 0; i < lastI; i++) {
+          // eslint-disable-next-line ts/no-unsafe-assignment
+          let subNode = node.get(readTerms[i]);
+          if (subNode === undefined) {
+            subNode = new Map<TE, any>();
+            node.set(readTerms[i], subNode);
+          }
+          // eslint-disable-next-line ts/no-unsafe-assignment
+          node = subNode;
+        }
+        if (node.has(readTerms[lastI])) {
           continue;
         }
-        distinctTerms.add(decodedTermsId);
+        node.set(readTerms[lastI], true);
+      }
+
+      // Decode terms, inversing the term ordering along the way.
+      // The results are pushed in output order so that a packed array is built in one pass.
+      const decodedTerms: RDF.Term[] = [];
+      for (const orderedI of termOrderInToOrdered) {
+        decodedTerms.push(dictionary.decode(readTerms[orderedI]));
       }
 
       yield decodedTerms;
@@ -720,7 +733,11 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     terms: QuadTermName[],
     filters?: (RDF.Term | undefined)[],
   ): RDF.Term[][] {
-    return [ ...this.readDistinctTerms(terms, filters) ];
+    const results: RDF.Term[][] = [];
+    for (const result of this.readDistinctTerms(terms, filters)) {
+      results.push(result);
+    }
+    return results;
   }
 
   /**
