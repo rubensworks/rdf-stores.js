@@ -271,6 +271,23 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
   }
 
   /**
+   * Determine the best index for the given quad pattern.
+   *
+   * The best index only depends on which of the four components are defined,
+   * so this is a lookup in a table that was precomputed upon construction.
+   *
+   * @param quadComponents A quad pattern.
+   */
+  private getBestIndexWrapped(quadComponents: QuadPatternTerms): IRdfStoreIndexWrapped<TE> {
+    return this.indexesWrapped[this.bestIndexLookup[
+      (quadComponents[0] === undefined ? 0 : 1) |
+      (quadComponents[1] === undefined ? 0 : 2) |
+      (quadComponents[2] === undefined ? 0 : 4) |
+      (quadComponents[3] === undefined ? 0 : 8)
+    ]];
+  }
+
+  /**
    * Returns a generator producing all quads matching the pattern.
    * @param subject The optional subject.
    * @param predicate The optional predicate.
@@ -288,26 +305,29 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
       quadToPattern(subject, predicate, object, graph, this.indexesSupportQuotedPatterns);
 
     // Determine the best index for this pattern
-    const indexWrapped = this.indexesWrapped[this.bestIndexLookup[
-      (quadComponents[0] === undefined ? 0 : 1) |
-      (quadComponents[1] === undefined ? 0 : 2) |
-      (quadComponents[2] === undefined ? 0 : 4) |
-      (quadComponents[3] === undefined ? 0 : 8)
-    ]];
+    const indexWrapped = this.getBestIndexWrapped(quadComponents);
 
     // Re-order the quad pattern based on this best index's component order
     const quadComponentsOrdered = <QuadPatternTerms>
       orderQuadComponentsPermutation(indexWrapped.componentOrderPermutation, quadComponents);
 
+    // Hoist the de-ordering offsets and the data factory out of the loop below.
+    const componentOrderInverse = indexWrapped.componentOrderInverse;
+    const subjectI = componentOrderInverse.subject;
+    const predicateI = componentOrderInverse.predicate;
+    const objectI = componentOrderInverse.object;
+    const graphI = componentOrderInverse.graph;
+    const dataFactory = this.dataFactory;
+
     // Call the best index's find method.
 
     for (const decomposedQuad of indexWrapped.index.find(quadComponentsOrdered)) {
       // De-order the resulting quad components into the normal SPOG order for quad creation.
-      const quad = this.dataFactory.quad(
-        decomposedQuad[indexWrapped.componentOrderInverse.subject],
-        decomposedQuad[indexWrapped.componentOrderInverse.predicate],
-        decomposedQuad[indexWrapped.componentOrderInverse.object],
-        decomposedQuad[indexWrapped.componentOrderInverse.graph],
+      const quad = dataFactory.quad(
+        decomposedQuad[subjectI],
+        decomposedQuad[predicateI],
+        decomposedQuad[objectI],
+        decomposedQuad[graphI],
       );
       if (requireQuotedTripleFiltering) {
         if (matchPattern(quad, subject!, predicate!, object!, graph!)) {
@@ -332,7 +352,44 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     object?: RDF.Term | null,
     graph?: RDF.Term | null,
   ): TQ[] {
-    return [ ...this.readQuads(subject, predicate, object, graph) ];
+    // This intentionally does not delegate to readQuads:
+    // spreading a generator into an array costs an extra generator resume
+    // and an iterator result object per quad, which is significant for large result sets.
+
+    // Construct a quad pattern array
+    const [ quadComponents, requireQuotedTripleFiltering ] =
+      quadToPattern(subject, predicate, object, graph, this.indexesSupportQuotedPatterns);
+
+    // Determine the best index for this pattern
+    const indexWrapped = this.getBestIndexWrapped(quadComponents);
+
+    // Re-order the quad pattern based on this best index's component order
+    const quadComponentsOrdered = <QuadPatternTerms>
+      orderQuadComponentsPermutation(indexWrapped.componentOrderPermutation, quadComponents);
+
+    // Hoist the de-ordering offsets and the data factory out of the loop below.
+    const componentOrderInverse = indexWrapped.componentOrderInverse;
+    const subjectI = componentOrderInverse.subject;
+    const predicateI = componentOrderInverse.predicate;
+    const objectI = componentOrderInverse.object;
+    const graphI = componentOrderInverse.graph;
+    const dataFactory = this.dataFactory;
+
+    // Call the best index's find method.
+    const quads: TQ[] = [];
+    for (const decomposedQuad of indexWrapped.index.find(quadComponentsOrdered)) {
+      // De-order the resulting quad components into the normal SPOG order for quad creation.
+      const quad = dataFactory.quad(
+        decomposedQuad[subjectI],
+        decomposedQuad[predicateI],
+        decomposedQuad[objectI],
+        decomposedQuad[graphI],
+      );
+      if (!requireQuotedTripleFiltering || matchPattern(quad, subject!, predicate!, object!, graph!)) {
+        quads.push(quad);
+      }
+    }
+    return quads;
   }
 
   /**
@@ -371,12 +428,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
       quadToPattern(subject, predicate, object, graph, this.indexesSupportQuotedPatterns);
 
     // Determine the best index for this pattern
-    const indexWrapped = this.indexesWrapped[this.bestIndexLookup[
-      (quadComponents[0] === undefined ? 0 : 1) |
-      (quadComponents[1] === undefined ? 0 : 2) |
-      (quadComponents[2] === undefined ? 0 : 4) |
-      (quadComponents[3] === undefined ? 0 : 8)
-    ]];
+    const indexWrapped = this.getBestIndexWrapped(quadComponents);
 
     // Re-order the quad pattern based on this best index's component order
     const quadComponentsOrdered = <QuadPatternTerms>
@@ -805,12 +857,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     }
 
     // Determine the best index for this pattern
-    const indexWrapped = this.indexesWrapped[this.bestIndexLookup[
-      (quadComponents[0] === undefined ? 0 : 1) |
-      (quadComponents[1] === undefined ? 0 : 2) |
-      (quadComponents[2] === undefined ? 0 : 4) |
-      (quadComponents[3] === undefined ? 0 : 8)
-    ]];
+    const indexWrapped = this.getBestIndexWrapped(quadComponents);
 
     // Re-order the quad pattern based on this best index's component order
     const quadComponentsOrdered = <QuadPatternTerms>
