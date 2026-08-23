@@ -20,10 +20,11 @@ import type { IRdfStoreOptions } from './IRdfStoreOptions';
 import {
   encodeAndExtendFilters,
   encodeOptionalTerms,
-  getBestIndex,
+  getBestIndexLookupTable,
   getBestIndexTerms,
+  getComponentOrderPermutation,
   getIndexMatchTermsPath,
-  orderQuadComponents,
+  orderQuadComponentsPermutation,
   quadToPattern,
 } from './OrderUtils';
 import type { EncodedQuadTerms, QuadPatternTerms } from './PatternTerm';
@@ -46,6 +47,15 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
   private readonly indexesWrappedComponentOrders: QuadTermName[][];
   public readonly features = { quotedTripleFiltering: true, indexNodes: false, indexDistinctTerms: true };
   private readonly indexNodes: Map<TE, Set<TE>> | undefined;
+  /**
+   * Whether or not the dictionary and all indexes support quoted triple patterns.
+   * This is invariant for the lifetime of the store, so it is determined once upon construction.
+   */
+  private readonly indexesSupportQuotedPatterns: boolean;
+  /**
+   * Lookup table from a bitmask of defined quad pattern components to the best index.
+   */
+  private readonly bestIndexLookup: Uint8Array;
 
   // eslint-disable-next-line ts/naming-convention
   private _size = 0;
@@ -58,6 +68,9 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     this.indexesWrappedComponentOrders = this.indexesWrapped.map(indexThis => indexThis.componentOrder);
     this.indexNodes = options.indexNodes ? new Map() : undefined;
     this.features.indexNodes = Boolean(options.indexNodes);
+    this.indexesSupportQuotedPatterns = Boolean(this.dictionary.features.quotedTriples) &&
+      this.indexesWrapped.every(wrapped => wrapped.index.features.quotedTripleFiltering);
+    this.bestIndexLookup = getBestIndexLookupTable(this.indexesWrappedComponentOrders);
   }
 
   /**
@@ -94,6 +107,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
       indexes.push({
         index: options.indexConstructor(options),
         componentOrder,
+        componentOrderPermutation: getComponentOrderPermutation(componentOrder),
         // eslint-disable-next-line ts/no-unsafe-assignment
         componentOrderInverse: <any>Object.fromEntries(componentOrder.map((value, key) => [ value, key ])),
       });
@@ -137,7 +151,8 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     for (const indexWrapped of this.indexesWrapped) {
       // Before sending the quad to the index, make sure its components are ordered corresponding to the index's order.
       newQuad = indexWrapped.index
-        .set(<EncodedQuadTerms<TE>>orderQuadComponents(indexWrapped.componentOrder, quadEncoded), true);
+        .set(<EncodedQuadTerms<TE>>
+          orderQuadComponentsPermutation(indexWrapped.componentOrderPermutation, quadEncoded), true);
     }
     if (newQuad) {
       this._size++;
@@ -181,7 +196,8 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     for (const indexWrapped of this.indexesWrapped) {
       // Before sending the quad to the index, make sure its components are ordered corresponding to the index's order.
       wasPresent = indexWrapped.index
-        .remove(<EncodedQuadTerms<TE>>orderQuadComponents(indexWrapped.componentOrder, quadEncoded));
+        .remove(<EncodedQuadTerms<TE>>
+          orderQuadComponentsPermutation(indexWrapped.componentOrderPermutation, quadEncoded));
       if (!wasPresent) {
         break;
       }
@@ -267,19 +283,21 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     object?: RDF.Term | null,
     graph?: RDF.Term | null,
   ): IterableIterator<TQ> {
-    // Check if our dictionary and our indexes have quoted pattern support
-    const indexesSupportQuotedPatterns = Boolean(this.dictionary.features.quotedTriples) &&
-      Object.values(this.indexesWrapped).every(wrapped => wrapped.index.features.quotedTripleFiltering);
-
     // Construct a quad pattern array
     const [ quadComponents, requireQuotedTripleFiltering ] =
-      quadToPattern(subject, predicate, object, graph, indexesSupportQuotedPatterns);
+      quadToPattern(subject, predicate, object, graph, this.indexesSupportQuotedPatterns);
 
     // Determine the best index for this pattern
-    const indexWrapped = this.indexesWrapped[getBestIndex(this.indexesWrappedComponentOrders, quadComponents)];
+    const indexWrapped = this.indexesWrapped[this.bestIndexLookup[
+      (quadComponents[0] === undefined ? 0 : 1) |
+      (quadComponents[1] === undefined ? 0 : 2) |
+      (quadComponents[2] === undefined ? 0 : 4) |
+      (quadComponents[3] === undefined ? 0 : 8)
+    ]];
 
     // Re-order the quad pattern based on this best index's component order
-    const quadComponentsOrdered = <QuadPatternTerms> orderQuadComponents(indexWrapped.componentOrder, quadComponents);
+    const quadComponentsOrdered = <QuadPatternTerms>
+      orderQuadComponentsPermutation(indexWrapped.componentOrderPermutation, quadComponents);
 
     // Call the best index's find method.
 
@@ -348,19 +366,21 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     object: RDF.Term,
     graph: RDF.Term,
   ): IterableIterator<RDF.Bindings> {
-    // Check if our dictionary and our indexes have quoted pattern support
-    const indexesSupportQuotedPatterns = Boolean(this.dictionary.features.quotedTriples) &&
-      Object.values(this.indexesWrapped).every(wrapped => wrapped.index.features.quotedTripleFiltering);
-
     // Construct a quad pattern array
     const [ quadComponents ] =
-      quadToPattern(subject, predicate, object, graph, indexesSupportQuotedPatterns);
+      quadToPattern(subject, predicate, object, graph, this.indexesSupportQuotedPatterns);
 
     // Determine the best index for this pattern
-    const indexWrapped = this.indexesWrapped[getBestIndex(this.indexesWrappedComponentOrders, quadComponents)];
+    const indexWrapped = this.indexesWrapped[this.bestIndexLookup[
+      (quadComponents[0] === undefined ? 0 : 1) |
+      (quadComponents[1] === undefined ? 0 : 2) |
+      (quadComponents[2] === undefined ? 0 : 4) |
+      (quadComponents[3] === undefined ? 0 : 8)
+    ]];
 
     // Re-order the quad pattern based on this best index's component order
-    const quadComponentsOrdered = <QuadPatternTerms> orderQuadComponents(indexWrapped.componentOrder, quadComponents);
+    const quadComponentsOrdered = <QuadPatternTerms>
+      orderQuadComponentsPermutation(indexWrapped.componentOrderPermutation, quadComponents);
     const ids = encodeOptionalTerms(quadComponentsOrdered, this.dictionary);
 
     // Abort if any of the terms does not exist in the dictionary
@@ -369,7 +389,10 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     }
 
     // Collect variables to bind
-    const terms = orderQuadComponents(indexWrapped.componentOrder, [ subject, predicate, object, graph ]);
+    const terms = orderQuadComponentsPermutation(
+      indexWrapped.componentOrderPermutation,
+      [ subject, predicate, object, graph ],
+    );
     const variableIndexes: number[] = [];
     for (let i = 0; i < terms.length; i++) {
       if (terms[i].termType === 'Variable' || terms[i].termType === 'Quad') {
@@ -772,13 +795,9 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     object?: RDF.Term | null,
     graph?: RDF.Term | null,
   ): number {
-    // Check if our dictionary and our indexes have quoted pattern support
-    const indexesSupportQuotedPatterns = Boolean(this.dictionary.features.quotedTriples) &&
-      Object.values(this.indexesWrapped).every(wrapped => wrapped.index.features.quotedTripleFiltering);
-
     // Construct a quad pattern array
     const [ quadComponents ] =
-      quadToPattern(subject, predicate, object, graph, indexesSupportQuotedPatterns);
+      quadToPattern(subject, predicate, object, graph, this.indexesSupportQuotedPatterns);
 
     // Optimize all-variables pattern
     if (quadComponents.every(quadComponent => quadComponent === undefined)) {
@@ -786,10 +805,16 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     }
 
     // Determine the best index for this pattern
-    const indexWrapped = this.indexesWrapped[getBestIndex(this.indexesWrappedComponentOrders, quadComponents)];
+    const indexWrapped = this.indexesWrapped[this.bestIndexLookup[
+      (quadComponents[0] === undefined ? 0 : 1) |
+      (quadComponents[1] === undefined ? 0 : 2) |
+      (quadComponents[2] === undefined ? 0 : 4) |
+      (quadComponents[3] === undefined ? 0 : 8)
+    ]];
 
     // Re-order the quad pattern based on this best index's component order
-    const quadComponentsOrdered = <QuadPatternTerms> orderQuadComponents(indexWrapped.componentOrder, quadComponents);
+    const quadComponentsOrdered = <QuadPatternTerms>
+      orderQuadComponentsPermutation(indexWrapped.componentOrderPermutation, quadComponents);
 
     // Call the best index's count method.
     return indexWrapped.index.count(quadComponentsOrdered);
@@ -806,6 +831,10 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
 
 export interface IRdfStoreIndexWrapped<TE> {
   componentOrder: QuadTermName[];
+  /**
+   * The precomputed permutation of SPOG indexes corresponding to `componentOrder`.
+   */
+  componentOrderPermutation: number[];
   componentOrderInverse: Record<QuadTermName, number>;
   index: IRdfStoreIndex<TE, boolean>;
 }

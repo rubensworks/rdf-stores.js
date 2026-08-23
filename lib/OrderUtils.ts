@@ -112,10 +112,88 @@ export function orderQuadComponents<T>(
   desiredComponentOrder: QuadTermName[],
   quadPattern: T[],
 ): T[] {
-  return desiredComponentOrder.map((desiredComponent) => {
-    const desiredComponentIndex = QUAD_TERM_NAMES_INVERSE[desiredComponent];
-    return quadPattern[desiredComponentIndex];
-  });
+  // Manually unrolled (component orders always have length 4) to avoid the closure allocation of Array#map.
+  return [
+    quadPattern[QUAD_TERM_NAMES_INVERSE[desiredComponentOrder[0]]],
+    quadPattern[QUAD_TERM_NAMES_INVERSE[desiredComponentOrder[1]]],
+    quadPattern[QUAD_TERM_NAMES_INVERSE[desiredComponentOrder[2]]],
+    quadPattern[QUAD_TERM_NAMES_INVERSE[desiredComponentOrder[3]]],
+  ];
+}
+
+/**
+ * Order a quad pattern's terms based on the given precomputed component order permutation.
+ * The permutation must be an array of four indexes into the SPOG-ordered input array,
+ * as produced by {@link getComponentOrderPermutation}.
+ * @param permutation A precomputed component order permutation.
+ * @param quadPattern A quad pattern.
+ */
+export function orderQuadComponentsPermutation<T>(
+  permutation: number[],
+  quadPattern: T[],
+): [T, T, T, T] {
+  return [
+    quadPattern[permutation[0]],
+    quadPattern[permutation[1]],
+    quadPattern[permutation[2]],
+    quadPattern[permutation[3]],
+  ];
+}
+
+/**
+ * Precompute the permutation of SPOG indexes corresponding to the given component order.
+ * @param componentOrder A quad component order.
+ */
+export function getComponentOrderPermutation(componentOrder: QuadTermName[]): number[] {
+  return [
+    QUAD_TERM_NAMES_INVERSE[componentOrder[0]],
+    QUAD_TERM_NAMES_INVERSE[componentOrder[1]],
+    QUAD_TERM_NAMES_INVERSE[componentOrder[2]],
+    QUAD_TERM_NAMES_INVERSE[componentOrder[3]],
+  ];
+}
+
+/**
+ * Precompute, for every possible combination of defined quad pattern components,
+ * the index of the best suitable component order.
+ *
+ * The returned array is indexed by a bitmask in which bit `i` is set
+ * when `QUAD_TERM_NAMES[i]` is defined within the quad pattern.
+ * This allows {@link getBestIndex} to be replaced by a single array lookup at query time.
+ * The produced values are identical to what {@link getBestIndex} returns for such patterns.
+ *
+ * @param componentOrders Possible orders of quad components.
+ */
+export function getBestIndexLookupTable(componentOrders: QuadTermName[][]): Uint8Array {
+  const table = new Uint8Array(16);
+  if (componentOrders.length === 1) {
+    return table;
+  }
+  for (let mask = 0; mask < 16; mask++) {
+    // Fully defined patterns can be answered by any index.
+    if (mask === 0b1111) {
+      continue;
+    }
+
+    // Determine the quad component names for which we require a defined lookup
+    const definedQuadComponentNames: QuadTermName[] = [];
+    for (let quadComponentId = 0; quadComponentId < QUAD_TERM_NAMES.length; quadComponentId++) {
+      if ((mask & (1 << quadComponentId)) !== 0) {
+        definedQuadComponentNames.push(QUAD_TERM_NAMES[quadComponentId]);
+      }
+    }
+
+    // Pick the highest-scoring component order, preferring earlier ones on ties (like the sort in getBestIndex)
+    let bestScore = -1;
+    for (let orderId = 0; orderId < componentOrders.length; orderId++) {
+      const score = getComponentOrderScore(componentOrders[orderId], definedQuadComponentNames);
+      if (score > bestScore) {
+        bestScore = score;
+        table[mask] = orderId;
+      }
+    }
+  }
+  return table;
 }
 
 /**
