@@ -15,6 +15,15 @@ import { RdfStore } from '../lib/RdfStore';
  * These tests have been based on https://github.com/rdfjs/N3.js/blob/main/perf/N3Store-perf.js
  */
 export class PerformanceTest {
+  /**
+   * If all progress reporting must be suppressed.
+   *
+   * This is needed when a benchmark runner measures these tests itself:
+   * the console I/O and the `process.memoryUsage()` calls below would otherwise
+   * end up inside the measured region and show up as part of the results.
+   */
+  public quiet = false;
+
   public constructor(
     public readonly approaches: IPerformanceTestApproach[],
     public readonly dimension = 256,
@@ -23,9 +32,33 @@ export class PerformanceTest {
     public readonly bindingsFactory: RDF.BindingsFactory = new BindingsFactory(<any> this.dataFactory),
   ) {}
 
+  protected timeStart(label: string): void {
+    if (!this.quiet) {
+      console.time(label);
+    }
+  }
+
+  protected timeEnd(label: string): void {
+    if (!this.quiet) {
+      console.timeEnd(label);
+    }
+  }
+
+  protected print(message = ''): void {
+    if (!this.quiet) {
+      console.log(message);
+    }
+  }
+
+  protected printMemory(label: string): void {
+    if (!this.quiet) {
+      console.log(`* Memory usage for ${label}: ${Math.round(process.memoryUsage().rss / 1_024 / 1_024)}MB`);
+    }
+  }
+
   public async run(scope: 'all' | 'triples' | 'quads' | 'quoted' | 'terms' | 'nodes'): Promise<void> {
     for (const approach of this.approaches) {
-      console.log(`\n# ${approach.name}\n`);
+      this.print(`\n# ${approach.name}\n`);
 
       if (scope === 'all' || scope === 'triples') {
         const store = approach.options.type === 'n3' ? new Store() : new RdfStore(approach.options.options);
@@ -38,21 +71,21 @@ export class PerformanceTest {
         }
         await this.findTriples1VariableStream(this.dimension, <any>store);
         this.countTriples1Variable(this.dimension, store);
-        console.log();
+        this.print();
       }
 
       if (scope === 'all' || scope === 'quads') {
         const store = approach.options.type === 'n3' ? new Store() : new RdfStore(approach.options.options);
         this.addQuadsToGraphs(this.dimension / 4, store);
         this.findQuadsInGraphs(this.dimension / 4, store);
-        console.log();
+        this.print();
       }
 
       if ((scope === 'all' || scope === 'quoted') && approach.options.type !== 'n3') {
         const store = new RdfStore(approach.options.options);
         this.addQuotedTriplesToGraphs(this.dimension / 2, store);
         this.findQuotedTriplesInGraphs(this.dimension / 2, store);
-        console.log();
+        this.print();
       }
 
       if ((scope === 'all' || scope === 'terms') && approach.options.type !== 'n3' &&
@@ -69,7 +102,7 @@ export class PerformanceTest {
         this.countTerms4(this.dimension / 4, store);
         this.findTerms1WithFilter(this.dimension / 4, store);
         this.countTerms1WithFilter(this.dimension / 4, store);
-        console.log();
+        this.print();
       }
 
       if ((scope === 'all' || scope === 'nodes') && approach.options.type !== 'n3' &&
@@ -77,14 +110,14 @@ export class PerformanceTest {
         const store = new RdfStore(approach.options.options);
         this.addQuadsToGraphs(this.dimension, store);
         this.findNodes(this.dimension, store);
-        console.log();
+        this.print();
       }
     }
   }
 
   public addTriplesToDefaultGraph(dimension: number, store: RdfStore | Store): void {
     const TEST = `- Adding ${dimension * dimension * dimension} triples to the default graph`;
-    console.time(TEST);
+    this.timeStart(TEST);
     for (let subjectIt = 0; subjectIt < dimension; subjectIt++) {
       for (let predicateIt = 0; predicateIt < dimension; predicateIt++) {
         for (let objectIt = 0; objectIt < dimension; objectIt++) {
@@ -96,13 +129,13 @@ export class PerformanceTest {
         }
       }
     }
-    console.timeEnd(TEST);
-    console.log(`* Memory usage for triples: ${Math.round(process.memoryUsage().rss / 1_024 / 1_024)}MB`);
+    this.timeEnd(TEST);
+    this.printMemory('triples');
   }
 
   public findTriplesNoVariables(dimension: number, store: RdfStore | Store): void {
     const TEST = `- Finding all ${dimension * dimension * dimension} triples in the default graph ${dimension * dimension * dimension} times (0 variables)`;
-    console.time(TEST);
+    this.timeStart(TEST);
     for (let subjectIt = 0; subjectIt < dimension; subjectIt++) {
       for (let predicateIt = 0; predicateIt < dimension; predicateIt++) {
         for (let objectIt = 0; objectIt < dimension; objectIt++) {
@@ -115,12 +148,12 @@ export class PerformanceTest {
         }
       }
     }
-    console.timeEnd(TEST);
+    this.timeEnd(TEST);
   }
 
   public findTriples1Variable(dimension: number, store: RdfStore | Store): void {
     const TEST = `- Finding all ${dimension * dimension * dimension} triples in the default graph ${dimension * dimension * 2} times (1 variable)`;
-    console.time(TEST);
+    this.timeStart(TEST);
     for (let i = 0; i < dimension; i++) {
       for (let j = 0; j < dimension; j++) {
         assert.equal(store.getQuads(this.dataFactory.namedNode(`${this.prefix}${i}`), this.dataFactory.namedNode(`${this.prefix}${j}`), null, this.dataFactory.defaultGraph()).length, dimension);
@@ -136,12 +169,12 @@ export class PerformanceTest {
         assert.equal(store.getQuads(null, this.dataFactory.namedNode(`${this.prefix}${i}`), this.dataFactory.namedNode(`${this.prefix}${j}`), this.dataFactory.defaultGraph()).length, dimension);
       }
     }
-    console.timeEnd(TEST);
+    this.timeEnd(TEST);
   }
 
   public findTriples2Variables(dimension: number, store: RdfStore | Store): void {
     const TEST = `- Finding all ${dimension * dimension * dimension} triples in the default graph ${dimension * 3} times (2 variables)`;
-    console.time(TEST);
+    this.timeStart(TEST);
     for (let i = 0; i < dimension; i++) {
       assert.equal(store.getQuads(this.dataFactory.namedNode(`${this.prefix}${i}`), null, null, this.dataFactory.defaultGraph()).length, dimension * dimension);
     }
@@ -151,12 +184,12 @@ export class PerformanceTest {
     for (let kCount = 0; kCount < dimension; kCount++) {
       assert.equal(store.getQuads(null, null, this.dataFactory.namedNode(`${this.prefix}${kCount}`), this.dataFactory.defaultGraph()).length, dimension * dimension);
     }
-    console.timeEnd(TEST);
+    this.timeEnd(TEST);
   }
 
   public findBindings2Variables(dimension: number, store: RdfStore): void {
     const TEST = `- Finding all ${dimension * dimension * dimension} triples as bindings in the default graph ${dimension * 3} times (2 variables)`;
-    console.time(TEST);
+    this.timeStart(TEST);
     for (let i = 0; i < dimension; i++) {
       assert.equal(store.getBindings(this.bindingsFactory, this.dataFactory.namedNode(`${this.prefix}${i}`), this.dataFactory.variable!('p'), this.dataFactory.variable!('o'), this.dataFactory.defaultGraph()).length, dimension * dimension);
     }
@@ -166,12 +199,12 @@ export class PerformanceTest {
     for (let kCount = 0; kCount < dimension; kCount++) {
       assert.equal(store.getBindings(this.bindingsFactory, this.dataFactory.variable!('s'), this.dataFactory.variable!('p'), this.dataFactory.namedNode(`${this.prefix}${kCount}`), this.dataFactory.defaultGraph()).length, dimension * dimension);
     }
-    console.timeEnd(TEST);
+    this.timeEnd(TEST);
   }
 
   public async findTriples1VariableStream(dimension: number, store: RdfStore): Promise<void> {
     const TEST = `- Finding all ${dimension * dimension * dimension} triples in the default graph ${dimension * dimension * 2} times (1 variable) via a stream`;
-    console.time(TEST);
+    this.timeStart(TEST);
     for (let i = 0; i < dimension; i++) {
       for (let j = 0; j < dimension; j++) {
         assert.equal((await arrayifyStream(store.match(this.dataFactory.namedNode(`${this.prefix}${i}`), this.dataFactory.namedNode(`${this.prefix}${j}`), null, this.dataFactory.defaultGraph()))).length, dimension);
@@ -187,12 +220,12 @@ export class PerformanceTest {
         assert.equal((await arrayifyStream(store.match(null, this.dataFactory.namedNode(`${this.prefix}${i}`), this.dataFactory.namedNode(`${this.prefix}${j}`), this.dataFactory.defaultGraph()))).length, dimension);
       }
     }
-    console.timeEnd(TEST);
+    this.timeEnd(TEST);
   }
 
   public countTriples1Variable(dimension: number, store: RdfStore | Store): void {
     const TEST = `- Counting all ${dimension * dimension * dimension} triples in the default graph ${dimension * dimension * 2} times (1 variable)`;
-    console.time(TEST);
+    this.timeStart(TEST);
     for (let i = 0; i < dimension; i++) {
       for (let j = 0; j < dimension; j++) {
         assert.equal(store.countQuads(this.dataFactory.namedNode(`${this.prefix}${i}`), this.dataFactory.namedNode(`${this.prefix}${j}`), null, this.dataFactory.defaultGraph()), dimension);
@@ -208,12 +241,12 @@ export class PerformanceTest {
         assert.equal(store.countQuads(null, this.dataFactory.namedNode(`${this.prefix}${i}`), this.dataFactory.namedNode(`${this.prefix}${j}`), this.dataFactory.defaultGraph()), dimension);
       }
     }
-    console.timeEnd(TEST);
+    this.timeEnd(TEST);
   }
 
   public addQuadsToGraphs(dimension: number, store: RdfStore | Store): void {
     const TEST = `- Adding ${dimension * dimension * dimension * dimension} quads`;
-    console.time(TEST);
+    this.timeStart(TEST);
     for (let subjectIt = 0; subjectIt < dimension; subjectIt++) {
       for (let predicateIt = 0; predicateIt < dimension; predicateIt++) {
         for (let objectIt = 0; objectIt < dimension; objectIt++) {
@@ -228,13 +261,13 @@ export class PerformanceTest {
         }
       }
     }
-    console.timeEnd(TEST);
-    console.log(`* Memory usage for quads: ${Math.round(process.memoryUsage().rss / 1_024 / 1_024)}MB`);
+    this.timeEnd(TEST);
+    this.printMemory('quads');
   }
 
   public findQuadsInGraphs(dimension: number, store: RdfStore | Store): void {
     const TEST = `- Finding all ${dimension * dimension * dimension * dimension} quads ${dimension * dimension * dimension * 4} times`;
-    console.time(TEST);
+    this.timeStart(TEST);
     for (let i = 0; i < dimension; i++) {
       assert.equal(store.getQuads(this.dataFactory.namedNode(`${this.prefix}${i}`), null, null, null).length, dimension * dimension * dimension);
     }
@@ -247,12 +280,12 @@ export class PerformanceTest {
     for (let i = 0; i < dimension; i++) {
       assert.equal(store.getQuads(null, null, null, this.dataFactory.namedNode(`${this.prefix}${i}`)).length, dimension * dimension * dimension);
     }
-    console.timeEnd(TEST);
+    this.timeEnd(TEST);
   }
 
   public addQuotedTriplesToGraphs(dimension: number, store: RdfStore): void {
     const TEST = `- Adding ${dimension * dimension * dimension} quoted triples`;
-    console.time(TEST);
+    this.timeStart(TEST);
     for (let person1It = 0; person1It < dimension; person1It++) {
       for (let person2It = 0; person2It < dimension; person2It++) {
         for (let nameIt = 0; nameIt < dimension; nameIt++) {
@@ -268,13 +301,13 @@ export class PerformanceTest {
         }
       }
     }
-    console.timeEnd(TEST);
-    console.log(`* Memory usage for quoted triples: ${Math.round(process.memoryUsage().rss / 1_024 / 1_024)}MB`);
+    this.timeEnd(TEST);
+    this.printMemory('quoted triples');
   }
 
   public findQuotedTriplesInGraphs(dimension: number, store: RdfStore): void {
     const TEST = `- Finding all ${dimension * dimension * dimension} quoted triples ${dimension * 3} times`;
-    console.time(TEST);
+    this.timeStart(TEST);
     for (let i = 0; i < dimension; i++) {
       assert.equal(store.getQuads(
         this.dataFactory.namedNode(`${this.prefix}person-${i}`),
@@ -308,12 +341,12 @@ export class PerformanceTest {
         ),
       ).length, dimension * dimension);
     }
-    console.timeEnd(TEST);
+    this.timeEnd(TEST);
   }
 
   public findTerms1(dimension: number, store: RdfStore): void {
     const TEST = `- Finding all ${dimension} terms (1) in the default graph ${dimension * dimension} times for each quad term (4)`;
-    console.time(TEST);
+    this.timeStart(TEST);
     for (const quadTermName of QUAD_TERM_NAMES) {
       for (let i = 0; i < dimension; i++) {
         for (let j = 0; j < dimension; j++) {
@@ -321,12 +354,12 @@ export class PerformanceTest {
         }
       }
     }
-    console.timeEnd(TEST);
+    this.timeEnd(TEST);
   }
 
   public countTerms1(dimension: number, store: RdfStore): void {
     const TEST = `- Counting all ${dimension} terms (1) in the default graph ${dimension * dimension} times for each quad term (4)`;
-    console.time(TEST);
+    this.timeStart(TEST);
     for (const quadTermName of QUAD_TERM_NAMES) {
       for (let i = 0; i < dimension; i++) {
         for (let j = 0; j < dimension; j++) {
@@ -334,12 +367,12 @@ export class PerformanceTest {
         }
       }
     }
-    console.timeEnd(TEST);
+    this.timeEnd(TEST);
   }
 
   public findTerms2(dimension: number, store: RdfStore): void {
     const TEST = `- Finding all ${dimension * dimension} terms (2) in the default graph ${dimension} times for each sequential quad term pair (4)`;
-    console.time(TEST);
+    this.timeStart(TEST);
 
     for (let k = 0; k < QUAD_TERM_NAMES.length; k++) {
       const quadTerm1 = QUAD_TERM_NAMES[k];
@@ -348,12 +381,12 @@ export class PerformanceTest {
         assert.equal(store.getDistinctTerms([ quadTerm1, quadTerm2 ]).length, dimension * dimension);
       }
     }
-    console.timeEnd(TEST);
+    this.timeEnd(TEST);
   }
 
   public countTerms2(dimension: number, store: RdfStore): void {
     const TEST = `- Counting all ${dimension * dimension} terms (2) in the default graph ${dimension} times for each sequential quad term pair (4)`;
-    console.time(TEST);
+    this.timeStart(TEST);
 
     for (let k = 0; k < QUAD_TERM_NAMES.length; k++) {
       const quadTerm1 = QUAD_TERM_NAMES[k];
@@ -362,12 +395,12 @@ export class PerformanceTest {
         assert.equal(store.countDistinctTerms([ quadTerm1, quadTerm2 ]), dimension * dimension);
       }
     }
-    console.timeEnd(TEST);
+    this.timeEnd(TEST);
   }
 
   public findTerms3(dimension: number, store: RdfStore): void {
     const TEST = `- Finding all ${dimension * dimension * dimension} terms (3) in the default graph ${dimension / 4} times for each sequential quad term triple (4)`;
-    console.time(TEST);
+    this.timeStart(TEST);
 
     for (let k = 0; k < QUAD_TERM_NAMES.length; k++) {
       const quadTerm1 = QUAD_TERM_NAMES[k];
@@ -380,12 +413,12 @@ export class PerformanceTest {
         );
       }
     }
-    console.timeEnd(TEST);
+    this.timeEnd(TEST);
   }
 
   public countTerms3(dimension: number, store: RdfStore): void {
     const TEST = `- Counting all ${dimension * dimension * dimension} terms (3) in the default graph ${dimension / 4} times for each sequential quad term triple (4)`;
-    console.time(TEST);
+    this.timeStart(TEST);
 
     for (let k = 0; k < QUAD_TERM_NAMES.length; k++) {
       const quadTerm1 = QUAD_TERM_NAMES[k];
@@ -398,12 +431,12 @@ export class PerformanceTest {
         );
       }
     }
-    console.timeEnd(TEST);
+    this.timeEnd(TEST);
   }
 
   public findTerms4(dimension: number, store: RdfStore): void {
     const TEST = `- Finding all ${dimension * dimension * dimension * dimension} terms (4) in the default graph ${dimension / 8} times for each sequential quad term quad (4)`;
-    console.time(TEST);
+    this.timeStart(TEST);
 
     for (let k = 0; k < QUAD_TERM_NAMES.length; k++) {
       const quadTerm1 = QUAD_TERM_NAMES[k];
@@ -417,12 +450,12 @@ export class PerformanceTest {
         );
       }
     }
-    console.timeEnd(TEST);
+    this.timeEnd(TEST);
   }
 
   public countTerms4(dimension: number, store: RdfStore): void {
     const TEST = `- Counting all ${dimension * dimension * dimension * dimension} terms (4) in the default graph ${dimension / 8} times for each sequential quad term quad (4)`;
-    console.time(TEST);
+    this.timeStart(TEST);
 
     for (let k = 0; k < QUAD_TERM_NAMES.length; k++) {
       const quadTerm1 = QUAD_TERM_NAMES[k];
@@ -436,23 +469,23 @@ export class PerformanceTest {
         );
       }
     }
-    console.timeEnd(TEST);
+    this.timeEnd(TEST);
   }
 
   public findNodes(dimension: number, store: RdfStore): void {
     const TEST = `- Finding all ${dimension} nodes ${dimension * dimension} times`;
-    console.time(TEST);
+    this.timeStart(TEST);
     for (let i = 0; i < dimension; i++) {
       for (let j = 0; j < dimension; j++) {
         assert.equal(store.getNodes(this.dataFactory.namedNode(`${this.prefix}${i}`)).length, dimension);
       }
     }
-    console.timeEnd(TEST);
+    this.timeEnd(TEST);
   }
 
   public findTerms1WithFilter(dimension: number, store: RdfStore): void {
     const TEST = `- Finding all ${dimension} terms (1) filtered by graph ${dimension * dimension} times`;
-    console.time(TEST);
+    this.timeStart(TEST);
     for (let i = 0; i < dimension; i++) {
       for (let j = 0; j < dimension; j++) {
         const graphFilter = this.dataFactory.namedNode(`${this.prefix}${i}`);
@@ -461,12 +494,12 @@ export class PerformanceTest {
         );
       }
     }
-    console.timeEnd(TEST);
+    this.timeEnd(TEST);
   }
 
   public countTerms1WithFilter(dimension: number, store: RdfStore): void {
     const TEST = `- Counting all ${dimension} terms (1) filtered by graph ${dimension * dimension} times`;
-    console.time(TEST);
+    this.timeStart(TEST);
     for (let i = 0; i < dimension; i++) {
       for (let j = 0; j < dimension; j++) {
         const graphFilter = this.dataFactory.namedNode(`${this.prefix}${i}`);
@@ -475,7 +508,7 @@ export class PerformanceTest {
         );
       }
     }
-    console.timeEnd(TEST);
+    this.timeEnd(TEST);
   }
 }
 /* eslint-enable no-console */
