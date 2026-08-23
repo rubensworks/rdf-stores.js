@@ -152,6 +152,10 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
       newQuad = indexWrapped.index
         .set(<EncodedQuadTerms<TE>>
           orderQuadComponentsPermutation(indexWrapped.componentOrderPermutation, quadEncoded), true);
+      if (!newQuad) {
+        // All indexes hold the same quads, so if the first one already had it, the others have it too.
+        break;
+      }
     }
     if (newQuad) {
       this._size++;
@@ -187,7 +191,8 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
 
     // We can quickly return false if the quad is not present in the dictionary
 
-    if (quadEncoded.includes(undefined)) {
+    if (quadEncoded[0] === undefined || quadEncoded[1] === undefined ||
+      quadEncoded[2] === undefined || quadEncoded[3] === undefined) {
       return false;
     }
 
