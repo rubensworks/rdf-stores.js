@@ -2,7 +2,7 @@ import type * as RDF from '@rdfjs/types';
 import type { QuadTermName } from 'rdf-terms';
 import { QUAD_TERM_NAMES } from 'rdf-terms';
 import type { ITermDictionary } from './dictionary/ITermDictionary';
-import type { EncodedQuadTerms, QuadPatternTerms } from './PatternTerm';
+import type { EncodedQuadTerms, PatternTerm, QuadPatternTerms } from './PatternTerm';
 
 // eslint-disable-next-line ts/no-unsafe-assignment
 export const QUAD_TERM_NAMES_INVERSE: Record<QuadTermName, number> =
@@ -207,26 +207,24 @@ export function encodeOptionalTerms<TE>(
   terms: QuadPatternTerms,
   dictionary: ITermDictionary<TE>,
 ): (TE | undefined)[] | undefined {
-  const encodedTerms = terms.map((term) => {
-    if (term) {
-      if (term.termType === 'Quad' && quadHasVariables(term)) {
-        // eslint-disable-next-line unicorn/no-useless-undefined
-        return undefined;
-      }
+  // This is written as an explicit loop rather than an Array#map with a sentinel value,
+  // because it is on the hot path of every lookup: it avoids a closure allocation,
+  // keeps the produced array monomorphic, and returns as soon as a term turns out to be absent.
+  const encodedTerms: (TE | undefined)[] = [];
+  for (const term of terms) {
+    if (term === undefined) {
+      encodedTerms.push(undefined);
+    } else if (term.termType === 'Quad' && quadHasVariables(term)) {
+      encodedTerms.push(undefined);
+    } else {
       const encodedTerm = dictionary.encodeOptional(term);
       if (encodedTerm === undefined) {
-        return 'none';
+        return undefined;
       }
-      return encodedTerm;
+      encodedTerms.push(encodedTerm);
     }
-    return term;
-  });
-
-  if (encodedTerms.includes('none')) {
-    return undefined;
   }
-
-  return <(TE | undefined)[]> encodedTerms;
+  return encodedTerms;
 }
 
 /**
@@ -247,26 +245,22 @@ export function quadToPattern(
   graph: RDF.Term | null | undefined,
   quotedPatterns: boolean,
 ): [ QuadPatternTerms, boolean ] {
+  // The four components are converted one by one rather than through an Array#map over a
+  // temporary array, because this runs for every single lookup.
   let requireQuotedTripleFiltering = false;
-  const quadPatternTerms = <QuadPatternTerms>
-    [ subject ?? undefined, predicate ?? undefined, object ?? undefined, graph ?? undefined ]
-      .map((term) => {
-        if (term) {
-          if (term.termType === 'Variable') {
-            // eslint-disable-next-line unicorn/no-useless-undefined
-            return undefined;
-          }
-          if (term.termType === 'Quad') {
-            if (quotedPatterns) {
-              return term;
-            }
-            requireQuotedTripleFiltering = true;
-            // eslint-disable-next-line unicorn/no-useless-undefined
-            return undefined;
-          }
-        }
-        return term;
-      });
+  const quadPatternTerms = <QuadPatternTerms> [ undefined, undefined, undefined, undefined ];
+  for (let i = 0; i < 4; i++) {
+    const term: RDF.Term | null | undefined =
+      i === 0 ? subject : (i === 1 ? predicate : (i === 2 ? object : graph));
+    if (term === undefined || term === null || term.termType === 'Variable') {
+      continue;
+    }
+    if (term.termType === 'Quad' && !quotedPatterns) {
+      requireQuotedTripleFiltering = true;
+      continue;
+    }
+    quadPatternTerms[i] = <PatternTerm> term;
+  }
 
   return [ quadPatternTerms, requireQuotedTripleFiltering ];
 }
@@ -276,13 +270,19 @@ export function quadToPattern(
  * @param currentTerm The quad pattern term.
  */
 export function quadHasVariables(currentTerm: RDF.Quad): boolean {
-  for (const component of QUAD_TERM_NAMES) {
-    const subTerm = currentTerm[component];
-    if (subTerm.termType === 'Variable' || (subTerm.termType === 'Quad' && quadHasVariables(subTerm))) {
-      return true;
-    }
-  }
-  return false;
+  // Manually unrolled to avoid an array iterator allocation on this hot, recursive path.
+  return termHasVariables(currentTerm.subject) ||
+    termHasVariables(currentTerm.predicate) ||
+    termHasVariables(currentTerm.object) ||
+    termHasVariables(currentTerm.graph);
+}
+
+/**
+ * Check if the given term is a variable, or a quad containing variables.
+ * @param term A term.
+ */
+function termHasVariables(term: RDF.Term): boolean {
+  return term.termType === 'Variable' || (term.termType === 'Quad' && quadHasVariables(<RDF.Quad> term));
 }
 
 /**
@@ -290,7 +290,20 @@ export function quadHasVariables(currentTerm: RDF.Quad): boolean {
  * @param terms An array of terms.
  */
 export function arePatternsQuoted(terms: QuadPatternTerms): boolean[] {
-  return terms.map(term => term?.termType === 'Quad' && quadHasVariables(term));
+  return [
+    isPatternQuoted(terms[0]),
+    isPatternQuoted(terms[1]),
+    isPatternQuoted(terms[2]),
+    isPatternQuoted(terms[3]),
+  ];
+}
+
+/**
+ * Check if the given term is a quoted triple pattern.
+ * @param term A pattern term.
+ */
+export function isPatternQuoted(term: PatternTerm): boolean {
+  return term !== undefined && term.termType === 'Quad' && quadHasVariables(term);
 }
 
 /**

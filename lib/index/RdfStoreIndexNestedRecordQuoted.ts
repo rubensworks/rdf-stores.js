@@ -1,6 +1,6 @@
 import type * as RDF from '@rdfjs/types';
 import type { IRdfStoreOptions } from '../IRdfStoreOptions';
-import { arePatternsQuoted, encodeOptionalTerms } from '../OrderUtils';
+import { encodeOptionalTerms, isPatternQuoted } from '../OrderUtils';
 import type { QuadPatternTerms, EncodedQuadTerms, PatternTerm, QuadTerms } from '../PatternTerm';
 import type { NestedRecordActual } from './RdfStoreIndexNestedRecord';
 import { RdfStoreIndexNestedRecord } from './RdfStoreIndexNestedRecord';
@@ -33,7 +33,10 @@ export class RdfStoreIndexNestedRecordQuoted<TE extends number, TV> extends RdfS
 
     const [ id0, id1, id2, id3 ] = ids;
     const [ term0, term1, term2, term3 ] = terms;
-    const [ quotedTerm0, quotedTerm1, quotedTerm2, quotedTerm3 ] = arePatternsQuoted(terms);
+    const quotedTerm0 = isPatternQuoted(terms[0]);
+    const quotedTerm1 = isPatternQuoted(terms[1]);
+    const quotedTerm2 = isPatternQuoted(terms[2]);
+    const quotedTerm3 = isPatternQuoted(terms[3]);
 
     let partialQuad0: RDF.Term;
     let partialQuad1: RDF.Term;
@@ -85,7 +88,10 @@ export class RdfStoreIndexNestedRecordQuoted<TE extends number, TV> extends RdfS
   ): IterableIterator<EncodedQuadTerms<TE>> {
     const [ id0, id1, id2, id3 ] = ids;
     const [ term0, term1, term2, term3 ] = terms;
-    const [ quotedTerm0, quotedTerm1, quotedTerm2, quotedTerm3 ] = arePatternsQuoted(terms);
+    const quotedTerm0 = isPatternQuoted(terms[0]);
+    const quotedTerm1 = isPatternQuoted(terms[1]);
+    const quotedTerm2 = isPatternQuoted(terms[2]);
+    const quotedTerm3 = isPatternQuoted(terms[3]);
 
     let map1: NestedRecordActual<TE>;
     let map2: NestedRecordActual<TE>;
@@ -132,7 +138,10 @@ export class RdfStoreIndexNestedRecordQuoted<TE extends number, TV> extends RdfS
     }
     const [ id0, id1, id2, id3 ] = ids;
     const [ term0, term1, term2, term3 ] = terms;
-    const [ quotedTerm0, quotedTerm1, quotedTerm2, quotedTerm3 ] = arePatternsQuoted(terms);
+    const quotedTerm0 = isPatternQuoted(terms[0]);
+    const quotedTerm1 = isPatternQuoted(terms[1]);
+    const quotedTerm2 = isPatternQuoted(terms[2]);
+    const quotedTerm3 = isPatternQuoted(terms[3]);
 
     let map1: NestedRecordActual<TE>;
     let map2: NestedRecordActual<TE>;
