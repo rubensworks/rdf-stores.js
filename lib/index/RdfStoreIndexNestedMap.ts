@@ -5,7 +5,11 @@ import type { IRdfStoreOptions } from '../IRdfStoreOptions';
 import { computeEndDepth, encodeOptionalTerms } from '../OrderUtils';
 import type { EncodedQuadTerms, QuadPatternTerms, QuadTerms } from '../PatternTerm';
 import type { IRdfStoreIndex } from './IRdfStoreIndex';
-import { RdfStoreIndexNestedMapIterator } from './RdfStoreIndexNestedMapIterator';
+import {
+  EMPTY_QUAD_ITERATOR,
+  RdfStoreIndexNestedMapIterator,
+  RdfStoreIndexSingleQuadIterator,
+} from './RdfStoreIndexNestedMapIterator';
 
 /**
  * An RDF store index that is implemented using nested Maps.
@@ -197,12 +201,35 @@ export class RdfStoreIndexNestedMap<TE, TV> implements IRdfStoreIndex<TE, TV> {
     ids: EncodedQuadTerms<TE | undefined>,
     terms: QuadPatternTerms,
   ): IterableIterator<EncodedQuadTerms<TE>> {
-    return new RdfStoreIndexNestedMapIterator<TE, TV>(
-      this.nestedMap,
-      ids,
-      terms,
-      ids[0] !== undefined && ids[1] !== undefined && ids[2] !== undefined && ids[3] !== undefined,
-    );
+    return this.createFindEncodedIterator(ids, terms, false);
+  }
+
+  public findEncodedBuffered(
+    ids: EncodedQuadTerms<TE | undefined>,
+    terms: QuadPatternTerms,
+  ): IterableIterator<EncodedQuadTerms<TE>> {
+    return this.createFindEncodedIterator(ids, terms, true);
+  }
+
+  /**
+   * Create the iterator backing {@link RdfStoreIndexNestedMap#findEncoded}
+   * and {@link RdfStoreIndexNestedMap#findEncodedBuffered}.
+   * @param ids An iterable of encoded pattern terms, ordered in the component order of this index.
+   * @param terms An iterable of pattern terms, ordered in the component order of this index.
+   * @param reuseBuffer If a single array may be reused for all produced results.
+   */
+  protected createFindEncodedIterator(
+    ids: EncodedQuadTerms<TE | undefined>,
+    terms: QuadPatternTerms,
+    reuseBuffer: boolean,
+  ): IterableIterator<EncodedQuadTerms<TE>> {
+    // Fully defined patterns are just a membership check, which avoids setting up the loops below.
+    if (ids[0] !== undefined && ids[1] !== undefined && ids[2] !== undefined && ids[3] !== undefined) {
+      return this.hasExact(ids) ?
+        new RdfStoreIndexSingleQuadIterator<TE>(<EncodedQuadTerms<TE>> ids) :
+        EMPTY_QUAD_ITERATOR;
+    }
+    return new RdfStoreIndexNestedMapIterator<TE, TV>(this.nestedMap, ids, terms, undefined, reuseBuffer);
   }
 
   protected existsPath(

@@ -38,7 +38,7 @@ export class RdfStoreIndexNestedMapIterator<TE, TV> implements IterableIterator<
   private map1: NestedMapActual<TE, TV> | undefined;
   private map2: NestedMapActual<TE, TV> | undefined;
   private map3: NestedMapActual<TE, TV> | undefined;
-  private iterator0: Iterator<TE> | undefined;
+  private iterator0: Iterator<TE>;
   private iterator1: Iterator<TE> | undefined;
   private iterator2: Iterator<TE> | undefined;
   private iterator3: Iterator<TE> | undefined;
@@ -46,16 +46,18 @@ export class RdfStoreIndexNestedMapIterator<TE, TV> implements IterableIterator<
   private key1: TE;
   private key2: TE;
   /**
-   * The single result of a fully defined pattern, which is just a membership check.
+   * The array and the iterator result object that are reused for every result,
+   * or undefined when a fresh array and result object must be produced per result.
    */
-  private exact: EncodedQuadTerms<TE> | undefined;
+  private readonly buffer: EncodedQuadTerms<TE> | undefined;
+  private readonly bufferedResult: IteratorYieldResult<EncodedQuadTerms<TE>> | undefined;
 
   public constructor(
     nestedMap: NestedMapActual<TE, TV>,
     ids: EncodedQuadTerms<TE | undefined>,
     terms: QuadPatternTerms,
-    exactPattern: boolean,
     quotedProvider?: IQuotedPatternKeysProvider<TE, TV>,
+    reuseBuffer?: boolean,
   ) {
     this.ids = ids;
     this.terms = terms;
@@ -70,16 +72,10 @@ export class RdfStoreIndexNestedMapIterator<TE, TV> implements IterableIterator<
       ];
     }
 
-    // Fully defined patterns are just a membership check, which avoids setting up the loops below.
-    if (exactPattern) {
-      const map1: NestedMapActual<TE, TV> | undefined = <any> nestedMap.get(<TE> ids[0]);
-      const map2: NestedMapActual<TE, TV> | undefined = map1 && <any> map1.get(<TE> ids[1]);
-      const map3: NestedMapActual<TE, TV> | undefined = map2 && <any> map2.get(<TE> ids[2]);
-      if (map3 && map3.has(<TE> ids[3])) {
-        this.exact = <EncodedQuadTerms<TE>> ids;
-      }
-    } else {
-      this.iterator0 = this.keysAt(0, nestedMap);
+    this.iterator0 = this.keysAt(0, nestedMap);
+    if (reuseBuffer) {
+      this.buffer = <EncodedQuadTerms<TE>> <any> [ ids[0], ids[1], ids[2], ids[3] ];
+      this.bufferedResult = { value: this.buffer, done: false };
     }
   }
 
@@ -113,16 +109,16 @@ export class RdfStoreIndexNestedMapIterator<TE, TV> implements IterableIterator<
   }
 
   public next(): IteratorResult<EncodedQuadTerms<TE>> {
-    const exact = this.exact;
-    if (exact !== undefined) {
-      this.exact = undefined;
-      return { value: exact, done: false };
-    }
     for (;;) {
       if (this.iterator3 !== undefined) {
         const entry = this.iterator3.next();
         if (entry.done !== true) {
-          return { value: [ this.key0, this.key1, this.key2, entry.value ], done: false };
+          const buffer = this.buffer;
+          if (buffer === undefined) {
+            return { value: [ this.key0, this.key1, this.key2, entry.value ], done: false };
+          }
+          buffer[3] = entry.value;
+          return this.bufferedResult!;
         }
         this.iterator3 = undefined;
       }
@@ -130,6 +126,9 @@ export class RdfStoreIndexNestedMapIterator<TE, TV> implements IterableIterator<
         const entry = this.iterator2.next();
         if (entry.done !== true) {
           this.key2 = entry.value;
+          if (this.buffer !== undefined) {
+            this.buffer[2] = entry.value;
+          }
           this.map3 = <any> this.map2!.get(entry.value);
           this.iterator3 = this.keysAt(3, this.map3!);
           continue;
@@ -140,23 +139,25 @@ export class RdfStoreIndexNestedMapIterator<TE, TV> implements IterableIterator<
         const entry = this.iterator1.next();
         if (entry.done !== true) {
           this.key1 = entry.value;
+          if (this.buffer !== undefined) {
+            this.buffer[1] = entry.value;
+          }
           this.map2 = <any> this.map1!.get(entry.value);
           this.iterator2 = this.keysAt(2, this.map2!);
           continue;
         }
         this.iterator1 = undefined;
       }
-      if (this.iterator0 !== undefined) {
-        const entry = this.iterator0.next();
-        if (entry.done !== true) {
-          this.key0 = entry.value;
-          this.map1 = <any> this.map0.get(entry.value);
-          this.iterator1 = this.keysAt(1, this.map1!);
-          continue;
-        }
-        this.iterator0 = undefined;
+      const entry = this.iterator0.next();
+      if (entry.done === true) {
+        return DONE;
       }
-      return DONE;
+      this.key0 = entry.value;
+      if (this.buffer !== undefined) {
+        this.buffer[0] = entry.value;
+      }
+      this.map1 = <any> this.map0.get(entry.value);
+      this.iterator1 = this.keysAt(1, this.map1!);
     }
   }
 
@@ -164,8 +165,7 @@ export class RdfStoreIndexNestedMapIterator<TE, TV> implements IterableIterator<
    * Stop iterating, and release the references that are held into the index.
    */
   public return(): IteratorResult<EncodedQuadTerms<TE>> {
-    this.exact = undefined;
-    this.iterator0 = undefined;
+    this.iterator0 = EMPTY_ITERATOR;
     this.iterator1 = undefined;
     this.iterator2 = undefined;
     this.iterator3 = undefined;
@@ -175,3 +175,37 @@ export class RdfStoreIndexNestedMapIterator<TE, TV> implements IterableIterator<
     return DONE;
   }
 }
+
+/**
+ * An iterator over exactly one encoded quad.
+ *
+ * Fully defined patterns are a single membership check, so they get this instead of the
+ * four-level state machine above.
+ */
+export class RdfStoreIndexSingleQuadIterator<TE> implements IterableIterator<EncodedQuadTerms<TE>> {
+  private quad: EncodedQuadTerms<TE> | undefined;
+
+  public constructor(quad: EncodedQuadTerms<TE>) {
+    this.quad = quad;
+  }
+
+  public [Symbol.iterator](): IterableIterator<EncodedQuadTerms<TE>> {
+    return this;
+  }
+
+  public next(): IteratorResult<EncodedQuadTerms<TE>> {
+    const quad = this.quad;
+    if (quad === undefined) {
+      return DONE;
+    }
+    this.quad = undefined;
+    return { value: quad, done: false };
+  }
+}
+
+/**
+ * A shared iterator over no encoded quads at all, for patterns without any match.
+ *
+ * An exhausted array iterator stays exhausted, so a single instance can be handed out for all of them.
+ */
+export const EMPTY_QUAD_ITERATOR = <IterableIterator<any>> [][Symbol.iterator]();

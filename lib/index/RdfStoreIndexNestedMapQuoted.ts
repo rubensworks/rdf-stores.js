@@ -5,7 +5,11 @@ import { encodeOptionalTerms, isPatternQuoted } from '../OrderUtils';
 import type { EncodedQuadTerms, QuadPatternTerms, PatternTerm, QuadTerms } from '../PatternTerm';
 import type { NestedMapActual } from './RdfStoreIndexNestedMap';
 import { RdfStoreIndexNestedMap } from './RdfStoreIndexNestedMap';
-import { RdfStoreIndexNestedMapIterator } from './RdfStoreIndexNestedMapIterator';
+import {
+  EMPTY_QUAD_ITERATOR,
+  RdfStoreIndexNestedMapIterator,
+  RdfStoreIndexSingleQuadIterator,
+} from './RdfStoreIndexNestedMapIterator';
 
 /**
  * An RDF store index that is implemented using nested Maps with optimized quoted triple support.
@@ -98,17 +102,18 @@ export class RdfStoreIndexNestedMapQuoted<TE, TV> extends RdfStoreIndexNestedMap
 
   // The code below is nearly identical. We duplicate because abstraction would result in a significant performance hit.
 
-  public override findEncoded(
+  protected override createFindEncodedIterator(
     ids: EncodedQuadTerms<TE | undefined>,
     terms: QuadPatternTerms,
+    reuseBuffer: boolean,
   ): IterableIterator<EncodedQuadTerms<TE>> {
-    return new RdfStoreIndexNestedMapIterator<TE, TV>(
-      this.nestedMap,
-      ids,
-      terms,
-      this.isExactPattern(terms),
-      this,
-    );
+    // Fully defined patterns are just a membership check, which avoids setting up the loops below.
+    if (this.isExactPattern(terms)) {
+      return this.hasExact(ids) ?
+        new RdfStoreIndexSingleQuadIterator<TE>(<EncodedQuadTerms<TE>> ids) :
+        EMPTY_QUAD_ITERATOR;
+    }
+    return new RdfStoreIndexNestedMapIterator<TE, TV>(this.nestedMap, ids, terms, this, reuseBuffer);
   }
 
   public override count(terms: QuadPatternTerms): number {

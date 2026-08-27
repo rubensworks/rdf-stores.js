@@ -56,6 +56,23 @@ export interface IRdfStoreIndex<TE, TV> {
   findEncoded: (ids: EncodedQuadTerms<TE | undefined>, terms: QuadPatternTerms) =>
   IterableIterator<EncodedQuadTerms<TE>>;
   /**
+   * Optional variant of {@link IRdfStoreIndex#findEncoded} whose results are only valid until the
+   * iterator is advanced again, because a single array is reused for all of them.
+   *
+   * Lookups that produce many results would otherwise spend a noticeable part of their time
+   * allocating and collecting one short-lived array per result, while their consumers within this
+   * package turn every result into a bindings object before asking for the next one.
+   * Consumers that need to retain a result must copy it, or use
+   * {@link IRdfStoreIndex#findEncoded} instead.
+   *
+   * Indexes that do not implement this fall back to {@link IRdfStoreIndex#findEncoded}.
+   *
+   * @param ids An iterable of encoded pattern terms, ordered in the component order of this index.
+   * @param terms An iterable of pattern terms, ordered in the component order of this index.
+   */
+  findEncodedBuffered?: (ids: EncodedQuadTerms<TE | undefined>, terms: QuadPatternTerms) =>
+  IterableIterator<EncodedQuadTerms<TE>>;
+  /**
    * Returns a generator producing arrays of terms that exist in the index.
    * Each returned array corresponds to the terms specified by given quad term names.
    * Distinct-ness is only guaranteed if there are only true match term values.

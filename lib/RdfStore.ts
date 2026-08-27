@@ -104,12 +104,15 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
       if (!RdfStore.isCombinationValid(componentOrder)) {
         throw new Error(`Invalid index combination: ${componentOrder.join(',')}`);
       }
+      const index = options.indexConstructor(options);
       indexes.push({
-        index: options.indexConstructor(options),
+        index,
         componentOrder,
         componentOrderPermutation: getComponentOrderPermutation(componentOrder),
         // eslint-disable-next-line ts/no-unsafe-assignment
         componentOrderInverse: <any>Object.fromEntries(componentOrder.map((value, key) => [ value, key ])),
+        // Resolved once here, so that lookups don't have to check for the optional method.
+        supportsBufferedFind: Boolean(index.findEncodedBuffered),
       });
     }
     return indexes;
@@ -498,8 +501,12 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
       }
     }
 
-    const source = indexWrapped.index
-      .findEncoded(<EncodedQuadTerms<TE | undefined>> ids, quadComponentsOrdered);
+    // Each result is turned into a bindings object before the index iterator is advanced again,
+    // so the buffered variant is used when the index offers one.
+    const index = indexWrapped.index;
+    const source = indexWrapped.supportsBufferedFind ?
+      index.findEncodedBuffered!(<EncodedQuadTerms<TE | undefined>> ids, quadComponentsOrdered) :
+      index.findEncoded(<EncodedQuadTerms<TE | undefined>> ids, quadComponentsOrdered);
 
     // Patterns without quoted triple patterns and without overlapping variables
     // never need post-filtering, and get a producer without any of that bookkeeping.
@@ -925,5 +932,9 @@ export interface IRdfStoreIndexWrapped<TE> {
    */
   componentOrderPermutation: number[];
   componentOrderInverse: Record<QuadTermName, number>;
+  /**
+   * Whether the index implements {@link IRdfStoreIndex#findEncodedBuffered}.
+   */
+  supportsBufferedFind: boolean;
   index: IRdfStoreIndex<TE, boolean>;
 }
