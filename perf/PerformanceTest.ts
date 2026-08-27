@@ -68,6 +68,8 @@ export class PerformanceTest {
         this.findTriples2Variables(this.dimension, store);
         if (approach.options.type !== 'n3') {
           this.findBindings2Variables(this.dimension, <any> store);
+          await this.findBindings2VariablesStream(this.dimension, <any> store);
+          this.findBindings1Variable(this.dimension, <any> store);
         }
         await this.findTriples1VariableStream(this.dimension, <any>store);
         this.countTriples1Variable(this.dimension, store);
@@ -198,6 +200,32 @@ export class PerformanceTest {
     }
     for (let kCount = 0; kCount < dimension; kCount++) {
       assert.equal(store.getBindings(this.bindingsFactory, this.dataFactory.variable!('s'), this.dataFactory.variable!('p'), this.dataFactory.namedNode(`${this.prefix}${kCount}`), this.dataFactory.defaultGraph()).length, dimension * dimension);
+    }
+    this.timeEnd(TEST);
+  }
+
+  public async findBindings2VariablesStream(dimension: number, store: RdfStore): Promise<void> {
+    const TEST = `- Finding all ${dimension * dimension * dimension} triples as bindings in the default graph ${dimension * 3} times (2 variables) via a stream`;
+    this.timeStart(TEST);
+    for (let i = 0; i < dimension; i++) {
+      assert.equal((await arrayifyStream(store.matchBindings(this.bindingsFactory, this.dataFactory.namedNode(`${this.prefix}${i}`), this.dataFactory.variable!('p'), this.dataFactory.variable!('o'), this.dataFactory.defaultGraph()))).length, dimension * dimension);
+    }
+    for (let j = 0; j < dimension; j++) {
+      assert.equal((await arrayifyStream(store.matchBindings(this.bindingsFactory, this.dataFactory.variable!('s'), this.dataFactory.namedNode(`${this.prefix}${j}`), this.dataFactory.variable!('o'), this.dataFactory.defaultGraph()))).length, dimension * dimension);
+    }
+    for (let kCount = 0; kCount < dimension; kCount++) {
+      assert.equal((await arrayifyStream(store.matchBindings(this.bindingsFactory, this.dataFactory.variable!('s'), this.dataFactory.variable!('p'), this.dataFactory.namedNode(`${this.prefix}${kCount}`), this.dataFactory.defaultGraph()))).length, dimension * dimension);
+    }
+    this.timeEnd(TEST);
+  }
+
+  public findBindings1Variable(dimension: number, store: RdfStore): void {
+    const TEST = `- Finding all ${dimension * dimension * dimension} triples as bindings in the default graph ${dimension * dimension} times (1 variable)`;
+    this.timeStart(TEST);
+    for (let i = 0; i < dimension; i++) {
+      for (let j = 0; j < dimension; j++) {
+        assert.equal(store.getBindings(this.bindingsFactory, this.dataFactory.namedNode(`${this.prefix}${i}`), this.dataFactory.namedNode(`${this.prefix}${j}`), this.dataFactory.variable!('o'), this.dataFactory.defaultGraph()).length, dimension);
+      }
     }
     this.timeEnd(TEST);
   }
