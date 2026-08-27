@@ -451,41 +451,84 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     );
     const variableIndexes: number[] = [];
     const variableIsQuad: boolean[] = [];
+    let hasQuadVariables = false;
     for (let i = 0; i < terms.length; i++) {
       const termType = terms[i].termType;
       if (termType === 'Variable' || termType === 'Quad') {
         variableIndexes.push(i);
-        variableIsQuad.push(termType === 'Quad');
+        const isQuad = termType === 'Quad';
+        variableIsQuad.push(isQuad);
+        hasQuadVariables = hasQuadVariables || isQuad;
       }
-    }
-
-    // Check if we need to do post-filtering for overlapping variables.
-    // Overlapping variables are rare, so the per-component filter lists are only
-    // materialized once an overlap is known to exist.
-    let shouldFilterIndexes = false;
-    for (let i = 0; i < terms.length && !shouldFilterIndexes; i++) {
-      for (let j = i + 1; j < terms.length; j++) {
-        if (terms[i].equals(terms[j])) {
-          shouldFilterIndexes = true;
-          break;
-        }
-      }
-    }
-    let filterIndexes: number[][] | undefined;
-    if (shouldFilterIndexes) {
-      filterIndexes = terms.map((variable, i) => {
-        const equalVariables = [];
-        for (let j = i + 1; j < terms.length; j++) {
-          if (variable.equals(terms[j])) {
-            equalVariables.push(j);
-          }
-        }
-        return equalVariables;
-      });
     }
 
     const dictionary = this.dictionary;
     const variableCount = variableIndexes.length;
+
+    // Check if we need to do post-filtering for overlapping variables.
+    // Only variable (and quoted pattern) components can overlap in a way that matters:
+    // the filter lists below are only consulted for those components, and a term can only
+    // be equal to another term of the same term type. Two equal *constant* components can
+    // therefore never cause a binding to be dropped, so they are not considered here.
+    // Overlapping variables are rare, so the per-component filter lists are only
+    // materialized once an overlap is known to exist.
+    let filterIndexes: number[][] | undefined;
+    for (let variableI = 0; variableI < variableCount; variableI++) {
+      const i = variableIndexes[variableI];
+      let equalVariables: number[] | undefined;
+      for (let variableJ = variableI + 1; variableJ < variableCount; variableJ++) {
+        const j = variableIndexes[variableJ];
+        if (terms[i].equals(terms[j])) {
+          if (equalVariables === undefined) {
+            equalVariables = [];
+          }
+          equalVariables.push(j);
+        }
+      }
+      if (equalVariables !== undefined) {
+        if (filterIndexes === undefined) {
+          filterIndexes = [];
+        }
+        filterIndexes[i] = equalVariables;
+      }
+    }
+
+    // Fast path: no quoted triple patterns and no overlapping variables.
+    // This covers virtually every pattern a query engine sends to this method,
+    // and lets the per-result loop skip all of the conflict-detection bookkeeping below.
+    if (!hasQuadVariables && filterIndexes === undefined) {
+      // The index produces its results in nested-map order, so consecutive results share
+      // their leading components. Remembering the last decoding per variable slot therefore
+      // removes most dictionary lookups: a component that only changes once every N results
+      // is decoded once instead of N times.
+      const memoIds: (TE | undefined)[] = [];
+      const memoTerms: RDF.Term[] = [];
+      for (let variableI = 0; variableI < variableCount; variableI++) {
+        memoIds.push(undefined);
+        // eslint-disable-next-line ts/no-unsafe-argument
+        memoTerms.push(<any> undefined);
+      }
+
+      for (const decomposedQuadEncoded of indexWrapped.index
+        .findEncoded(<EncodedQuadTerms<TE | undefined>> ids, quadComponentsOrdered)) {
+        const bindingsEntries: [RDF.Variable, RDF.Term][] = [];
+        for (let variableI = 0; variableI < variableCount; variableI++) {
+          const i = variableIndexes[variableI];
+          const encodedTerm = decomposedQuadEncoded[i];
+          let decodedTerm: RDF.Term;
+          if (encodedTerm === memoIds[variableI]) {
+            decodedTerm = memoTerms[variableI];
+          } else {
+            decodedTerm = dictionary.decode(encodedTerm);
+            memoIds[variableI] = encodedTerm;
+            memoTerms[variableI] = decodedTerm;
+          }
+          bindingsEntries.push([ <RDF.Variable> terms[i], decodedTerm ]);
+        }
+        yield bindingsFactory.bindings(bindingsEntries);
+      }
+      return;
+    }
 
     // Call the best index's find method.
     for (const decomposedQuadEncoded of indexWrapped.index
@@ -498,14 +541,16 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
         // If we had overlapping variables, potentially exclude this binding if values for variable are unequal
         if (filterIndexes) {
           const filterI = filterIndexes[i];
-          for (const j of filterI) {
-            if (decomposedQuadEncoded[i] !== decomposedQuadEncoded[j]) {
-              skipBinding = true;
+          if (filterI !== undefined) {
+            for (const j of filterI) {
+              if (decomposedQuadEncoded[i] !== decomposedQuadEncoded[j]) {
+                skipBinding = true;
+                break;
+              }
+            }
+            if (skipBinding) {
               break;
             }
-          }
-          if (skipBinding) {
-            break;
           }
         }
 
