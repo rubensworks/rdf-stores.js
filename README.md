@@ -593,226 +593,226 @@ These conclusions are draw from the measurements of the command `node perf/run.j
 ```text
 # N3Store
 
-- Adding 2097152 triples to the default graph: 479.468ms
-* Memory usage for triples: 163MB
-- Finding all 2097152 triples in the default graph 2097152 times (0 variables): 2.080s
-- Finding all 2097152 triples in the default graph 32768 times (1 variable): 520.912ms
-- Finding all 2097152 triples in the default graph 384 times (2 variables): 473.104ms
-- Finding all 2097152 triples in the default graph 32768 times (1 variable) via a stream: 822.414ms
-- Counting all 2097152 triples in the default graph 32768 times (1 variable): 67.228ms
+- Adding 2097152 triples to the default graph: 469.447ms
+* Memory usage for triples: 165MB
+- Finding all 2097152 triples in the default graph 2097152 times (0 variables): 2.048s
+- Finding all 2097152 triples in the default graph 32768 times (1 variable): 510.216ms
+- Finding all 2097152 triples in the default graph 384 times (2 variables): 463.075ms
+- Finding all 2097152 triples in the default graph 32768 times (1 variable) via a stream: 797.207ms
+- Counting all 2097152 triples in the default graph 32768 times (1 variable): 65.534ms
 
-- Adding 1048576 quads: 322.286ms
-* Memory usage for quads: 216MB
-- Finding all 1048576 quads 131072 times: 353.68ms
+- Adding 1048576 quads: 316.429ms
+* Memory usage for quads: 227MB
+- Finding all 1048576 quads 131072 times: 346.913ms
 
 
 # 3 Map indexes (number) OPT-QUERY
 
-- Adding 2097152 triples to the default graph: 993.74ms
-* Memory usage for triples: 363MB
-- Finding all 2097152 triples in the default graph 2097152 times (0 variables): 692.184ms
-- Finding all 2097152 triples in the default graph 32768 times (1 variable): 302.466ms
-- Finding all 2097152 triples in the default graph 384 times (2 variables): 315.857ms
-- Finding all 2097152 triples as bindings in the default graph 384 times (2 variables): 2.081s
-- Finding all 2097152 triples in the default graph 32768 times (1 variable) via a stream: 623.16ms
-- Counting all 2097152 triples in the default graph 32768 times (1 variable): 18.616ms
+- Adding 2097152 triples to the default graph: 952.481ms
+* Memory usage for triples: 365MB
+- Finding all 2097152 triples in the default graph 2097152 times (0 variables): 665.723ms
+- Finding all 2097152 triples in the default graph 32768 times (1 variable): 297.259ms
+- Finding all 2097152 triples in the default graph 384 times (2 variables): 293.228ms
+- Finding all 2097152 triples as bindings in the default graph 384 times (2 variables): 2.066s
+- Finding all 2097152 triples in the default graph 32768 times (1 variable) via a stream: 596.537ms
+- Counting all 2097152 triples in the default graph 32768 times (1 variable): 19.298ms
 
-- Adding 1048576 quads: 540.963ms
-* Memory usage for quads: 1112MB
-- Finding all 1048576 quads 131072 times: 231.622ms
+- Adding 1048576 quads: 536.853ms
+* Memory usage for quads: 1105MB
+- Finding all 1048576 quads 131072 times: 214.833ms
 
-- Adding 262144 quoted triples: 173.918ms
-* Memory usage for quoted triples: 1114MB
-- Finding all 262144 quoted triples 192 times: 2.982s
+- Adding 262144 quoted triples: 174.591ms
+* Memory usage for quoted triples: 1107MB
+- Finding all 262144 quoted triples 192 times: 2.854s
 
-- Adding 1048576 quads: 541.148ms
-* Memory usage for quads: 1116MB
-- Finding all 32 terms (1) in the default graph 1024 times for each quad term (4): 379.793ms
-- Counting all 32 terms (1) in the default graph 1024 times for each quad term (4): 369.534ms
-- Finding all 1024 terms (2) in the default graph 32 times for each sequential quad term pair (4): 312.157ms
-- Counting all 1024 terms (2) in the default graph 32 times for each sequential quad term pair (4): 302.747ms
-- Finding all 32768 terms (3) in the default graph 8 times for each sequential quad term triple (4): 1.820s
-- Counting all 32768 terms (3) in the default graph 8 times for each sequential quad term triple (4): 1.573s
-- Finding all 1048576 terms (4) in the default graph 4 times for each sequential quad term quad (4): 5.534s
-- Counting all 1048576 terms (4) in the default graph 4 times for each sequential quad term quad (4): 3.975ms
-- Finding all 32 terms (1) filtered by graph 1024 times: 13.343ms
-- Counting all 32 terms (1) filtered by graph 1024 times: 7.258ms
+- Adding 1048576 quads: 544.122ms
+* Memory usage for quads: 1109MB
+- Finding all 32 terms (1) in the default graph 1024 times for each quad term (4): 376.075ms
+- Counting all 32 terms (1) in the default graph 1024 times for each quad term (4): 371.407ms
+- Finding all 1024 terms (2) in the default graph 32 times for each sequential quad term pair (4): 311.503ms
+- Counting all 1024 terms (2) in the default graph 32 times for each sequential quad term pair (4): 300.178ms
+- Finding all 32768 terms (3) in the default graph 8 times for each sequential quad term triple (4): 1.784s
+- Counting all 32768 terms (3) in the default graph 8 times for each sequential quad term triple (4): 1.550s
+- Finding all 1048576 terms (4) in the default graph 4 times for each sequential quad term quad (4): 5.190s
+- Counting all 1048576 terms (4) in the default graph 4 times for each sequential quad term quad (4): 3.987ms
+- Finding all 32 terms (1) filtered by graph 1024 times: 13.012ms
+- Counting all 32 terms (1) filtered by graph 1024 times: 7.314ms
 
 
 # 3 Map indexes (number) OPT-QUERY-NODES
 
-- Adding 2097152 triples to the default graph: 1.016s
-* Memory usage for triples: 2322MB
-- Finding all 2097152 triples in the default graph 2097152 times (0 variables): 742.367ms
-- Finding all 2097152 triples in the default graph 32768 times (1 variable): 339.297ms
-- Finding all 2097152 triples in the default graph 384 times (2 variables): 364.055ms
-- Finding all 2097152 triples as bindings in the default graph 384 times (2 variables): 2.452s
-- Finding all 2097152 triples in the default graph 32768 times (1 variable) via a stream: 658.299ms
-- Counting all 2097152 triples in the default graph 32768 times (1 variable): 18.681ms
+- Adding 2097152 triples to the default graph: 1.012s
+* Memory usage for triples: 2305MB
+- Finding all 2097152 triples in the default graph 2097152 times (0 variables): 739.364ms
+- Finding all 2097152 triples in the default graph 32768 times (1 variable): 331.6ms
+- Finding all 2097152 triples in the default graph 384 times (2 variables): 328.532ms
+- Finding all 2097152 triples as bindings in the default graph 384 times (2 variables): 2.478s
+- Finding all 2097152 triples in the default graph 32768 times (1 variable) via a stream: 630.409ms
+- Counting all 2097152 triples in the default graph 32768 times (1 variable): 18.766ms
 
-- Adding 1048576 quads: 604.757ms
-* Memory usage for quads: 2469MB
-- Finding all 1048576 quads 131072 times: 255.933ms
+- Adding 1048576 quads: 584.324ms
+* Memory usage for quads: 2462MB
+- Finding all 1048576 quads 131072 times: 236.608ms
 
-- Adding 262144 quoted triples: 199.202ms
-* Memory usage for quoted triples: 2470MB
-- Finding all 262144 quoted triples 192 times: 3.365s
+- Adding 262144 quoted triples: 193.003ms
+* Memory usage for quoted triples: 2463MB
+- Finding all 262144 quoted triples 192 times: 3.208s
 
-- Adding 1048576 quads: 632.966ms
-* Memory usage for quads: 2448MB
-- Finding all 32 terms (1) in the default graph 1024 times for each quad term (4): 374.012ms
-- Counting all 32 terms (1) in the default graph 1024 times for each quad term (4): 369.216ms
-- Finding all 1024 terms (2) in the default graph 32 times for each sequential quad term pair (4): 311.077ms
-- Counting all 1024 terms (2) in the default graph 32 times for each sequential quad term pair (4): 294.657ms
-- Finding all 32768 terms (3) in the default graph 8 times for each sequential quad term triple (4): 1.767s
-- Counting all 32768 terms (3) in the default graph 8 times for each sequential quad term triple (4): 1.589s
-- Finding all 1048576 terms (4) in the default graph 4 times for each sequential quad term quad (4): 4.919s
-- Counting all 1048576 terms (4) in the default graph 4 times for each sequential quad term quad (4): 3.96ms
-- Finding all 32 terms (1) filtered by graph 1024 times: 7.729ms
-- Counting all 32 terms (1) filtered by graph 1024 times: 7.132ms
+- Adding 1048576 quads: 661.448ms
+* Memory usage for quads: 2440MB
+- Finding all 32 terms (1) in the default graph 1024 times for each quad term (4): 362.33ms
+- Counting all 32 terms (1) in the default graph 1024 times for each quad term (4): 368.646ms
+- Finding all 1024 terms (2) in the default graph 32 times for each sequential quad term pair (4): 297.924ms
+- Counting all 1024 terms (2) in the default graph 32 times for each sequential quad term pair (4): 287.383ms
+- Finding all 32768 terms (3) in the default graph 8 times for each sequential quad term triple (4): 1.750s
+- Counting all 32768 terms (3) in the default graph 8 times for each sequential quad term triple (4): 1.561s
+- Finding all 1048576 terms (4) in the default graph 4 times for each sequential quad term quad (4): 4.845s
+- Counting all 1048576 terms (4) in the default graph 4 times for each sequential quad term quad (4): 3.932ms
+- Finding all 32 terms (1) filtered by graph 1024 times: 7.585ms
+- Counting all 32 terms (1) filtered by graph 1024 times: 6.966ms
 
-- Adding 1048576 quads: 593.714ms
-* Memory usage for quads: 2595MB
-- Finding all 32 nodes 1024 times: 2.49ms
+- Adding 1048576 quads: 580.961ms
+* Memory usage for quads: 2580MB
+- Finding all 32 nodes 1024 times: 2.351ms
 
 
 # 3 Record indexes (number) OPT-INGEST
 
-- Adding 2097152 triples to the default graph: 704.897ms
-* Memory usage for triples: 2595MB
-- Finding all 2097152 triples in the default graph 2097152 times (0 variables): 721.551ms
-- Finding all 2097152 triples in the default graph 32768 times (1 variable): 392.97ms
-- Finding all 2097152 triples in the default graph 384 times (2 variables): 412.528ms
-- Finding all 2097152 triples as bindings in the default graph 384 times (2 variables): 2.439s
-- Finding all 2097152 triples in the default graph 32768 times (1 variable) via a stream: 669.816ms
-- Counting all 2097152 triples in the default graph 32768 times (1 variable): 51.149ms
+- Adding 2097152 triples to the default graph: 671.975ms
+* Memory usage for triples: 2580MB
+- Finding all 2097152 triples in the default graph 2097152 times (0 variables): 701.878ms
+- Finding all 2097152 triples in the default graph 32768 times (1 variable): 381.241ms
+- Finding all 2097152 triples in the default graph 384 times (2 variables): 410.961ms
+- Finding all 2097152 triples as bindings in the default graph 384 times (2 variables): 2.393s
+- Finding all 2097152 triples in the default graph 32768 times (1 variable) via a stream: 661.393ms
+- Counting all 2097152 triples in the default graph 32768 times (1 variable): 39.711ms
 
-- Adding 1048576 quads: 401.141ms
-* Memory usage for quads: 2468MB
-- Finding all 1048576 quads 131072 times: 312.373ms
-
-- Adding 262144 quoted triples: 330.667ms
-* Memory usage for quoted triples: 2477MB
-- Finding all 262144 quoted triples 192 times: 3.712s
-
-- Adding 1048576 quads: 380.579ms
+- Adding 1048576 quads: 391.849ms
 * Memory usage for quads: 2455MB
-- Finding all 32 terms (1) in the default graph 1024 times for each quad term (4): 399.33ms
-- Counting all 32 terms (1) in the default graph 1024 times for each quad term (4): 393.108ms
-- Finding all 1024 terms (2) in the default graph 32 times for each sequential quad term pair (4): 327.06ms
-- Counting all 1024 terms (2) in the default graph 32 times for each sequential quad term pair (4): 322.799ms
-- Finding all 32768 terms (3) in the default graph 8 times for each sequential quad term triple (4): 1.874s
-- Counting all 32768 terms (3) in the default graph 8 times for each sequential quad term triple (4): 1.684s
-- Finding all 1048576 terms (4) in the default graph 4 times for each sequential quad term quad (4): 5.199s
-- Counting all 1048576 terms (4) in the default graph 4 times for each sequential quad term quad (4): 113.794ms
-- Finding all 32 terms (1) filtered by graph 1024 times: 13.547ms
-- Counting all 32 terms (1) filtered by graph 1024 times: 9.3ms
+- Finding all 1048576 quads 131072 times: 291.827ms
+
+- Adding 262144 quoted triples: 311.105ms
+* Memory usage for quoted triples: 2464MB
+- Finding all 262144 quoted triples 192 times: 3.598s
+
+- Adding 1048576 quads: 416.086ms
+* Memory usage for quads: 2464MB
+- Finding all 32 terms (1) in the default graph 1024 times for each quad term (4): 412.925ms
+- Counting all 32 terms (1) in the default graph 1024 times for each quad term (4): 397.132ms
+- Finding all 1024 terms (2) in the default graph 32 times for each sequential quad term pair (4): 331.395ms
+- Counting all 1024 terms (2) in the default graph 32 times for each sequential quad term pair (4): 315.327ms
+- Finding all 32768 terms (3) in the default graph 8 times for each sequential quad term triple (4): 1.959s
+- Counting all 32768 terms (3) in the default graph 8 times for each sequential quad term triple (4): 1.599s
+- Finding all 1048576 terms (4) in the default graph 4 times for each sequential quad term quad (4): 5.130s
+- Counting all 1048576 terms (4) in the default graph 4 times for each sequential quad term quad (4): 101.193ms
+- Finding all 32 terms (1) filtered by graph 1024 times: 9.095ms
+- Counting all 32 terms (1) filtered by graph 1024 times: 7.067ms
 
 
 # 1 Map indexes (number) OPT-QUERY
 
-- Adding 2097152 triples to the default graph: 640.779ms
-* Memory usage for triples: 2457MB
-- Finding all 2097152 triples in the default graph 2097152 times (0 variables): 752.861ms
-- Finding all 2097152 triples in the default graph 32768 times (1 variable): 598.053ms
-- Finding all 2097152 triples in the default graph 384 times (2 variables): 682.667ms
-- Finding all 2097152 triples as bindings in the default graph 384 times (2 variables): 3.316s
-- Finding all 2097152 triples in the default graph 32768 times (1 variable) via a stream: 923.685ms
-- Counting all 2097152 triples in the default graph 32768 times (1 variable): 174.326ms
+- Adding 2097152 triples to the default graph: 544.088ms
+* Memory usage for triples: 2475MB
+- Finding all 2097152 triples in the default graph 2097152 times (0 variables): 787.506ms
+- Finding all 2097152 triples in the default graph 32768 times (1 variable): 682.324ms
+- Finding all 2097152 triples in the default graph 384 times (2 variables): 710.618ms
+- Finding all 2097152 triples as bindings in the default graph 384 times (2 variables): 3.815s
+- Finding all 2097152 triples in the default graph 32768 times (1 variable) via a stream: 1.024s
+- Counting all 2097152 triples in the default graph 32768 times (1 variable): 193.583ms
 
-- Adding 1048576 quads: 317.839ms
-* Memory usage for quads: 2571MB
-- Finding all 1048576 quads 131072 times: 356.356ms
+- Adding 1048576 quads: 322.029ms
+* Memory usage for quads: 2577MB
+- Finding all 1048576 quads 131072 times: 462.123ms
 
-- Adding 262144 quoted triples: 120.659ms
-* Memory usage for quoted triples: 2572MB
-- Finding all 262144 quoted triples 192 times: 3.304s
+- Adding 262144 quoted triples: 126.364ms
+* Memory usage for quoted triples: 2586MB
+- Finding all 262144 quoted triples 192 times: 3.079s
 
 
 # 1 Record indexes (number) OPT-INGEST
 
-- Adding 2097152 triples to the default graph: 479.673ms
-* Memory usage for triples: 2572MB
-- Finding all 2097152 triples in the default graph 2097152 times (0 variables): 667.883ms
-- Finding all 2097152 triples in the default graph 32768 times (1 variable): 582.248ms
-- Finding all 2097152 triples in the default graph 384 times (2 variables): 490.551ms
-- Finding all 2097152 triples as bindings in the default graph 384 times (2 variables): 2.583s
-- Finding all 2097152 triples in the default graph 32768 times (1 variable) via a stream: 833.394ms
-- Counting all 2097152 triples in the default graph 32768 times (1 variable): 91.41ms
+- Adding 2097152 triples to the default graph: 482.111ms
+* Memory usage for triples: 2586MB
+- Finding all 2097152 triples in the default graph 2097152 times (0 variables): 669.852ms
+- Finding all 2097152 triples in the default graph 32768 times (1 variable): 546.804ms
+- Finding all 2097152 triples in the default graph 384 times (2 variables): 467.683ms
+- Finding all 2097152 triples as bindings in the default graph 384 times (2 variables): 2.625s
+- Finding all 2097152 triples in the default graph 32768 times (1 variable) via a stream: 828.14ms
+- Counting all 2097152 triples in the default graph 32768 times (1 variable): 78.115ms
 
-- Adding 1048576 quads: 268.963ms
-* Memory usage for quads: 2571MB
-- Finding all 1048576 quads 131072 times: 336.225ms
+- Adding 1048576 quads: 270.422ms
+* Memory usage for quads: 2577MB
+- Finding all 1048576 quads 131072 times: 343.494ms
 
-- Adding 262144 quoted triples: 109.26ms
-* Memory usage for quoted triples: 2582MB
-- Finding all 262144 quoted triples 192 times: 3.459s
+- Adding 262144 quoted triples: 112.214ms
+* Memory usage for quoted triples: 2588MB
+- Finding all 262144 quoted triples 192 times: 3.503s
 
 
 # 3 Nested Map Quoted indexes with indexed quoted dict (number) OPT-QUERY
 
-- Adding 2097152 triples to the default graph: 997.98ms
-* Memory usage for triples: 2582MB
-- Finding all 2097152 triples in the default graph 2097152 times (0 variables): 722.365ms
-- Finding all 2097152 triples in the default graph 32768 times (1 variable): 346.636ms
-- Finding all 2097152 triples in the default graph 384 times (2 variables): 360.259ms
-- Finding all 2097152 triples as bindings in the default graph 384 times (2 variables): 2.176s
-- Finding all 2097152 triples in the default graph 32768 times (1 variable) via a stream: 670.417ms
-- Counting all 2097152 triples in the default graph 32768 times (1 variable): 22.467ms
+- Adding 2097152 triples to the default graph: 1.078s
+* Memory usage for triples: 2570MB
+- Finding all 2097152 triples in the default graph 2097152 times (0 variables): 712.367ms
+- Finding all 2097152 triples in the default graph 32768 times (1 variable): 345.123ms
+- Finding all 2097152 triples in the default graph 384 times (2 variables): 361.83ms
+- Finding all 2097152 triples as bindings in the default graph 384 times (2 variables): 2.237s
+- Finding all 2097152 triples in the default graph 32768 times (1 variable) via a stream: 622.327ms
+- Counting all 2097152 triples in the default graph 32768 times (1 variable): 21.117ms
 
-- Adding 1048576 quads: 620.876ms
-* Memory usage for quads: 2571MB
-- Finding all 1048576 quads 131072 times: 256.611ms
+- Adding 1048576 quads: 574.894ms
+* Memory usage for quads: 2579MB
+- Finding all 1048576 quads 131072 times: 253.503ms
 
-- Adding 262144 quoted triples: 204.503ms
-* Memory usage for quoted triples: 2575MB
-- Finding all 262144 quoted triples 192 times: 107.511ms
+- Adding 262144 quoted triples: 200.185ms
+* Memory usage for quoted triples: 2582MB
+- Finding all 262144 quoted triples 192 times: 113.968ms
 
-- Adding 1048576 quads: 582.532ms
-* Memory usage for quads: 2578MB
-- Finding all 32 terms (1) in the default graph 1024 times for each quad term (4): 379.241ms
-- Counting all 32 terms (1) in the default graph 1024 times for each quad term (4): 375.543ms
-- Finding all 1024 terms (2) in the default graph 32 times for each sequential quad term pair (4): 316.82ms
-- Counting all 1024 terms (2) in the default graph 32 times for each sequential quad term pair (4): 308.27ms
-- Finding all 32768 terms (3) in the default graph 8 times for each sequential quad term triple (4): 1.840s
-- Counting all 32768 terms (3) in the default graph 8 times for each sequential quad term triple (4): 1.662s
-- Finding all 1048576 terms (4) in the default graph 4 times for each sequential quad term quad (4): 5.571s
-- Counting all 1048576 terms (4) in the default graph 4 times for each sequential quad term quad (4): 4.165ms
-- Finding all 32 terms (1) filtered by graph 1024 times: 12.802ms
-- Counting all 32 terms (1) filtered by graph 1024 times: 8.11ms
+- Adding 1048576 quads: 591.424ms
+* Memory usage for quads: 2584MB
+- Finding all 32 terms (1) in the default graph 1024 times for each quad term (4): 389.214ms
+- Counting all 32 terms (1) in the default graph 1024 times for each quad term (4): 380.599ms
+- Finding all 1024 terms (2) in the default graph 32 times for each sequential quad term pair (4): 309.703ms
+- Counting all 1024 terms (2) in the default graph 32 times for each sequential quad term pair (4): 303.848ms
+- Finding all 32768 terms (3) in the default graph 8 times for each sequential quad term triple (4): 1.826s
+- Counting all 32768 terms (3) in the default graph 8 times for each sequential quad term triple (4): 1.683s
+- Finding all 1048576 terms (4) in the default graph 4 times for each sequential quad term quad (4): 5.540s
+- Counting all 1048576 terms (4) in the default graph 4 times for each sequential quad term quad (4): 4.095ms
+- Finding all 32 terms (1) filtered by graph 1024 times: 12.714ms
+- Counting all 32 terms (1) filtered by graph 1024 times: 8.769ms
 
 
 # 3 Nested Record Quoted indexes with indexed quoted dict (number) OPT-INGEST
 
-- Adding 2097152 triples to the default graph: 675.351ms
-* Memory usage for triples: 2742MB
-- Finding all 2097152 triples in the default graph 2097152 times (0 variables): 858.682ms
-- Finding all 2097152 triples in the default graph 32768 times (1 variable): 445.961ms
-- Finding all 2097152 triples in the default graph 384 times (2 variables): 474.445ms
-- Finding all 2097152 triples as bindings in the default graph 384 times (2 variables): 3.006s
-- Finding all 2097152 triples in the default graph 32768 times (1 variable) via a stream: 710.319ms
-- Counting all 2097152 triples in the default graph 32768 times (1 variable): 52.664ms
+- Adding 2097152 triples to the default graph: 650.012ms
+* Memory usage for triples: 2799MB
+- Finding all 2097152 triples in the default graph 2097152 times (0 variables): 806.702ms
+- Finding all 2097152 triples in the default graph 32768 times (1 variable): 433.938ms
+- Finding all 2097152 triples in the default graph 384 times (2 variables): 449.254ms
+- Finding all 2097152 triples as bindings in the default graph 384 times (2 variables): 2.523s
+- Finding all 2097152 triples in the default graph 32768 times (1 variable) via a stream: 701.009ms
+- Counting all 2097152 triples in the default graph 32768 times (1 variable): 44.774ms
 
-- Adding 1048576 quads: 378.553ms
-* Memory usage for quads: 2589MB
-- Finding all 1048576 quads 131072 times: 338.85ms
+- Adding 1048576 quads: 381.385ms
+* Memory usage for quads: 2592MB
+- Finding all 1048576 quads 131072 times: 335.648ms
 
-- Adding 262144 quoted triples: 434.371ms
-* Memory usage for quoted triples: 2609MB
-- Finding all 262144 quoted triples 192 times: 130.165ms
+- Adding 262144 quoted triples: 349.226ms
+* Memory usage for quoted triples: 2615MB
+- Finding all 262144 quoted triples 192 times: 128.903ms
 
-- Adding 1048576 quads: 433.213ms
-* Memory usage for quads: 2611MB
-- Finding all 32 terms (1) in the default graph 1024 times for each quad term (4): 431.746ms
-- Counting all 32 terms (1) in the default graph 1024 times for each quad term (4): 418.886ms
-- Finding all 1024 terms (2) in the default graph 32 times for each sequential quad term pair (4): 352.263ms
-- Counting all 1024 terms (2) in the default graph 32 times for each sequential quad term pair (4): 339.848ms
-- Finding all 32768 terms (3) in the default graph 8 times for each sequential quad term triple (4): 1.982s
-- Counting all 32768 terms (3) in the default graph 8 times for each sequential quad term triple (4): 1.823s
-- Finding all 1048576 terms (4) in the default graph 4 times for each sequential quad term quad (4): 5.695s
-- Counting all 1048576 terms (4) in the default graph 4 times for each sequential quad term quad (4): 111.741ms
-- Finding all 32 terms (1) filtered by graph 1024 times: 10.42ms
-- Counting all 32 terms (1) filtered by graph 1024 times: 8.45ms
+- Adding 1048576 quads: 475.484ms
+* Memory usage for quads: 2596MB
+- Finding all 32 terms (1) in the default graph 1024 times for each quad term (4): 394.51ms
+- Counting all 32 terms (1) in the default graph 1024 times for each quad term (4): 384.203ms
+- Finding all 1024 terms (2) in the default graph 32 times for each sequential quad term pair (4): 318.691ms
+- Counting all 1024 terms (2) in the default graph 32 times for each sequential quad term pair (4): 309.164ms
+- Finding all 32768 terms (3) in the default graph 8 times for each sequential quad term triple (4): 1.879s
+- Counting all 32768 terms (3) in the default graph 8 times for each sequential quad term triple (4): 1.677s
+- Finding all 1048576 terms (4) in the default graph 4 times for each sequential quad term quad (4): 5.604s
+- Counting all 1048576 terms (4) in the default graph 4 times for each sequential quad term quad (4): 104.021ms
+- Finding all 32 terms (1) filtered by graph 1024 times: 9.483ms
+- Counting all 32 terms (1) filtered by graph 1024 times: 7.615ms
 ```
 
 Note that memory usage measurements are inaccurate due to all stores running in the same process,
