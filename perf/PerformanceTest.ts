@@ -56,7 +56,9 @@ export class PerformanceTest {
     }
   }
 
-  public async run(scope: 'all' | 'triples' | 'quads' | 'quoted' | 'terms' | 'nodes'): Promise<void> {
+  public async run(
+    scope: 'all' | 'triples' | 'bindings' | 'quads' | 'quoted' | 'terms' | 'nodes',
+  ): Promise<void> {
     for (const approach of this.approaches) {
       this.print(`\n# ${approach.name}\n`);
 
@@ -68,11 +70,20 @@ export class PerformanceTest {
         this.findTriples2Variables(this.dimension, store);
         if (approach.options.type !== 'n3') {
           this.findBindings2Variables(this.dimension, <any> store);
-          await this.findBindings2VariablesStream(this.dimension, <any> store);
-          this.findBindings1Variable(this.dimension, <any> store);
         }
         await this.findTriples1VariableStream(this.dimension, <any>store);
         this.countTriples1Variable(this.dimension, store);
+        this.print();
+      }
+
+      // Reading bindings has its own scope, so that adding a case to it does not change what the
+      // `triples` scope measures. The N3 store has no bindings API, so it is skipped here.
+      if ((scope === 'all' || scope === 'bindings') && approach.options.type !== 'n3') {
+        const store = new RdfStore(approach.options.options);
+        this.addTriplesToDefaultGraph(this.dimension, store);
+        this.findBindings2Variables(this.dimension, store);
+        await this.findBindings2VariablesStream(this.dimension, store);
+        this.findBindings1Variable(this.dimension, store);
         this.print();
       }
 
