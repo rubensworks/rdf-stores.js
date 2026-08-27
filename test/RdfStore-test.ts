@@ -2491,6 +2491,109 @@ describe('RdfStore', () => {
     });
   });
 
+  describe('readBindings', () => {
+    beforeEach(() => {
+      store = RdfStore.createDefault();
+      store.addQuad(DF.quad(DF.namedNode('s1'), DF.namedNode('p1'), DF.namedNode('o1')));
+      store.addQuad(DF.quad(DF.namedNode('s1'), DF.namedNode('p1'), DF.namedNode('o2')));
+    });
+
+    it('should produce no results for a pattern that is not in the dictionary', () => {
+      expect([ ...store.readBindings(
+        BF,
+        DF.namedNode('s-none'),
+        DF.variable('p'),
+        DF.variable('o'),
+        DF.defaultGraph(),
+      ) ]).toEqual([]);
+    });
+
+    it('should produce all matching bindings', () => {
+      expect([ ...store.readBindings(
+        BF,
+        DF.namedNode('s1'),
+        DF.namedNode('p1'),
+        DF.variable('o'),
+        DF.defaultGraph(),
+      ) ]).toEqualBindingsArray([
+        BF.fromRecord({ o: DF.namedNode('o1') }),
+        BF.fromRecord({ o: DF.namedNode('o2') }),
+      ]);
+    });
+  });
+
+  describe('matchBindings iterator', () => {
+    beforeEach(() => {
+      store = RdfStore.createDefault();
+      store.addQuad(DF.quad(DF.namedNode('s1'), DF.namedNode('p1'), DF.namedNode('o1')));
+      store.addQuad(DF.quad(DF.namedNode('s1'), DF.namedNode('p1'), DF.namedNode('o2')));
+    });
+
+    it('should return null once all bindings have been read', () => {
+      const iterator = store.matchBindings(
+        BF,
+        DF.namedNode('s1'),
+        DF.namedNode('p1'),
+        DF.variable('o'),
+        DF.defaultGraph(),
+      );
+      expect(iterator.read()).not.toBeNull();
+      expect(iterator.read()).not.toBeNull();
+      expect(iterator.read()).toBeNull();
+      expect(iterator.read()).toBeNull();
+      expect(iterator.closed).toBeTruthy();
+    });
+
+    it('should stop reading the index when destroyed', () => {
+      const iterator = store.matchBindings(
+        BF,
+        DF.namedNode('s1'),
+        DF.namedNode('p1'),
+        DF.variable('o'),
+        DF.defaultGraph(),
+      );
+      expect(iterator.read()).not.toBeNull();
+      iterator.destroy();
+      expect(iterator.done).toBeTruthy();
+      expect(iterator.read()).toBeNull();
+    });
+
+    it('should be destroyable after all bindings have been read', () => {
+      const iterator = store.matchBindings(
+        BF,
+        DF.namedNode('s1'),
+        DF.namedNode('p1'),
+        DF.variable('o'),
+        DF.defaultGraph(),
+      );
+      expect(iterator.read()).not.toBeNull();
+      expect(iterator.read()).not.toBeNull();
+      expect(iterator.read()).toBeNull();
+      iterator.destroy();
+      expect(iterator.done).toBeTruthy();
+    });
+
+    it('should produce no results for a pattern that is not in the dictionary', async() => {
+      await expect(arrayifyStream(store.matchBindings(
+        BF,
+        DF.namedNode('s-none'),
+        DF.variable('p'),
+        DF.variable('o'),
+        DF.defaultGraph(),
+      ))).resolves.toEqual([]);
+    });
+
+    it('getBindings should produce no results for a pattern that is not in the dictionary', () => {
+      expect(store.getBindings(
+        BF,
+        DF.namedNode('s-none'),
+        DF.variable('p'),
+        DF.variable('o'),
+        DF.defaultGraph(),
+      )).toEqual([]);
+    });
+  });
+
   describe('constructed for invalid combinations should throw', () => {
     it('not no combinations', () => {
       expect(() => new RdfStore<number>({
