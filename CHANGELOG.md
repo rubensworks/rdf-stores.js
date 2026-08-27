@@ -1,6 +1,21 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+<a name="v2.4.0"></a>
+## [v2.4.0](https://github.com/rubensworks/rdf-stores.js/compare/v2.3.0...v2.4.0) - 2026-08-27
+
+### Changed
+* Improve overall performance
+  * [Keep the original nested map loops for patterns that produce many results](https://github.com/rubensworks/rdf-stores.js/commit/2dd27c5609006c7df1c3ac9072402a778becfb03)
+  * [Apply the direct lookup and traversal fixes to the record-based indexes too](https://github.com/rubensworks/rdf-stores.js/commit/2b16075f863d5039db17910bbe76de5dca617175)
+  * [Stop updating the remaining indexes when a quad is already present](https://github.com/rubensworks/rdf-stores.js/commit/f3898e5b74a9fb511bdcd5f33ad4b95117c868d0)
+  * [Remove closure and array allocations from the shared lookup helpers](https://github.com/rubensworks/rdf-stores.js/commit/f8dbd481b267acbdf95ddd6a8b5c8d2001fa148c)
+  * [Reduce per-call and per-result overhead of reading bindings](https://github.com/rubensworks/rdf-stores.js/commit/cc5c33c44e46a12a20f0969e19ef27f8abdb0bda)
+  * [Stop allocating intermediate arrays and distinctness strings for distinct terms](https://github.com/rubensworks/rdf-stores.js/commit/fcd8bc1048b337da5a0c971029885f07d3c9c651)
+  * [Resolve fully defined patterns by direct lookup in the nested map indexes](https://github.com/rubensworks/rdf-stores.js/commit/a339c570f70432abaf0dbe95e379cc974a2c329c)
+  * [Build getQuads results directly instead of spreading a generator](https://github.com/rubensworks/rdf-stores.js/commit/7a7121c4cf3a190bf5d831bbf4e93529aab4d2eb)
+  * [Precompute query planning metadata instead of recomputing it per operation](https://github.com/rubensworks/rdf-stores.js/commit/7d0664a836d3075b5436819a066ed99a1d7b5c77)
+
 <a name="v2.3.0"></a>
 ## [v2.3.0](https://github.com/rubensworks/rdf-stores.js/compare/v2.2.0...v2.3.0) - 2026-08-13
 
