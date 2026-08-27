@@ -108,8 +108,8 @@ export class PerformanceTest {
       if ((scope === 'all' || scope === 'nodes') && approach.options.type !== 'n3' &&
         approach.options.options.indexNodes) {
         const store = new RdfStore(approach.options.options);
-        this.addQuadsToGraphs(this.dimension, store);
-        this.findNodes(this.dimension, store);
+        this.addQuadsToGraphs(this.dimension / 4, store);
+        this.findNodes(this.dimension / 4, store);
         this.print();
       }
     }
