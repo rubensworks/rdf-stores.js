@@ -77,13 +77,14 @@ export class PerformanceTest {
       }
 
       // Reading bindings has its own scope, so that adding a case to it does not change what the
-      // `triples` scope measures. The N3 store has no bindings API, so it is skipped here.
+      // `triples` scope measures. It runs at half the dimension, like the `quoted` scope, to keep
+      // the cost of the extra ingestion down. The N3 store has no bindings API, so it is skipped.
       if ((scope === 'all' || scope === 'bindings') && approach.options.type !== 'n3') {
         const store = new RdfStore(approach.options.options);
-        this.addTriplesToDefaultGraph(this.dimension, store);
-        this.findBindings2Variables(this.dimension, store);
-        await this.findBindings2VariablesStream(this.dimension, store);
-        this.findBindings1Variable(this.dimension, store);
+        this.addTriplesToDefaultGraph(this.dimension / 2, store);
+        this.findBindings2Variables(this.dimension / 2, store);
+        await this.findBindings2VariablesStream(this.dimension / 2, store);
+        this.findBindings1Variable(this.dimension / 2, store);
         this.print();
       }
 
