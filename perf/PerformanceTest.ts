@@ -56,7 +56,9 @@ export class PerformanceTest {
     }
   }
 
-  public async run(scope: 'all' | 'triples' | 'quads' | 'quoted' | 'terms' | 'nodes'): Promise<void> {
+  public async run(
+    scope: 'all' | 'triples' | 'bindings' | 'quads' | 'quoted' | 'terms' | 'nodes',
+  ): Promise<void> {
     for (const approach of this.approaches) {
       this.print(`\n# ${approach.name}\n`);
 
@@ -71,6 +73,18 @@ export class PerformanceTest {
         }
         await this.findTriples1VariableStream(this.dimension, <any>store);
         this.countTriples1Variable(this.dimension, store);
+        this.print();
+      }
+
+      // Reading bindings has its own scope, so that adding a case to it does not change what the
+      // `triples` scope measures. It runs at half the dimension, like the `quoted` scope, to keep
+      // the cost of the extra ingestion down. The N3 store has no bindings API, so it is skipped.
+      if ((scope === 'all' || scope === 'bindings') && approach.options.type !== 'n3') {
+        const store = new RdfStore(approach.options.options);
+        this.addTriplesToDefaultGraph(this.dimension / 2, store);
+        this.findBindings2Variables(this.dimension / 2, store);
+        await this.findBindings2VariablesStream(this.dimension / 2, store);
+        this.findBindings1Variable(this.dimension / 2, store);
         this.print();
       }
 
@@ -198,6 +212,32 @@ export class PerformanceTest {
     }
     for (let kCount = 0; kCount < dimension; kCount++) {
       assert.equal(store.getBindings(this.bindingsFactory, this.dataFactory.variable!('s'), this.dataFactory.variable!('p'), this.dataFactory.namedNode(`${this.prefix}${kCount}`), this.dataFactory.defaultGraph()).length, dimension * dimension);
+    }
+    this.timeEnd(TEST);
+  }
+
+  public async findBindings2VariablesStream(dimension: number, store: RdfStore): Promise<void> {
+    const TEST = `- Finding all ${dimension * dimension * dimension} triples as bindings in the default graph ${dimension * 3} times (2 variables) via a stream`;
+    this.timeStart(TEST);
+    for (let i = 0; i < dimension; i++) {
+      assert.equal((await arrayifyStream(store.matchBindings(this.bindingsFactory, this.dataFactory.namedNode(`${this.prefix}${i}`), this.dataFactory.variable!('p'), this.dataFactory.variable!('o'), this.dataFactory.defaultGraph()))).length, dimension * dimension);
+    }
+    for (let j = 0; j < dimension; j++) {
+      assert.equal((await arrayifyStream(store.matchBindings(this.bindingsFactory, this.dataFactory.variable!('s'), this.dataFactory.namedNode(`${this.prefix}${j}`), this.dataFactory.variable!('o'), this.dataFactory.defaultGraph()))).length, dimension * dimension);
+    }
+    for (let kCount = 0; kCount < dimension; kCount++) {
+      assert.equal((await arrayifyStream(store.matchBindings(this.bindingsFactory, this.dataFactory.variable!('s'), this.dataFactory.variable!('p'), this.dataFactory.namedNode(`${this.prefix}${kCount}`), this.dataFactory.defaultGraph()))).length, dimension * dimension);
+    }
+    this.timeEnd(TEST);
+  }
+
+  public findBindings1Variable(dimension: number, store: RdfStore): void {
+    const TEST = `- Finding all ${dimension * dimension * dimension} triples as bindings in the default graph ${dimension * dimension} times (1 variable)`;
+    this.timeStart(TEST);
+    for (let i = 0; i < dimension; i++) {
+      for (let j = 0; j < dimension; j++) {
+        assert.equal(store.getBindings(this.bindingsFactory, this.dataFactory.namedNode(`${this.prefix}${i}`), this.dataFactory.namedNode(`${this.prefix}${j}`), this.dataFactory.variable!('o'), this.dataFactory.defaultGraph()).length, dimension);
+      }
     }
     this.timeEnd(TEST);
   }
