@@ -56,16 +56,55 @@ export class BindingsProducer<TE> {
       return null;
     }
     const decomposedQuadEncoded = next.value;
-    const variableCount = this.variableCount;
-    const bindingsEntries: [RDF.Variable, RDF.Term][] = [];
-    for (let variableI = 0; variableI < variableCount; variableI++) {
-      const i = this.variableIndexes[variableI];
-      bindingsEntries.push([
-        <RDF.Variable> this.terms[i],
-        this.dictionary.decode(decomposedQuadEncoded[i]),
-      ]);
+    const variableIndexes = this.variableIndexes;
+    const terms = this.terms;
+    // This producer only handles patterns without quoted triple patterns, so every bound component
+    // is a plain variable contributing exactly one entry, and a quad has four components: there are
+    // never more than four entries. (A quoted triple pattern can bind more than four variables at
+    // once, through the variables nested inside it, and is handled by FilteringBindingsProducer.)
+    // The entries array is therefore built with a literal per possible size. Growing an array by
+    // pushing costs a capacity transition on the way, and leaves a holey array behind for the
+    // bindings factory to iterate.
+    switch (this.variableCount) {
+      case 1: {
+        const i0 = variableIndexes[0];
+        return this.bindingsFactory.bindings([
+          [ <RDF.Variable> terms[i0], this.dictionary.decode(decomposedQuadEncoded[i0]) ],
+        ]);
+      }
+      case 2: {
+        const i0 = variableIndexes[0];
+        const i1 = variableIndexes[1];
+        return this.bindingsFactory.bindings([
+          [ <RDF.Variable> terms[i0], this.dictionary.decode(decomposedQuadEncoded[i0]) ],
+          [ <RDF.Variable> terms[i1], this.dictionary.decode(decomposedQuadEncoded[i1]) ],
+        ]);
+      }
+      case 3: {
+        const i0 = variableIndexes[0];
+        const i1 = variableIndexes[1];
+        const i2 = variableIndexes[2];
+        return this.bindingsFactory.bindings([
+          [ <RDF.Variable> terms[i0], this.dictionary.decode(decomposedQuadEncoded[i0]) ],
+          [ <RDF.Variable> terms[i1], this.dictionary.decode(decomposedQuadEncoded[i1]) ],
+          [ <RDF.Variable> terms[i2], this.dictionary.decode(decomposedQuadEncoded[i2]) ],
+        ]);
+      }
+      case 4: {
+        const i0 = variableIndexes[0];
+        const i1 = variableIndexes[1];
+        const i2 = variableIndexes[2];
+        const i3 = variableIndexes[3];
+        return this.bindingsFactory.bindings([
+          [ <RDF.Variable> terms[i0], this.dictionary.decode(decomposedQuadEncoded[i0]) ],
+          [ <RDF.Variable> terms[i1], this.dictionary.decode(decomposedQuadEncoded[i1]) ],
+          [ <RDF.Variable> terms[i2], this.dictionary.decode(decomposedQuadEncoded[i2]) ],
+          [ <RDF.Variable> terms[i3], this.dictionary.decode(decomposedQuadEncoded[i3]) ],
+        ]);
+      }
+      default:
+        return this.bindingsFactory.bindings([]);
     }
-    return this.bindingsFactory.bindings(bindingsEntries);
   }
 
   /**
