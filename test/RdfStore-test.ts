@@ -2522,6 +2522,41 @@ describe('RdfStore', () => {
     });
   });
 
+  describe('bindings for quoted triple patterns', () => {
+    beforeEach(() => {
+      store = RdfStore.createDefault();
+      store.addQuad(DF.quad(
+        DF.quad(DF.namedNode('s1'), DF.namedNode('p1'), DF.namedNode('o1')),
+        DF.namedNode('p2'),
+        DF.quad(DF.namedNode('s3'), DF.namedNode('p3'), DF.namedNode('o3')),
+        DF.namedNode('g'),
+      ));
+    });
+
+    it('should bind more variables than a quad has components', () => {
+      // Quoted triple patterns bind the variables nested inside them, so a single binding can hold
+      // more than the four entries a plain quad pattern is limited to.
+      expect(store.getBindings(
+        BF,
+        DF.quad(DF.variable('a'), DF.variable('b'), DF.variable('c')),
+        DF.variable('p'),
+        DF.quad(DF.variable('d'), DF.variable('e'), DF.variable('f')),
+        DF.variable('g'),
+      )).toEqualBindingsArray([
+        BF.fromRecord({
+          g: DF.namedNode('g'),
+          d: DF.namedNode('s3'),
+          e: DF.namedNode('p3'),
+          f: DF.namedNode('o3'),
+          a: DF.namedNode('s1'),
+          b: DF.namedNode('p1'),
+          c: DF.namedNode('o1'),
+          p: DF.namedNode('p2'),
+        }),
+      ]);
+    });
+  });
+
   describe('matchBindings iterator', () => {
     beforeEach(() => {
       store = RdfStore.createDefault();
