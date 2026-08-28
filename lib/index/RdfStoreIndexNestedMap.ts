@@ -5,6 +5,11 @@ import type { IRdfStoreOptions } from '../IRdfStoreOptions';
 import { computeEndDepth, encodeOptionalTerms } from '../OrderUtils';
 import type { EncodedQuadTerms, QuadPatternTerms, QuadTerms } from '../PatternTerm';
 import type { IRdfStoreIndex } from './IRdfStoreIndex';
+import {
+  EMPTY_QUAD_ITERATOR,
+  RdfStoreIndexNestedMapIterator,
+  RdfStoreIndexSingleQuadIterator,
+} from './RdfStoreIndexNestedMapIterator';
 
 /**
  * An RDF store index that is implemented using nested Maps.
@@ -192,47 +197,17 @@ export class RdfStoreIndexNestedMap<TE, TV> implements IRdfStoreIndex<TE, TV> {
 
   // The code below is nearly identical. We duplicate because abstraction would result in a significant performance hit.
 
-  public* findEncoded(
+  public findEncoded(
     ids: EncodedQuadTerms<TE | undefined>,
-    // eslint-disable-next-line ts/naming-convention
-    _terms: QuadPatternTerms,
+    terms: QuadPatternTerms,
   ): IterableIterator<EncodedQuadTerms<TE>> {
     // Fully defined patterns are just a membership check, which avoids setting up the loops below.
     if (ids[0] !== undefined && ids[1] !== undefined && ids[2] !== undefined && ids[3] !== undefined) {
-      if (this.hasExact(ids)) {
-        yield <EncodedQuadTerms<TE>> ids;
-      }
-      return;
+      return this.hasExact(ids) ?
+        new RdfStoreIndexSingleQuadIterator<TE>(<EncodedQuadTerms<TE>> ids) :
+        EMPTY_QUAD_ITERATOR;
     }
-
-    // The loops below deliberately build a one-element key array for a defined component instead of
-    // branching per iteration: that array is allocated once per call, while a per-iteration branch
-    // would be paid once per result. Patterns that produce many results (which is what these loops
-    // are for) are far more sensitive to the latter.
-
-    const [ id0, id1, id2, id3 ] = ids;
-
-    let map1: NestedMapActual<TE, TV>;
-    let map2: NestedMapActual<TE, TV>;
-    let map3: NestedMapActual<TE, TV>;
-
-    const map0: NestedMapActual<TE, TV> = this.nestedMap;
-    const map0Keys = id0 === undefined ? map0.keys() : (map0.has(id0) ? [ id0 ] : []);
-    for (const key1 of map0Keys) {
-      map1 = <any>map0.get(key1);
-      const map1Keys = id1 === undefined ? map1.keys() : (map1.has(id1) ? [ id1 ] : []);
-      for (const key2 of map1Keys) {
-        map2 = <any>map1.get(key2);
-        const map2Keys = id2 === undefined ? map2.keys() : (map2.has(id2) ? [ id2 ] : []);
-        for (const key3 of map2Keys) {
-          map3 = <any>map2.get(key3);
-          const map3Keys = id3 === undefined ? map3.keys() : (map3.has(id3) ? [ id3 ] : []);
-          for (const key4 of map3Keys) {
-            yield [ <TE> key1, <TE> key2, <TE> key3, <TE> key4 ];
-          }
-        }
-      }
-    }
+    return new RdfStoreIndexNestedMapIterator<TE, TV>(this.nestedMap, ids, terms);
   }
 
   protected existsPath(

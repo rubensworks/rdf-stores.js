@@ -5,6 +5,11 @@ import { encodeOptionalTerms, isPatternQuoted } from '../OrderUtils';
 import type { EncodedQuadTerms, QuadPatternTerms, PatternTerm, QuadTerms } from '../PatternTerm';
 import type { NestedMapActual } from './RdfStoreIndexNestedMap';
 import { RdfStoreIndexNestedMap } from './RdfStoreIndexNestedMap';
+import {
+  EMPTY_QUAD_ITERATOR,
+  RdfStoreIndexNestedMapIterator,
+  RdfStoreIndexSingleQuadIterator,
+} from './RdfStoreIndexNestedMapIterator';
 
 /**
  * An RDF store index that is implemented using nested Maps with optimized quoted triple support.
@@ -18,7 +23,15 @@ export class RdfStoreIndexNestedMapQuoted<TE, TV> extends RdfStoreIndexNestedMap
     super(options);
   }
 
-  protected* getQuotedPatternKeys(map: NestedMapActual<TE, TV>, term: PatternTerm): IterableIterator<TE> {
+  /**
+   * Find the keys within the given map that match the given quoted triple pattern.
+   *
+   * This is public so that {@link RdfStoreIndexNestedMapQuotedIterator} can reuse it.
+   *
+   * @param map The map to find keys in.
+   * @param term A quoted triple pattern.
+   */
+  public* getQuotedPatternKeys(map: NestedMapActual<TE, TV>, term: PatternTerm): IterableIterator<TE> {
     for (const quotedTripleEncoded of this.dictionary.findQuotedTriplesEncoded(<RDF.Quad>term)) {
       if (map.has(quotedTripleEncoded)) {
         yield quotedTripleEncoded;
@@ -89,56 +102,17 @@ export class RdfStoreIndexNestedMapQuoted<TE, TV> extends RdfStoreIndexNestedMap
 
   // The code below is nearly identical. We duplicate because abstraction would result in a significant performance hit.
 
-  public override* findEncoded(
+  public override findEncoded(
     ids: EncodedQuadTerms<TE | undefined>,
     terms: QuadPatternTerms,
   ): IterableIterator<EncodedQuadTerms<TE>> {
     // Fully defined patterns are just a membership check, which avoids setting up the loops below.
     if (this.isExactPattern(terms)) {
-      if (this.hasExact(ids)) {
-        yield <EncodedQuadTerms<TE>> ids;
-      }
-      return;
+      return this.hasExact(ids) ?
+        new RdfStoreIndexSingleQuadIterator<TE>(<EncodedQuadTerms<TE>> ids) :
+        EMPTY_QUAD_ITERATOR;
     }
-
-    const [ id0, id1, id2, id3 ] = ids;
-    const [ term0, term1, term2, term3 ] = terms;
-    const quotedTerm0 = isPatternQuoted(terms[0]);
-    const quotedTerm1 = isPatternQuoted(terms[1]);
-    const quotedTerm2 = isPatternQuoted(terms[2]);
-    const quotedTerm3 = isPatternQuoted(terms[3]);
-
-    let map1: NestedMapActual<TE, TV>;
-    let map2: NestedMapActual<TE, TV>;
-    let map3: NestedMapActual<TE, TV>;
-
-    const map0: NestedMapActual<TE, TV> = this.nestedMap;
-    const map0Keys = <TE[] | IterableIterator<TE>> (term0 === undefined ?
-      map0.keys() :
-        (quotedTerm0 ? this.getQuotedPatternKeys(map0, term0) : (map0.has(id0!) ? [ id0 ] : [])));
-    for (const key1 of map0Keys) {
-      map1 = <any>map0.get(key1);
-      const map1Keys = <TE[] | IterableIterator<TE>> (term1 === undefined ?
-        map1.keys() :
-          (quotedTerm1 ? this.getQuotedPatternKeys(map1, term1) : (map1.has(id1!) ? [ id1 ] : [])));
-      for (const key2 of map1Keys) {
-        map2 = <any>map1.get(key2);
-        const map2Keys = <TE[] | IterableIterator<TE>> (term2 === undefined ?
-          map2.keys() :
-            (quotedTerm2 ? this.getQuotedPatternKeys(map2, term2) : (map2.has(id2!) ? [ id2 ] : [])));
-        for (const key3 of map2Keys) {
-          map3 = <any>map2.get(key3);
-          const map3Keys = <TE[] | IterableIterator<TE>> (term3 === undefined ?
-            map3.keys() :
-              (quotedTerm3 ? this.getQuotedPatternKeys(map3, term3) : (map3.has(id3!) ? [ id3 ] : [])));
-          for (const key4 of map3Keys) {
-            // Unlike the record-based indexes, map keys are the encoded terms themselves,
-            // so no string-to-number conversion is needed here.
-            yield [ key1, key2, key3, key4 ];
-          }
-        }
-      }
-    }
+    return new RdfStoreIndexNestedMapIterator<TE, TV>(this.nestedMap, ids, terms, this);
   }
 
   public override count(terms: QuadPatternTerms): number {
