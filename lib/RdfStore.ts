@@ -6,9 +6,10 @@ import { DataFactory } from 'rdf-data-factory';
 import type { QuadTermName } from 'rdf-terms';
 import {
   matchPattern,
-  matchPatternMappings,
   QUAD_TERM_NAMES,
 } from 'rdf-terms';
+import { BindingsIterator } from './BindingsIterator';
+import { BindingsProducer, FilteringBindingsProducer } from './BindingsProducer';
 import { DatasetCoreWrapper } from './dataset/DatasetCoreWrapper';
 import type { ITermDictionary } from './dictionary/ITermDictionary';
 import { TermDictionaryNumberRecordFullTerms } from './dictionary/TermDictionaryNumberRecordFullTerms';
@@ -413,20 +414,26 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
   }
 
   /**
-   * Returns a generator producing all quads matching the pattern.
+   * Prepare the production of bindings for the given quad pattern.
+   *
+   * This determines the best index, encodes the pattern, works out which components must be
+   * bound, and detects whether any post-filtering is required.
+   * All of this only depends on the pattern, so it is done once per lookup instead of per result.
+   *
    * @param bindingsFactory The factory to use for creating bindings.
    * @param subject The subject, which can be a variable.
    * @param predicate The predicate, which can be a variable.
    * @param object The object, which can be a variable.
    * @param graph The graph, which can be a variable.
+   * @return A producer of bindings, or undefined if the pattern can not produce any results.
    */
-  public* readBindings(
+  private prepareBindings(
     bindingsFactory: RDF.BindingsFactory,
     subject: RDF.Term,
     predicate: RDF.Term,
     object: RDF.Term,
     graph: RDF.Term,
-  ): IterableIterator<RDF.Bindings> {
+  ): BindingsProducer<TE> | undefined {
     // Construct a quad pattern array
     const [ quadComponents ] =
       quadToPattern(subject, predicate, object, graph, this.indexesSupportQuotedPatterns);
@@ -441,7 +448,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
 
     // Abort if any of the terms does not exist in the dictionary
     if (!ids) {
-      return;
+      return undefined;
     }
 
     // Collect variables to bind
@@ -451,11 +458,14 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     );
     const variableIndexes: number[] = [];
     const variableIsQuad: boolean[] = [];
+    let hasQuadVariables = false;
     for (let i = 0; i < terms.length; i++) {
       const termType = terms[i].termType;
       if (termType === 'Variable' || termType === 'Quad') {
         variableIndexes.push(i);
-        variableIsQuad.push(termType === 'Quad');
+        const isQuad = termType === 'Quad';
+        variableIsQuad.push(isQuad);
+        hasQuadVariables = hasQuadVariables || isQuad;
       }
     }
 
@@ -484,75 +494,49 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
       });
     }
 
-    const dictionary = this.dictionary;
-    const variableCount = variableIndexes.length;
+    const source = indexWrapped.index
+      .findEncoded(<EncodedQuadTerms<TE | undefined>> ids, quadComponentsOrdered);
 
-    // Call the best index's find method.
-    for (const decomposedQuadEncoded of indexWrapped.index
-      .findEncoded(<EncodedQuadTerms<TE | undefined>> ids, quadComponentsOrdered)) {
-      let skipBinding = false;
-      let checkForBindingConflicts = false;
-      const bindingsEntries: [RDF.Variable, RDF.Term][] = [];
-      for (let variableI = 0; variableI < variableCount; variableI++) {
-        const i = variableIndexes[variableI];
-        // If we had overlapping variables, potentially exclude this binding if values for variable are unequal
-        if (filterIndexes) {
-          const filterI = filterIndexes[i];
-          for (const j of filterI) {
-            if (decomposedQuadEncoded[i] !== decomposedQuadEncoded[j]) {
-              skipBinding = true;
-              break;
-            }
-          }
-          if (skipBinding) {
-            break;
-          }
-        }
+    // Patterns without quoted triple patterns and without overlapping variables
+    // never need post-filtering, and get a producer without any of that bookkeeping.
+    if (!hasQuadVariables && filterIndexes === undefined) {
+      return new BindingsProducer<TE>(bindingsFactory, source, this.dictionary, terms, variableIndexes);
+    }
+    return new FilteringBindingsProducer<TE>(
+      bindingsFactory,
+      source,
+      this.dictionary,
+      terms,
+      variableIndexes,
+      this.dataFactory,
+      variableIsQuad,
+      filterIndexes,
+    );
+  }
 
-        const decodedTerm = dictionary.decode(decomposedQuadEncoded[i]);
-
-        // Handle quoted triples
-        // TODO: it may be possible to implement a more efficient of findEncoded if requireQuotedTripleFiltering is
-        //  false that would return bindings instead of quads. The following could then be skipped.
-        //  variableIndexes would also need to be changed to check requireQuotedTripleFiltering (see readQuads).
-        if (variableIsQuad[variableI]) {
-          // If the term is a quad, it may also contain nested variables,
-          // so we need to extract those additional bindings.
-          const additionalBindings =
-            matchPatternMappings(<RDF.Quad> decodedTerm, <RDF.Quad> terms[i], { returnMappings: true });
-          if (additionalBindings) {
-            checkForBindingConflicts = true;
-            for (const [ key, value ] of Object.entries(additionalBindings)) {
-              const variable = this.dataFactory.variable!(key);
-              if (bindingsEntries.some(entry => entry[0].equals(variable) && !entry[1].equals(value))) {
-                // Skip this binding if we find conflicting variable bindings
-                skipBinding = true;
-                break;
-              }
-              bindingsEntries.push([ variable, value ]);
-            }
-            continue;
-          }
-          skipBinding = true;
-          break;
-        }
-
-        // If for the current bindings object, we previously found a quoted quad term that bound variables within it,
-        // make sure that later bindings to this variable from other terms don't conflict.
-        if (checkForBindingConflicts && bindingsEntries
-          .some(entry => entry[0].equals(terms[i]) && !entry[1].equals(decodedTerm))) {
-          // Skip this binding if we find conflicting variable bindings
-          skipBinding = true;
-          break;
-        }
-
-        bindingsEntries.push([ <RDF.Variable> terms[i], decodedTerm ]);
-      }
-
-      if (!skipBinding) {
-        // Create and yield the bindings object
-        yield bindingsFactory.bindings(bindingsEntries);
-      }
+  /**
+   * Returns a generator producing all quads matching the pattern.
+   * @param bindingsFactory The factory to use for creating bindings.
+   * @param subject The subject, which can be a variable.
+   * @param predicate The predicate, which can be a variable.
+   * @param object The object, which can be a variable.
+   * @param graph The graph, which can be a variable.
+   */
+  public* readBindings(
+    bindingsFactory: RDF.BindingsFactory,
+    subject: RDF.Term,
+    predicate: RDF.Term,
+    object: RDF.Term,
+    graph: RDF.Term,
+  ): IterableIterator<RDF.Bindings> {
+    const producer = this.prepareBindings(bindingsFactory, subject, predicate, object, graph);
+    if (!producer) {
+      return;
+    }
+    let bindings: RDF.Bindings | null = producer.read();
+    while (bindings !== null) {
+      yield bindings;
+      bindings = producer.read();
     }
   }
 
@@ -571,11 +555,18 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     object: RDF.Term,
     graph: RDF.Term,
   ): RDF.Bindings[] {
-    const bindings: RDF.Bindings[] = [];
-    for (const binding of this.readBindings(bindingsFactory, subject, predicate, object, graph)) {
-      bindings.push(binding);
+    // This intentionally does not delegate to readBindings:
+    // draining a generator costs an extra suspend/resume and an iterator result object per binding.
+    const bindingsArray: RDF.Bindings[] = [];
+    const producer = this.prepareBindings(bindingsFactory, subject, predicate, object, graph);
+    if (producer) {
+      let bindings: RDF.Bindings | null = producer.read();
+      while (bindings !== null) {
+        bindingsArray.push(bindings);
+        bindings = producer.read();
+      }
     }
-    return bindings;
+    return bindingsArray;
   }
 
   /**
@@ -593,7 +584,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     object: RDF.Term,
     graph: RDF.Term,
   ): AsyncIterator<RDF.Bindings> {
-    return wrap(this.readBindings(bindingsFactory, subject, predicate, object, graph));
+    return new BindingsIterator(this.prepareBindings(bindingsFactory, subject, predicate, object, graph));
   }
 
   /**
