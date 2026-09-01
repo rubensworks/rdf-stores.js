@@ -1,6 +1,15 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+<a name="v2.5.0"></a>
+## [v2.5.0](https://github.com/rubensworks/rdf-stores.js/compare/v2.4.0...v2.5.0) - 2026-09-01
+
+### Changed
+* Improve performance of bindings-related methods
+  * [Build bindings entries with a literal per pattern arity](https://github.com/rubensworks/rdf-stores.js/commit/a90c155f9e9c783583c94b56be2fae47484e77d2)
+  * [Traverse nested map indexes without a generator](https://github.com/rubensworks/rdf-stores.js/commit/c964f55b0a62b21da504cba38db77cff4594e98b)
+  * [Read bindings without intermediate generator layers](https://github.com/rubensworks/rdf-stores.js/commit/f61ad2671aefd3474daf5ca4ef4d901316fe71a0)
+
 <a name="v2.4.0"></a>
 ## [v2.4.0](https://github.com/rubensworks/rdf-stores.js/compare/v2.3.0...v2.4.0) - 2026-08-27
 
