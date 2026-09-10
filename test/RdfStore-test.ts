@@ -1765,6 +1765,20 @@ describe('RdfStore', () => {
                 [ undefined, undefined, undefined, undefined ],
               )).toBe(2);
             });
+
+            it('should count objects filtered by predicate and graph', async() => {
+              expect(store.countDistinctTerms(
+                [ 'object' ],
+                [ undefined, DF.namedNode('p1'), undefined, DF.namedNode('g1') ],
+              )).toBe(1);
+            });
+
+            it('should count objects filtered by subject', async() => {
+              expect(store.countDistinctTerms(
+                [ 'object' ],
+                [ DF.namedNode('s1'), undefined, undefined, undefined ],
+              )).toBe(2);
+            });
           });
 
           describe('asDataset', () => {
@@ -2640,6 +2654,53 @@ describe('RdfStore', () => {
         DF.variable('o'),
         DF.defaultGraph(),
       )).toEqual([]);
+    });
+  });
+
+  describe('countDistinctTerms with the default indexes', () => {
+    let defaultStore: RdfStore<number>;
+
+    beforeEach(async() => {
+      defaultStore = RdfStore.createDefault(true);
+      for (const quad of [
+        DF.quad(DF.namedNode('s1'), DF.namedNode('p1'), DF.namedNode('o1'), DF.namedNode('g1')),
+        DF.quad(DF.namedNode('s2'), DF.namedNode('p1'), DF.namedNode('o1'), DF.namedNode('g1')),
+        DF.quad(DF.namedNode('s1'), DF.namedNode('p1'), DF.namedNode('o2'), DF.namedNode('g1')),
+        DF.quad(DF.namedNode('s1'), DF.namedNode('p2'), DF.namedNode('o3'), DF.namedNode('g2')),
+      ]) {
+        defaultStore.addQuad(quad);
+      }
+    });
+
+    it('should count from the index when the filters pin the components before the term', () => {
+      const spy = jest.spyOn(defaultStore, 'getDistinctTerms');
+      expect(defaultStore.countDistinctTerms(
+        [ 'object' ],
+        [ undefined, DF.namedNode('p1'), undefined, DF.namedNode('g1') ],
+      )).toBe(2);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('should agree with the fully qualified term list', () => {
+      expect(defaultStore.countDistinctTerms(
+        [ 'object' ],
+        [ undefined, DF.namedNode('p1'), undefined, DF.namedNode('g1') ],
+      )).toBe(defaultStore.countDistinctTerms(
+        [ 'graph', 'predicate', 'object' ],
+        [ undefined, DF.namedNode('p1'), undefined, DF.namedNode('g1') ],
+      ));
+    });
+
+    it('should materialise terms when a component before the term is unbound', () => {
+      const spy = jest.spyOn(defaultStore, 'getDistinctTerms');
+      expect(defaultStore.countDistinctTerms(
+        [ 'object' ],
+        [ DF.namedNode('s1'), undefined, undefined, undefined ],
+      )).toBe(3);
+      expect(spy).toHaveBeenCalledWith(
+        [ 'object' ],
+        [ DF.namedNode('s1'), undefined, undefined, undefined ],
+      );
     });
   });
 

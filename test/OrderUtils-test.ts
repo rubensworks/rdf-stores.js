@@ -10,6 +10,7 @@ import {
   getBestIndexTerms,
   getComponentOrderPermutation,
   getComponentOrderScore,
+  getComponentOrderScoreFiltered,
   getIndexMatchTermsPath,
   orderQuadComponents,
   orderQuadComponentsPermutation,
@@ -358,6 +359,34 @@ describe('OrderUtils', () => {
         [ 'graph', 'subject', 'predicate', 'object' ],
         [ 'subject', 'object' ],
       )).toEqual([ false, true, false, true ]);
+    });
+  });
+
+  describe('getComponentOrderScoreFiltered', () => {
+    const GPOS: QuadTermName[] = [ 'graph', 'predicate', 'object', 'subject' ];
+    const GOSP: QuadTermName[] = [ 'graph', 'object', 'subject', 'predicate' ];
+    const GSPO: QuadTermName[] = [ 'graph', 'subject', 'predicate', 'object' ];
+
+    it('scores as the unfiltered variant without filters', () => {
+      for (const order of [ GPOS, GOSP, GSPO ]) {
+        expect(getComponentOrderScoreFiltered(order, [ 'object' ])).toBe(
+          getComponentOrderScore(order, [ 'object' ]),
+        );
+      }
+    });
+
+    it('ranks the order that matches the filters before the term highest', () => {
+      const filters = [ undefined, DF.namedNode('p'), undefined, DF.namedNode('g') ];
+      const scores = [ GPOS, GOSP, GSPO ]
+        .map(order => getComponentOrderScoreFiltered(order, [ 'object' ], filters));
+      expect(scores[0]).toBeGreaterThan(scores[1]);
+      expect(scores[0]).toBeGreaterThan(scores[2]);
+    });
+
+    it('weighs filtered components above looked up terms', () => {
+      const filters = [ undefined, undefined, undefined, DF.namedNode('g') ];
+      expect(getComponentOrderScoreFiltered(GPOS, [ 'object' ], filters))
+        .toBeGreaterThan(getComponentOrderScoreFiltered(GPOS, [ 'graph' ], filters));
     });
   });
 

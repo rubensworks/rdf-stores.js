@@ -597,8 +597,9 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     terms: QuadTermName[],
     filters?: (RDF.Term | undefined)[],
   ): number {
-    // Determine the best index for this pattern
-    const bestIndex = getBestIndexTerms(this.indexesWrappedComponentOrders, terms);
+    // Determine the best index for this pattern, taking into account the components the filters bind,
+    // as those must be matched before the counted terms can be read off the index
+    const bestIndex = getBestIndexTerms(this.indexesWrappedComponentOrders, terms, filters);
     const indexWrapped = this.indexesWrapped[bestIndex];
 
     // Order terms, and keep index for fast inverse ordering during decoding
@@ -626,9 +627,9 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
       ({ filterTermsEncoded, matchTerms } = encodedFilters);
     }
 
-    // Ensure distinctness (this can only occur when insufficient indexes are available,
-    // or when filters go beyond match depths)
-    if (matchTerms.includes(false)) {
+    // Ensure distinctness: a depth that is neither counted nor pinned to a single term by a filter
+    // fans out over the index, which would count the same term once per branch it occurs in
+    if (matchTerms.some((matched, i) => !matched && filterTermsEncoded?.[i] === undefined)) {
       return this.getDistinctTerms(terms, filters).length;
     }
 
