@@ -446,6 +446,64 @@ dataset.add(DF.quad(DF.namedNode('ex:s1'), DF.namedNode('ex:p1'), DF.namedNode('
 console.log(dataset.has(DF.quad(DF.namedNode('ex:s1'), DF.namedNode('ex:p1'), DF.namedNode('ex:o1'))));
 ```
 
+### `sortIndexes`
+
+Reorders every index that supports it, so that later scans emit their results sorted by the given term comparator.
+
+The indexes iterate in insertion order, so a scan is otherwise ordered by the order quads were added.
+This pass re-inserts every nested map once, after which scans are sorted at no per-query cost.
+It is meant for a store that is loaded and then queried: quads added afterwards land at the end of their map
+and break the ordering, so call it again after adding more.
+
+Indexes that cannot be reordered, such as the record-backed ones, are left alone.
+The returned number says how many indexes were reordered.
+
+```typescript
+const sorted = store.sortIndexes((termA, termB) => termA.value.localeCompare(termB.value));
+console.log(sorted); // The number of indexes that are now sorted
+```
+
+### `indexOrders`
+
+The orders a scan of this store can come back in, one entry per reordered index:
+
+```typescript
+console.log(store.indexOrders);
+// [ [ 'graph', 'subject', 'predicate', 'object' ], [ 'graph', 'predicate', 'object', 'subject' ] ]
+```
+
+This is empty until [`sortIndexes`](#sortindexes) has run, since the indexes otherwise iterate in insertion order
+and a scan has no useful order at all.
+The order a given pattern actually gets is the entry for the index that serves it,
+with the components the pattern binds removed, since those do not vary across the scan.
+
+### `resultOrder` and `seekTo`
+
+Once [`sortIndexes`](#sortindexes) has run, the iterator returned by [`matchBindings`](#matchbindings) carries two extra members,
+for scans served by an index that was actually reordered.
+Both are absent otherwise, so a consumer can check for them to find out whether they are supported.
+
+`resultOrder` names the components the scan varies over, in the order it produces them:
+
+```typescript
+const stream = store.matchBindings(BF, DF.variable('s'), DF.namedNode('ex:p1'), DF.variable('o'), DF.defaultGraph());
+console.log(stream.resultOrder); // [ 'subject', 'object' ] on a (graph, predicate, subject, object) index
+```
+
+`seekTo` drops what is still ahead of the scan and before the given term.
+Keys that precede it are skipped without descending into the maps below them,
+so a skipped key costs one map step rather than one result per quad underneath it.
+This makes it useful for a merge join, which can skip to a term coming from the other side:
+
+```typescript
+stream.seekTo('subject', DF.namedNode('ex:s5'));
+// The next result read has a subject that is not before ex:s5
+```
+
+The sought term does not have to occur in the store: the scan lands on the first term that is not before it.
+A seek only drops what is ahead, so it can never rewind a scan or re-emit a result that was already produced,
+and a seek arriving before the previous one has been read past replaces it rather than combining with it.
+
 ## Configuring a store
 
 Instead of using the default settings, you may optionally decide to configure the following aspects of a store:

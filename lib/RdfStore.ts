@@ -149,9 +149,6 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
   }
 
   /**
-   * The number of quads in this store.
-   */
-  /**
    * Reorder every index that supports it, so that scans emit their results sorted by `comparator`.
    *
    * The indexes iterate in insertion order, which is the order quads were added, so a scan is
@@ -297,14 +294,18 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
       return undefined;
     }
     return (component: QuadTermName, term: RDF.Term): void => {
-      // Every component order names all four components, so this always finds one. A component the
-      // pattern binds is fixed across the scan, which makes seeking it a no-op rather than an error.
+      // Every component order names all four components, so this always finds one. Seeking a
+      // component the pattern binds is pointless rather than an error: that key is fixed, so the
+      // scan either carries on untouched or runs out.
       const level = componentOrder.indexOf(component);
       const targetRank = this.rankOf(term);
       producer.seek(level, key => this.termRank!(key) < targetRank);
     };
   }
 
+  /**
+   * The number of quads in this store.
+   */
   public get size(): number {
     return this._size;
   }
