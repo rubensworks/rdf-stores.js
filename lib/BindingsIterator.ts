@@ -1,5 +1,6 @@
 import type * as RDF from '@rdfjs/types';
 import { AsyncIterator } from 'asynciterator';
+import type { QuadTermName } from 'rdf-terms';
 import type { BindingsProducer } from './BindingsProducer';
 
 /**
@@ -18,11 +19,35 @@ import type { BindingsProducer } from './BindingsProducer';
  */
 export class BindingsIterator extends AsyncIterator<RDF.Bindings> {
   private producer: BindingsProducer<any> | undefined;
+  /**
+   * Skips this scan ahead to a term, when the store it reads from can do that. Absent otherwise, so
+   * that a consumer can tell whether skipping is supported by checking for it.
+   */
+  public readonly seekTo: ((component: QuadTermName, term: RDF.Term) => void) | undefined;
 
-  public constructor(producer?: BindingsProducer<any>) {
+  /**
+   * The components this scan varies over, in the order it produces them, or undefined when the
+   * index it reads is not sorted and therefore produces no useful order.
+   */
+  public readonly resultOrder: QuadTermName[] | undefined;
+
+  public constructor(
+    producer?: BindingsProducer<any>,
+    seekTo?: (component: QuadTermName, term: RDF.Term) => void,
+    resultOrder?: QuadTermName[],
+  ) {
     super();
+    this.resultOrder = resultOrder;
     this.producer = producer;
     this.readable = true;
+    if (seekTo) {
+      // Only skip while results remain: once the producer is gone the scan has already ended.
+      this.seekTo = (component, term) => {
+        if (this.producer !== undefined) {
+          seekTo(component, term);
+        }
+      };
+    }
   }
 
   public override read(): RDF.Bindings | null {

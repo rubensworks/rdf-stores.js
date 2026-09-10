@@ -48,6 +48,21 @@ export class BindingsProducer<TE> {
   }
 
   /**
+   * Skip forward to the first result whose component at `level` is not before the sought term.
+   *
+   * Does nothing when the underlying index cannot skip, in which case the caller still gets every
+   * result, just by reading through them.
+   * @param level The nesting level, in the component order of the index being read.
+   * @param isBefore Whether an encoded key at that level precedes the sought term.
+   */
+  public seek(level: number, isBefore: (key: TE) => boolean): void {
+    const source = <{ seek?: (level: number, isBefore: (key: TE) => boolean) => void }> <unknown> this.source;
+    if (source.seek) {
+      source.seek(level, isBefore);
+    }
+  }
+
+  /**
    * Produce the next bindings object, or `null` if no results remain.
    */
   public read(): RDF.Bindings | null {

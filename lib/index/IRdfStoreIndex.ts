@@ -74,6 +74,15 @@ export interface IRdfStoreIndex<TE, TV> {
    */
   count: (terms: QuadPatternTerms) => number;
   /**
+   * Reorder this index so that scans emit their results in the order given by `rank`.
+   *
+   * This is optional: an index that cannot reorder itself simply omits it, and stays unordered.
+   * Implementations that support it may assume the store is not modified afterwards, since a later
+   * write is free to break the ordering again.
+   * @param rank A rank per encoded term, ascending in the desired term order.
+   */
+  sort?: (rank: Map<TE, number>) => void;
+  /**
    * Count the terms that exist in the index.
    * Each returned array corresponds to the terms specified by given quad term names.
    * This corresponds to the semantics of {@link #findTerms}, and returns counts instead of terms.

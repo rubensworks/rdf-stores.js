@@ -45,6 +45,11 @@ export class RdfStoreIndexNestedMapIterator<TE, TV> implements IterableIterator<
   private key0: TE;
   private key1: TE;
   private key2: TE;
+  /**
+   * The level a pending seek applies to, or -1 when no seek is pending.
+   */
+  private seekLevel = -1;
+  private seekBefore: ((key: TE) => boolean) | undefined;
   public constructor(
     nestedMap: NestedMapActual<TE, TV>,
     ids: EncodedQuadTerms<TE | undefined>,
@@ -92,6 +97,36 @@ export class RdfStoreIndexNestedMapIterator<TE, TV> implements IterableIterator<
     return map.has(id) ? [ id ][Symbol.iterator]() : EMPTY_ITERATOR;
   }
 
+  /**
+   * Skip forward to the first result whose component at `level` is not before the sought term.
+   *
+   * Keys that are before it are dropped without descending into the maps below them, so a skipped
+   * key costs one map step rather than one result per quad underneath it. This only makes sense on
+   * an index whose maps are sorted, since it stops skipping at the first key that passes.
+   *
+   * Only what is still ahead is dropped, so a seek can never rewind the scan or hand back a result it
+   * has already produced. A seek that arrives before the previous one has been read past replaces it
+   * rather than combining with it.
+   * @param level The nesting level to skip within.
+   * @param isBefore Whether a key at that level precedes the sought term.
+   */
+  public seek(level: number, isBefore: (key: TE) => boolean): void {
+    this.seekLevel = level;
+    this.seekBefore = isBefore;
+    // Abandon the subtree currently being emitted when it sits before the sought term, so that the
+    // loop falls back to the level being sought rather than finishing the results underneath it.
+    const current = level === 0 ? this.key0 : (level === 1 ? this.key1 : this.key2);
+    if (level < 3 && current !== undefined && isBefore(current)) {
+      this.iterator3 = undefined;
+      if (level < 2) {
+        this.iterator2 = undefined;
+      }
+      if (level < 1) {
+        this.iterator1 = undefined;
+      }
+    }
+  }
+
   public [Symbol.iterator](): IterableIterator<EncodedQuadTerms<TE>> {
     return this;
   }
@@ -101,6 +136,12 @@ export class RdfStoreIndexNestedMapIterator<TE, TV> implements IterableIterator<
       if (this.iterator3 !== undefined) {
         const entry = this.iterator3.next();
         if (entry.done !== true) {
+          if (this.seekLevel === 3) {
+            if (this.seekBefore!(entry.value)) {
+              continue;
+            }
+            this.seekLevel = -1;
+          }
           return { value: [ this.key0, this.key1, this.key2, entry.value ], done: false };
         }
         this.iterator3 = undefined;
@@ -108,6 +149,12 @@ export class RdfStoreIndexNestedMapIterator<TE, TV> implements IterableIterator<
       if (this.iterator2 !== undefined) {
         const entry = this.iterator2.next();
         if (entry.done !== true) {
+          if (this.seekLevel === 2) {
+            if (this.seekBefore!(entry.value)) {
+              continue;
+            }
+            this.seekLevel = -1;
+          }
           this.key2 = entry.value;
           this.map3 = <any> this.map2!.get(entry.value);
           this.iterator3 = this.keysAt(3, this.map3!);
@@ -118,6 +165,12 @@ export class RdfStoreIndexNestedMapIterator<TE, TV> implements IterableIterator<
       if (this.iterator1 !== undefined) {
         const entry = this.iterator1.next();
         if (entry.done !== true) {
+          if (this.seekLevel === 1) {
+            if (this.seekBefore!(entry.value)) {
+              continue;
+            }
+            this.seekLevel = -1;
+          }
           this.key1 = entry.value;
           this.map2 = <any> this.map1!.get(entry.value);
           this.iterator2 = this.keysAt(2, this.map2!);
@@ -128,6 +181,12 @@ export class RdfStoreIndexNestedMapIterator<TE, TV> implements IterableIterator<
       const entry = this.iterator0.next();
       if (entry.done === true) {
         return DONE;
+      }
+      if (this.seekLevel === 0) {
+        if (this.seekBefore!(entry.value)) {
+          continue;
+        }
+        this.seekLevel = -1;
       }
       this.key0 = entry.value;
       this.map1 = <any> this.map0.get(entry.value);

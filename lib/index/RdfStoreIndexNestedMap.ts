@@ -415,6 +415,38 @@ filterTerms,
     return count;
   }
 
+  /**
+   * Reorder every nested map so that its keys iterate in the order given by `rank`.
+   *
+   * A Map iterates in insertion order, so re-inserting each map's entries in sorted key order makes
+   * every scan of this index emit sorted results without any per-query work. This is a one-off pass
+   * for a store that is loaded and then queried: a later `set` appends to the end of a map, which
+   * breaks the ordering again.
+   * @param rank A rank per encoded term, ascending in the desired term order.
+   */
+  public sort(rank: Map<TE, number>): void {
+    RdfStoreIndexNestedMap.sortMap(this.nestedMap, rank, 0);
+  }
+
+  /**
+   * Sort one map's entries by rank, then descend into the maps it holds.
+   * @param map The map to sort.
+   * @param rank A rank per encoded term.
+   * @param depth The nesting depth of `map`, where the deepest map holds values rather than maps.
+   */
+  protected static sortMap<TE, TV>(map: NestedMapActual<TE, TV>, rank: Map<TE, number>, depth: number): void {
+    const entries = [ ...map ];
+    entries.sort((left, right) => rank.get(left[0])! - rank.get(right[0])!);
+    map.clear();
+    for (const [ key, value ] of entries) {
+      map.set(key, value);
+      // The four levels are all maps: only the values of the deepest one are not.
+      if (depth < 3) {
+        RdfStoreIndexNestedMap.sortMap(<NestedMapActual<TE, TV>> value, rank, depth + 1);
+      }
+    }
+  }
+
   public countTerms(matchTerms: boolean[], filterTerms?: (TE | undefined)[]): number {
     const endDepth = computeEndDepth(matchTerms, filterTerms);
     return this.countTermsInner(0, endDepth, this.nestedMap, matchTerms, filterTerms);
