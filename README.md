@@ -112,6 +112,21 @@ store.addQuad(
 );
 ```
 
+### `addQuads`
+
+Adding several quads to the store at once, which returns how many of them were not yet present:
+
+```typescript
+const added = store.addQuads([
+  DF.quad(DF.namedNode('ex:s1'), DF.namedNode('ex:p1'), DF.namedNode('ex:o1')),
+  DF.quad(DF.namedNode('ex:s1'), DF.namedNode('ex:p1'), DF.namedNode('ex:o2')),
+]);
+```
+
+If every index supports batches, as [`RdfStoreIndexBTree`](#ordered-indexes) does,
+the quads are sorted once per index and merged in, which is much faster than adding them one by one.
+Otherwise, this is the same as calling `addQuad` for each of them.
+
 ### `removeQuad`
 
 Removing a quad from the store:
@@ -171,6 +186,12 @@ result.on('end', () => {
   console.log('Done!');
 });
 ```
+
+If every index supports batches, as [`RdfStoreIndexBTree`](#ordered-indexes) does,
+the quads are collected while the stream flows, and inserted as a single batch (like [`addQuads`](#addquads)) when it ends.
+They only become visible in the store at that point.
+The store listens for the end of the stream before `import` returns,
+so listeners that are attached to the returned emitter afterwards (as above) are only called once all quads have been added.
 
 ### `readQuads`
 
@@ -241,6 +262,43 @@ stream.on('end', () => {
   console.log('Done!');
 });
 ```
+
+### `resultOrder` and `seekTo`
+
+When a pattern is served by an [ordered index](#ordered-indexes),
+the iterator returned by [`matchBindings`](#matchbindings) carries two extra members.
+Both are absent otherwise, so a consumer can check for them to find out whether they are supported.
+
+`resultOrder` names the components the scan varies over, in the order it produces them:
+
+```typescript
+const stream = store.matchBindings(BF, DF.variable('s'), DF.namedNode('ex:p1'), DF.variable('o'), DF.defaultGraph());
+console.log(stream.resultOrder); // [ 'subject', 'object' ] on a (graph, predicate, subject, object) index
+```
+
+`seekTo` drops what is still ahead of the scan and before the given term, using a binary search rather than reading through it.
+This makes it useful for a merge join, which can skip to a term coming from the other side:
+
+```typescript
+stream.seekTo('subject', DF.namedNode('ex:s5'));
+// The next result read has a subject that is not before ex:s5
+```
+
+The sought term does not have to occur in the store: the scan lands on the first term that is not before it.
+A seek is applied right away and only drops what is ahead, so it can never rewind a scan or re-emit a result that was already produced.
+
+### `indexOrders`
+
+The orders a scan of this store can come back in, one entry per ordered index:
+
+```typescript
+console.log(store.indexOrders);
+// [ [ 'graph', 'subject', 'predicate', 'object' ], [ 'graph', 'predicate', 'object', 'subject' ], ... ]
+```
+
+This is empty for stores without ordered indexes, since the other indexes iterate in insertion order.
+The order a given pattern actually gets is the entry for the index that serves it,
+with the components the pattern binds removed, since those do not vary across the scan.
 
 ### `countDistinctTerms`
 
@@ -530,6 +588,7 @@ This library implements different approaches for storing indexes.
 * `RdfStoreIndexNestedRecordQuoted`: Stores quads inside nested `Record` objects, and supports quoted triples.
 * `RdfStoreIndexNestedMap`: Stores quads inside nested `Map` objects. (**Fastest querying**)
 * `RdfStoreIndexNestedMapQuoted`: Stores quads inside nested `Map` objects, and supports quoted triples. (**Fastest querying and ingestion for quoted triples**)
+* `RdfStoreIndexBTree`: Stores quads sorted in a B+tree of packed integer arrays, and supports quoted triples. (**Smallest memory footprint, fastest batch loading, ordered scans**) See [ordered indexes](#ordered-indexes).
 
 The following types also exist, but are mainly for illustration purposes,
 as they are always outperformed by other approaches:
@@ -544,6 +603,55 @@ For example, the following will use `RdfStoreIndexNestedRecord` for all indexes:
   indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions)
 }
 ```
+
+### Ordered indexes
+
+`RdfStoreIndexBTree` keeps its quads sorted on a term order, in fixed-size leaves of packed 32-bit integers.
+Compared to the nested indexes, this means:
+
+* Scans produce their results in a known order, and can skip ahead with [`seekTo`](#resultorder-and-seekto).
+* Counting quads for a pattern whose bound components come first in the index takes a few binary searches instead of a scan.
+* Components that are bound after an unbound one are matched with a skip-scan, which jumps over non-matching ranges.
+* Each quad costs 16 bytes per index, which is several times less memory than nested `Map` or `Record` objects.
+* Batches of quads, from [`addQuads`](#addquads) or [`import`](#import), are sorted once and merged in, which is faster than the nested indexes.
+* Adding quads one by one is slower than with the nested indexes, as is counting distinct terms on a store that keeps changing.
+  So nested indexes remain the better choice for stores that are filled incrementally while being queried.
+
+It requires a dictionary that encodes terms as 32-bit integers, which all bundled number dictionaries do.
+Quoted triple patterns are supported when the dictionary supports quoted triples, such as `TermDictionaryQuotedIndexed`.
+
+All ordered indexes of a store share a single term order,
+which is defined by the `termComparator` option, and defaults to ordering on term type, value, datatype and language.
+`RdfStore.createOrdered()` creates a store with the default index combinations, dictionary and data factory, using this index type:
+
+```typescript
+const store = RdfStore.createOrdered({
+  // Optional: the order to keep terms in
+  termComparator: (termA, termB) => termA.value.localeCompare(termB.value) || termA.termType.localeCompare(termB.termType),
+  // Optional: defaults to GSPO, GPOS, GOSP
+  indexCombinations: [
+    [ 'graph', 'predicate', 'subject', 'object' ],
+    [ 'graph', 'predicate', 'object', 'subject' ],
+    [ 'graph', 'object', 'subject', 'predicate' ],
+  ],
+  // Optional: if nodes must be indexed
+  nodes: true,
+});
+```
+
+The same can be achieved through the regular constructor:
+
+```typescript
+new RdfStore<number>({
+  indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+  indexConstructor: subOptions => new RdfStoreIndexBTree(subOptions),
+  dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms()),
+  dataFactory: new DataFactory(),
+  termComparator: (termA, termB) => termA.value.localeCompare(termB.value),
+});
+```
+
+A comparator that considers two different terms equal is allowed: such terms are then ordered on their encoding.
 
 ### Dictionaries
 
@@ -587,6 +695,7 @@ Experimental results show the following:
 * `RdfStoreIndexNestedMap` outperforms `RdfStoreIndexNestedRecord` and `N3Store` on query performance.
 * `TermDictionaryNumberRecordFullTerms` is generally the most efficient dictionary implementation, and it can be used in combination with `TermDictionaryQuotedIndexed` if quoted triples are to be used.
 * `RdfStoreIndexNestedMapQuoted` and `RdfStoreIndexNestedRecordQuoted` have a small overhead (~10%) on ingestion and query performance compared to their non-quoted index variants.
+* `RdfStoreIndexBTree` uses 16 bytes per quad per index. Loading WatDiv (1.1M triples) through `import` into 3 indexes with node indexing takes 111 MB and 5.2s including parsing, against 420 MB and 7.8s for `RdfStoreIndexNestedMapQuoted`. Adding the same quads one by one takes 9.8s.
 
 These conclusions are draw from the measurements of the command `node perf/run.js -d 128 -o` (part of this repository):
 

@@ -2,6 +2,7 @@ import type * as RDF from '@rdfjs/types';
 import type { QuadTermName } from 'rdf-terms';
 import type { ITermDictionary } from './dictionary/ITermDictionary';
 import type { IRdfStoreIndex } from './index/IRdfStoreIndex';
+import type { TermOrder } from './TermOrder';
 
 /**
  * Options for constructing an RDF store.
@@ -36,4 +37,14 @@ export interface IRdfStoreOptions<TE, TQ extends RDF.BaseQuad = RDF.Quad> {
    * The data factory for constructing terms and quads.
    */
   dataFactory: RDF.DataFactory<TQ>;
+  /**
+   * The order that ordered indexes keep their quads in, as a comparator over terms.
+   * Defaults to {@link defaultTermComparator}. Indexes that are not ordered ignore it.
+   */
+  termComparator?: (left: RDF.Term, right: RDF.Term) => number;
+  /**
+   * The term order that ordered indexes share. The store creates it from `termComparator`,
+   * so that all of its indexes agree on it.
+   */
+  termOrder?: TermOrder;
 }
