@@ -57,7 +57,7 @@ export class PerformanceTest {
   }
 
   public async run(
-    scope: 'all' | 'triples' | 'bindings' | 'quads' | 'quoted' | 'terms' | 'nodes',
+    scope: 'all' | 'triples' | 'bindings' | 'quads' | 'quoted' | 'terms' | 'terms-filtered' | 'nodes',
   ): Promise<void> {
     for (const approach of this.approaches) {
       this.print(`\n# ${approach.name}\n`);
@@ -116,6 +116,17 @@ export class PerformanceTest {
         this.countTerms4(this.dimension / 4, store);
         this.findTerms1WithFilter(this.dimension / 4, store);
         this.countTerms1WithFilter(this.dimension / 4, store);
+        this.print();
+      }
+
+      // Counting distinct terms under filters has its own scope, because inside the `terms` scope
+      // its cost is dwarfed by the ingestion and the unfiltered cases, which hides changes to it.
+      if ((scope === 'all' || scope === 'terms-filtered') && approach.options.type !== 'n3' &&
+        approach.options.options.indexCombinations.length >= 3) {
+        const store = new RdfStore(approach.options.options);
+        this.addQuadsToGraphs(this.dimension / 4, store);
+        this.countTerms1WithFilters(this.dimension / 4, store);
+        this.countTerms2WithFilters(this.dimension / 4, store);
         this.print();
       }
 
@@ -546,6 +557,44 @@ export class PerformanceTest {
         assert.ok(
           store.countDistinctTerms([ 'subject' ], [ undefined, undefined, undefined, graphFilter ]) <= dimension,
         );
+      }
+    }
+    this.timeEnd(TEST);
+  }
+
+  /**
+   * The filters here bind every component that precedes the counted term in an available index,
+   * so this can be answered from the index instead of by materializing the matching terms.
+   */
+  public countTerms1WithFilters(dimension: number, store: RdfStore): void {
+    const TEST = `- Counting the ${dimension} distinct objects of one predicate in one graph ${dimension * dimension * dimension} times`;
+    this.timeStart(TEST);
+    for (let repeatIt = 0; repeatIt < dimension; repeatIt++) {
+      for (let predicateIt = 0; predicateIt < dimension; predicateIt++) {
+        for (let graphIt = 0; graphIt < dimension; graphIt++) {
+          assert.equal(store.countDistinctTerms([ 'object' ], [
+            undefined,
+            this.dataFactory.namedNode(`${this.prefix}${predicateIt}`),
+            undefined,
+            this.dataFactory.namedNode(`${this.prefix}${graphIt}`),
+          ]), dimension);
+        }
+      }
+    }
+    this.timeEnd(TEST);
+  }
+
+  public countTerms2WithFilters(dimension: number, store: RdfStore): void {
+    const TEST = `- Counting the ${dimension * dimension} distinct predicate-object pairs of one graph ${dimension * dimension} times`;
+    this.timeStart(TEST);
+    for (let repeatIt = 0; repeatIt < dimension; repeatIt++) {
+      for (let graphIt = 0; graphIt < dimension; graphIt++) {
+        assert.equal(store.countDistinctTerms([ 'predicate', 'object' ], [
+          undefined,
+          undefined,
+          undefined,
+          this.dataFactory.namedNode(`${this.prefix}${graphIt}`),
+        ]), dimension * dimension);
       }
     }
     this.timeEnd(TEST);

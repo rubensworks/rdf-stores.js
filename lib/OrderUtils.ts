@@ -43,23 +43,55 @@ export function getBestIndex(
  * Determine the best suitable order's index among the given orders for the given terms.
  * @param componentOrders Possible orders of quad components.
  * @param terms The quad term names to lookup.
+ * @param filters Optional quad components (SPOG order) that are bound to a single term.
  */
 export function getBestIndexTerms(
   componentOrders: QuadTermName[][],
   terms: QuadTermName[],
+  filters?: (RDF.Term | undefined)[],
 ): number {
   if (componentOrders.length === 1) {
     return 0;
   }
 
-  // Score indexes by how well they match to the index
-  const scoredIndexes = componentOrders.map((componentOrder, index) => {
-    const score = getComponentOrderScore(componentOrder, terms);
-    return { score, index };
-  });
+  // Score indexes by how well they match to the index, and keep the best one.
+  // Scanning avoids the array of score objects that sorting would allocate on every lookup.
+  let bestIndex = 0;
+  let bestScore = -1;
+  for (const [ index, componentOrder ] of componentOrders.entries()) {
+    const score = getComponentOrderScoreFiltered(componentOrder, terms, filters);
+    if (score > bestScore) {
+      bestScore = score;
+      bestIndex = index;
+    }
+  }
+  return bestIndex;
+}
 
-  // Sort the indexes, and pick the first one
-  return scoredIndexes.sort((scoredLeft, scoredRight) => scoredRight.score - scoredLeft.score)[0].index;
+/**
+ * Determine the score of the given component order for looking up the given terms under the given filters.
+ * Filtered components weigh double, as they must be matched before the terms can be read off the index.
+ * @param componentOrder A quad component order.
+ * @param terms The quad term names to lookup.
+ * @param filters Optional quad components (SPOG order) that are bound to a single term.
+ */
+export function getComponentOrderScoreFiltered(
+  componentOrder: QuadTermName[],
+  terms: QuadTermName[],
+  filters?: (RDF.Term | undefined)[],
+): number {
+  let score = 0;
+  for (let i = 0; i < componentOrder.length; i++) {
+    const component = componentOrder[i];
+    let weight = 0;
+    if (filters?.[QUAD_TERM_NAMES_INVERSE[component]] !== undefined) {
+      weight = 2;
+    } else if (terms.includes(component)) {
+      weight = 1;
+    }
+    score += weight * (componentOrder.length - i);
+  }
+  return score;
 }
 
 /**
