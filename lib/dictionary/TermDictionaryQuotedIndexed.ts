@@ -146,6 +146,14 @@ export class TermDictionaryQuotedIndexed implements ITermDictionary<number> {
     }
   }
 
+  public reorder(encodings: number[]): ((encoding: number) => number) | undefined {
+    // Quoted triples are stored as the encodings of their components, which would all have to be renumbered too.
+    if (this.quotedTriplesDictionary.length > 0 || !this.plainTermDictionary.reorder) {
+      return undefined;
+    }
+    return this.plainTermDictionary.reorder(encodings);
+  }
+
   public* findQuotedTriples(quotedTriplePattern: RDF.Quad): IterableIterator<RDF.Term> {
     for (const termEncoded of this.findQuotedTriplesEncoded(quotedTriplePattern)) {
       yield this.decode(termEncoded);

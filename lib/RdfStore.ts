@@ -62,6 +62,10 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * If every index can insert a batch of quads at once, in which case imports are batched.
    */
   private readonly batchable: boolean;
+  /**
+   * The term order that the ordered indexes of this store share.
+   */
+  private readonly termOrder: TermOrder;
 
   // eslint-disable-next-line ts/naming-convention
   private _size = 0;
@@ -71,11 +75,9 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     this.dataFactory = options.dataFactory;
     this.dictionary = options.dictionary;
     // Ordered indexes must agree on the order of terms, so they share one term order.
-    this.indexesWrapped = RdfStore.constructIndexesWrapped({
-      ...options,
-      termOrder: options.termOrder ??
-        new TermOrder(<ITermDictionary<number>> <unknown> options.dictionary, options.termComparator),
-    });
+    this.termOrder = options.termOrder ??
+      new TermOrder(<ITermDictionary<number>> <unknown> options.dictionary, options.termComparator);
+    this.indexesWrapped = RdfStore.constructIndexesWrapped({ ...options, termOrder: this.termOrder });
     this.indexesWrappedComponentOrders = this.indexesWrapped.map(indexThis => indexThis.componentOrder);
     this.indexNodes = options.indexNodes ? new Map() : undefined;
     this.features.indexNodes = Boolean(options.indexNodes);
@@ -106,6 +108,8 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
       dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms()),
       dataFactory: new DataFactory(),
       termComparator: options.termComparator,
+      // The dictionary is created here, so nothing else holds its encodings.
+      reorderDictionary: true,
     });
   }
 
@@ -442,6 +446,16 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * @return number The number of quads that were not yet present.
    */
   private addEncodedQuads(buffer: Int32Array, count: number): number {
+    // Into an empty store, the dictionary can be renumbered to follow the term order before anything is indexed.
+    if (this.options.reorderDictionary && this._size === 0) {
+      this.termOrder.addAll(buffer, count * 4);
+      const mapping = this.termOrder.alignDictionary();
+      if (mapping) {
+        for (let i = 0; i < count * 4; i++) {
+          buffer[i] = mapping(buffer[i]);
+        }
+      }
+    }
     let added = 0;
     const permuted = new Int32Array(count * 4);
     for (const [ i, indexWrapped ] of this.indexesWrapped.entries()) {

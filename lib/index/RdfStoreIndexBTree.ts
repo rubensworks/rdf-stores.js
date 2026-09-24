@@ -108,7 +108,7 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
       const left = data[offset + i];
       const right = key[i];
       if (left !== right) {
-        return this.termOrder.label(left) < this.termOrder.label(right) ? -1 : 1;
+        return this.termOrder.before(left, right) ? -1 : 1;
       }
     }
     return 0;
@@ -293,15 +293,14 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
 
       // The next term at this level that could match: the bound one if it comes later,
       // or the first candidate after the current one.
-      const label = this.termOrder.label(data[offset + mismatch]);
       const levelCandidates = candidates?.[mismatch];
       let target: number | undefined;
       if (levelCandidates === undefined) {
-        if (label < this.termOrder.label(<number> ids[mismatch])) {
+        if (this.termOrder.before(data[offset + mismatch], <number> ids[mismatch])) {
           target = <number> ids[mismatch];
         }
       } else {
-        target = this.nextCandidate(levelCandidates.sorted, label);
+        target = this.nextCandidate(levelCandidates.sorted, this.termOrder.label(data[offset + mismatch]));
       }
 
       if (target !== undefined) {
