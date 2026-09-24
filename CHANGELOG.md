@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+<a name="v2.5.1"></a>
+## [v2.5.1](https://github.com/rubensworks/rdf-stores.js/compare/v2.5.0...v2.5.1) - 2026-09-24
+
+### Changed
+* [Optimize countDistinctTerms when it has filters (#40)](https://github.com/rubensworks/rdf-stores.js/commit/9a3d17f779033d2c315a5ae9dbf514743d6ce0af)
+
 <a name="v2.5.0"></a>
 ## [v2.5.0](https://github.com/rubensworks/rdf-stores.js/compare/v2.4.0...v2.5.0) - 2026-09-01
 
