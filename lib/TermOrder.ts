@@ -29,7 +29,8 @@ const TERM_TYPE_ORDER: Record<string, number> = {
 
 /**
  * A total order over RDF terms, used when no other comparator is given.
- * Orders on term type first, then on value, then on datatype and language.
+ * Orders on term type first, then on value, then on datatype, language, and base direction.
+ * Two terms compare as equal exactly if they are equal RDF terms.
  * @param left A term.
  * @param right A term.
  */
@@ -54,6 +55,11 @@ export function defaultTermComparator(left: RDF.Term, right: RDF.Term): number {
     }
     if (left.language !== rightLiteral.language) {
       return left.language < rightLiteral.language ? -1 : 1;
+    }
+    const leftDirection = left.direction ?? '';
+    const rightDirection = rightLiteral.direction ?? '';
+    if (leftDirection !== rightDirection) {
+      return leftDirection < rightDirection ? -1 : 1;
     }
   }
   return 0;

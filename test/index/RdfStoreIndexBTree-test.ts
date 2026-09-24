@@ -550,12 +550,19 @@ describe('TermOrder', () => {
       [ DF.quad(a, a, a, a), DF.quad(a, a, a, b) ],
       [ DF.literal('x', a), DF.literal('x', b) ],
       [ DF.literal('x', 'en'), DF.literal('x', 'nl') ],
+      [ DF.literal('x', { language: 'en', direction: 'ltr' }), DF.literal('x', { language: 'en', direction: 'rtl' }) ],
+      // A directional literal has rdf:dirLangString as datatype, which comes before rdf:langString.
+      [ DF.literal('x', { language: 'en', direction: 'ltr' }), DF.literal('x', 'en') ],
     ];
     for (const [ smaller, larger ] of cases) {
       expect(defaultTermComparator(smaller, larger)).toBeLessThan(0);
       expect(defaultTermComparator(larger, smaller)).toBeGreaterThan(0);
     }
     expect(defaultTermComparator(DF.quad(a, a, a, a), DF.quad(a, a, a, a))).toBe(0);
+    // Literals from factories that predate base directions have none at all.
+    const withoutDirection = <RDF.Literal> <unknown> { ...DF.literal('x', 'en'), direction: undefined };
+    expect(defaultTermComparator(withoutDirection, DF.literal('x', 'en'))).toBe(0);
+    expect(defaultTermComparator(DF.literal('x', 'en'), withoutDirection)).toBe(0);
   });
 });
 
