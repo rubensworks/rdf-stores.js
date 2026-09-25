@@ -9,11 +9,17 @@ import { DataFactory } from 'rdf-data-factory';
 import { QUAD_TERM_NAMES } from 'rdf-terms';
 import type { IRdfStoreOptions } from '../lib/IRdfStoreOptions';
 import { RdfStore } from '../lib/RdfStore';
+import { defaultTermComparator } from '../lib/TermOrder';
 
 /**
  * Run a set of performance tests over a set of storage approaches.
  * These tests have been based on https://github.com/rdfjs/N3.js/blob/main/perf/N3Store-perf.js
  */
+/**
+ * The number of properties of each entity in the entities scope.
+ */
+const ENTITY_PROPERTIES = 16;
+
 export class PerformanceTest {
   /**
    * If all progress reporting must be suppressed.
@@ -28,13 +34,40 @@ export class PerformanceTest {
    */
   protected pending: RDF.Quad[] | undefined;
 
+  public readonly approaches: IPerformanceTestApproach[];
+  /**
+   * Creates the approaches anew, so that every scope gets its own dictionary and indexes.
+   */
+  protected readonly makeApproaches: () => IPerformanceTestApproach[];
+
+  /**
+   * @param approaches The approaches to test, or a function that creates them. Only with a function, every scope
+   *                   gets its own dictionary, instead of sharing the one in the approach, which keeps the terms
+   *                   of earlier scopes, and of other approaches, in the memory that is measured.
+   * @param dimension The dimension of the datasets.
+   * @param prefix The prefix of the IRIs in the datasets.
+   * @param dataFactory The data factory.
+   * @param bindingsFactory The bindings factory.
+   */
   public constructor(
-    public readonly approaches: IPerformanceTestApproach[],
+    approaches: IPerformanceTestApproach[] | (() => IPerformanceTestApproach[]),
     public readonly dimension = 256,
     public readonly prefix = 'http://example.org/#',
     public readonly dataFactory: RDF.DataFactory = new DataFactory(),
     public readonly bindingsFactory: RDF.BindingsFactory = new BindingsFactory(<any> this.dataFactory),
-  ) {}
+  ) {
+    this.makeApproaches = typeof approaches === 'function' ? approaches : () => approaches;
+    this.approaches = this.makeApproaches();
+  }
+
+  /**
+   * The options for a new store of an approach.
+   * @param index The index of the approach.
+   */
+  protected storeOptions(index: number): IRdfStoreOptions<any, any> {
+    const approach = this.makeApproaches()[index];
+    return approach.options.type === 'rdfstore' ? approach.options.options : <IRdfStoreOptions<any, any>> {};
+  }
 
   protected timeStart(label: string): void {
     if (!this.quiet) {
@@ -102,13 +135,11 @@ export class PerformanceTest {
   }
 
   public async run(
-    scope: 'all' | 'triples' | 'bindings' | 'quads' | 'quoted' | 'terms' | 'terms-filtered' | 'nodes',
+    scope: 'all' | 'triples' | 'bindings' | 'quads' | 'quoted' | 'terms' | 'terms-filtered' | 'nodes' | 'entities',
   ): Promise<void> {
-    for (const approach of this.approaches) {
+    for (const [ index, approach ] of this.approaches.entries()) {
       this.print(`\n# ${approach.name}\n`);
       this.pending = approach.options.type === 'rdfstore' && approach.options.batch ? [] : undefined;
-      // Only used by the scopes that skip the N3 store.
-      const options = approach.options.type === 'rdfstore' ? approach.options.options : <IRdfStoreOptions<any, any>> {};
 
       if (scope === 'all' || scope === 'triples') {
         await this.inScope(async() => {
@@ -129,9 +160,21 @@ export class PerformanceTest {
       // Reading bindings has its own scope, so that adding a case to it does not change what the
       // `triples` scope measures. It runs at half the dimension, like the `quoted` scope, to keep
       // the cost of the extra ingestion down. The N3 store has no bindings API, so it is skipped.
+      // Data about entities, which unlike the other scopes has as many distinct terms as triples,
+      // as real data tends to, which nested indexes are least suited to.
+      if (scope === 'all' || scope === 'entities') {
+        await this.inScope(async() => {
+          const store = approach.options.type === 'n3' ? new Store() : new RdfStore(this.storeOptions(index));
+          this.addEntities(this.dimension, store);
+          this.countEntityProperties(this.dimension, store);
+          await this.findEntityPropertiesSorted(this.dimension, store);
+          this.print();
+        });
+      }
+
       if ((scope === 'all' || scope === 'bindings') && approach.options.type !== 'n3') {
         await this.inScope(async() => {
-          const store = new RdfStore(options);
+          const store = new RdfStore(this.storeOptions(index));
           this.addTriplesToDefaultGraph(this.dimension / 2, store);
           this.findBindings2Variables(this.dimension / 2, store);
           await this.findBindings2VariablesStream(this.dimension / 2, store);
@@ -151,7 +194,7 @@ export class PerformanceTest {
 
       if ((scope === 'all' || scope === 'quoted') && approach.options.type !== 'n3') {
         await this.inScope(async() => {
-          const store = new RdfStore(options);
+          const store = new RdfStore(this.storeOptions(index));
           this.addQuotedTriplesToGraphs(this.dimension / 2, store);
           this.findQuotedTriplesInGraphs(this.dimension / 2, store);
           this.print();
@@ -161,7 +204,7 @@ export class PerformanceTest {
       if ((scope === 'all' || scope === 'terms') && approach.options.type !== 'n3' &&
         approach.options.options.indexCombinations.length >= 3) {
         await this.inScope(async() => {
-          const store = new RdfStore(options);
+          const store = new RdfStore(this.storeOptions(index));
           this.addQuadsToGraphs(this.dimension / 4, store);
           this.findTerms1(this.dimension / 4, store);
           this.countTerms1(this.dimension / 4, store);
@@ -182,7 +225,7 @@ export class PerformanceTest {
       if ((scope === 'all' || scope === 'terms-filtered') && approach.options.type !== 'n3' &&
         approach.options.options.indexCombinations.length >= 3) {
         await this.inScope(async() => {
-          const store = new RdfStore(options);
+          const store = new RdfStore(this.storeOptions(index));
           this.addQuadsToGraphs(this.dimension / 4, store);
           this.countTerms1WithFilters(this.dimension / 4, store);
           this.countTerms2WithFilters(this.dimension / 4, store);
@@ -193,7 +236,7 @@ export class PerformanceTest {
       if ((scope === 'all' || scope === 'nodes') && approach.options.type !== 'n3' &&
         approach.options.options.indexNodes) {
         await this.inScope(async() => {
-          const store = new RdfStore(options);
+          const store = new RdfStore(this.storeOptions(index));
           this.addQuadsToGraphs(this.dimension / 4, store);
           this.findNodes(this.dimension / 4, store);
           this.print();
@@ -209,6 +252,88 @@ export class PerformanceTest {
    */
   private async inScope(body: () => Promise<void>): Promise<void> {
     await body();
+  }
+
+  /**
+   * Add triples about `dimension^2 * 8` entities, each with a distinct literal value for each of 16 properties.
+   * @param dimension The dimension.
+   * @param store The store.
+   */
+  public addEntities(dimension: number, store: RdfStore | Store): void {
+    const entities = dimension * dimension * 8;
+    const properties = ENTITY_PROPERTIES;
+    const TEST = `- Adding ${entities * properties} triples about ${entities} entities, with distinct values`;
+    this.timeStart(TEST);
+    for (let entity = 0; entity < entities; entity++) {
+      const subject = this.dataFactory.namedNode(`${this.prefix}entity${entity}`);
+      for (let property = 0; property < properties; property++) {
+        this.add(store, this.dataFactory.quad(
+          subject,
+          this.dataFactory.namedNode(`${this.prefix}property${property}`),
+          this.dataFactory.literal(`value ${entity} ${property}`),
+        ));
+      }
+    }
+    this.flush(store);
+    this.timeEnd(TEST);
+    this.printMemory('entities');
+  }
+
+  /**
+   * Count the triples of each property, as query engines do to estimate the cardinality of a pattern.
+   * @param dimension The dimension.
+   * @param store The store.
+   */
+  public countEntityProperties(dimension: number, store: RdfStore | Store): void {
+    const entities = dimension * dimension * 8;
+    const properties = ENTITY_PROPERTIES;
+    const TEST = `- Counting the ${entities} triples of each of ${properties} properties 64 times`;
+    this.timeStart(TEST);
+    for (let i = 0; i < 64; i++) {
+      for (let property = 0; property < properties; property++) {
+        const count = store.countQuads(
+          null,
+          this.dataFactory.namedNode(`${this.prefix}property${property}`),
+          null,
+          this.dataFactory.defaultGraph(),
+        );
+        assert.equal(count, entities);
+      }
+    }
+    this.timeEnd(TEST);
+  }
+
+  /**
+   * Find the triples of a property sorted on their value, as for an ORDER BY or a merge join.
+   * A store whose scan reports that it produces this order is read as is, and the results of others are sorted.
+   * @param dimension The dimension.
+   * @param store The store.
+   */
+  public async findEntityPropertiesSorted(dimension: number, store: RdfStore | Store): Promise<void> {
+    const entities = dimension * dimension * 8;
+    const TEST = `- Finding the ${entities} triples of a property sorted on their value, for 4 properties`;
+    this.timeStart(TEST);
+    const subject = this.dataFactory.variable!('s');
+    const object = this.dataFactory.variable!('o');
+    for (let property = 0; property < 4; property++) {
+      const predicate = this.dataFactory.namedNode(`${this.prefix}property${property}`);
+      let values: RDF.Term[];
+      if (store instanceof RdfStore) {
+        const graph = this.dataFactory.defaultGraph();
+        const stream = store.matchBindings(this.bindingsFactory, subject, predicate, object, graph);
+        const sorted = (<{ resultOrder?: string[] }> <unknown> stream).resultOrder?.[0] === 'object';
+        const bindings = await arrayifyStream<RDF.Bindings>(stream);
+        values = bindings.map(binding => binding.get(object)!);
+        if (!sorted) {
+          values.sort(defaultTermComparator);
+        }
+      } else {
+        values = store.getQuads(null, predicate, null, this.dataFactory.defaultGraph()).map(quad => quad.object);
+        values.sort(defaultTermComparator);
+      }
+      assert.equal(values.length, entities);
+    }
+    this.timeEnd(TEST);
   }
 
   public addTriplesToDefaultGraph(dimension: number, store: RdfStore | Store): void {

@@ -20,12 +20,12 @@ const argv = yargs(hideBin(process.argv))
     tests: {
       type: 'string',
       alias: 't',
-      choices: [ 'all', 'triples', 'bindings', 'quads', 'quoted', 'terms', 'terms-filtered', 'nodes' ],
+      choices: [ 'all', 'triples', 'bindings', 'quads', 'quoted', 'terms', 'terms-filtered', 'nodes', 'entities' ],
       describe: 'Which tests must be executed',
       default: 'all',
     },
   }).parseSync();
 
-const test = new PerformanceTest(makeTests(argv.optimal), argv.dimension);
+const test = new PerformanceTest(() => makeTests(argv.optimal), argv.dimension);
 // eslint-disable-next-line ts/no-unsafe-argument, no-console
 test.run(<any>argv.tests).catch(console.error);
