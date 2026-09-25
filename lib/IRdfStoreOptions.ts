@@ -47,11 +47,4 @@ export interface IRdfStoreOptions<TE, TQ extends RDF.BaseQuad = RDF.Quad> {
    * so that all of its indexes agree on it.
    */
   termOrder?: TermOrder;
-  /**
-   * If the dictionary may be renumbered, so that its encodings follow the term order of ordered indexes.
-   * Ordered indexes can then compare encodings directly, instead of looking up where they are in the term order.
-   * This happens when the first batch of quads is added to an empty store, through `addQuads` or `import`.
-   * Only enable this if nothing else holds encodings of the dictionary, such as another store sharing it.
-   */
-  reorderDictionary?: boolean;
 }

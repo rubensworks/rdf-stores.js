@@ -11,7 +11,7 @@ import type { ITermDictionary } from './ITermDictionary';
 export class TermDictionaryNumberRecordFullTerms implements ITermDictionary<number> {
   private lastId = 0;
   private readonly dictionary: Record<string, number> = {};
-  private reverseDictionary: Record<number, RDF.Term> = {};
+  private readonly reverseDictionary: Record<number, RDF.Term> = {};
   private readonly dataFactory: RDF.DataFactory;
   public readonly features = { quotedTriples: false };
 
@@ -47,23 +47,6 @@ export class TermDictionaryNumberRecordFullTerms implements ITermDictionary<numb
     for (const key of Object.keys(this.reverseDictionary)) {
       yield Number.parseInt(key, 10);
     }
-  }
-
-  public reorder(encodings: number[]): ((encoding: number) => number) | undefined {
-    if (encodings.length !== this.lastId) {
-      return undefined;
-    }
-    const mapping = new Int32Array(this.lastId);
-    const reverseDictionary: Record<number, RDF.Term> = {};
-    for (const [ position, encoding ] of encodings.entries()) {
-      mapping[encoding] = position;
-      reverseDictionary[position] = this.reverseDictionary[encoding];
-    }
-    for (const key of Object.keys(this.dictionary)) {
-      this.dictionary[key] = mapping[this.dictionary[key]];
-    }
-    this.reverseDictionary = reverseDictionary;
-    return encoding => mapping[encoding];
   }
 
   public findQuotedTriples(): IterableIterator<RDF.Term> {

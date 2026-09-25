@@ -91,12 +91,6 @@ export class TermOrder {
    * If every label is exactly its rank plus one, times the spacing, which is what a relabel produces.
    */
   private uniform = true;
-  /**
-   * If the encodings of all terms in this order increase along it, compared as unsigned 32-bit integers.
-   * Two encodings can then be compared directly, without looking up their labels.
-   * This is unsigned so that quoted triples, whose encodings have the high bit set, come after all other terms.
-   */
-  public aligned = true;
 
   public constructor(
     dictionary: ITermDictionary<number>,
@@ -125,15 +119,6 @@ export class TermOrder {
     const index = encoding & QUOTED_MASK;
     const labels = this.quotedLabels;
     return index < labels.length ? labels[index] : 0;
-  }
-
-  /**
-   * If a known encoding comes before another one in this order.
-   * @param left A known encoding.
-   * @param right A known encoding.
-   */
-  public before(left: number, right: number): boolean {
-    return this.aligned ? (left >>> 0) < (right >>> 0) : this.label(left) < this.label(right);
   }
 
   /**
@@ -224,10 +209,6 @@ export class TermOrder {
       chunk[position - 1] :
         (chunkIndex > 0 ? chunks[chunkIndex - 1][chunks[chunkIndex - 1].length - 1] : undefined);
     const next = position < chunk.length ? chunk[position] : undefined;
-    if (this.aligned && ((previous !== undefined && (previous >>> 0) > (encoding >>> 0)) ||
-      (next !== undefined && (encoding >>> 0) > (next >>> 0)))) {
-      this.aligned = false;
-    }
     const previousLabel = previous === undefined ? 0 : this.label(previous);
     let label: number;
     if (next === undefined) {
@@ -283,23 +264,17 @@ export class TermOrder {
 
     added.sort((left, right) => this.compareEncodings(left, right));
     const merged: number[] = [];
-    const push = (encoding: number): void => {
-      if (this.aligned && merged.length > 0 && (merged.at(-1)! >>> 0) > (encoding >>> 0)) {
-        this.aligned = false;
-      }
-      merged.push(encoding);
-    };
     let addedIndex = 0;
     for (const chunk of this.chunks) {
       for (const encoding of chunk) {
         while (addedIndex < added.length && this.compareEncodings(added[addedIndex], encoding) < 0) {
-          push(added[addedIndex++]);
+          merged.push(added[addedIndex++]);
         }
-        push(encoding);
+        merged.push(encoding);
       }
     }
     while (addedIndex < added.length) {
-      push(added[addedIndex++]);
+      merged.push(added[addedIndex++]);
     }
 
     this.chunks = [];
@@ -331,45 +306,11 @@ export class TermOrder {
   }
 
   /**
-   * Renumber the dictionary so that encodings increase along this order, if it can be renumbered.
-   *
-   * Terms in the dictionary that are not in this order yet are given the encodings after all others.
-   * Nothing but the caller may hold encodings of the dictionary, since the caller must apply the returned
-   * mapping to all encodings it holds.
-   * @return A function mapping old encodings to new ones, or undefined if nothing was renumbered.
-   */
-  public alignDictionary(): ((encoding: number) => number) | undefined {
-    if (this.aligned || !this.dictionary.reorder) {
-      return undefined;
-    }
-    const ordered = this.chunks.flat();
-    const others = [ ...this.dictionary.encodings() ].filter(encoding => this.label(encoding) === 0);
-    const mapping = this.dictionary.reorder([ ...ordered, ...others ]);
-    if (!mapping) {
-      return undefined;
-    }
-    this.plainLabels = new Float64Array(0);
-    this.quotedLabels = new Float64Array(0);
-    this.chunks = this.chunks.map(chunk => chunk.map(mapping));
-    this.relabel();
-    this.aligned = true;
-    return mapping;
-  }
-
-  /**
    * The label of the first known term that is not before the given term, or Infinity if there is none.
    * The term does not have to be known, so a key `k` is before `term` exactly if `label(k)` is lower.
    * @param term A term.
    */
   public lowerBound(term: RDF.Term): number {
-    // The sought term usually comes from this store, in which case its own label is the answer.
-    const encoding = this.dictionary.encodeOptional(term);
-    if (encoding !== undefined) {
-      const label = this.label(encoding);
-      if (label !== 0) {
-        return label;
-      }
-    }
     const chunks = this.chunks;
     let low = 0;
     let high = chunks.length;
