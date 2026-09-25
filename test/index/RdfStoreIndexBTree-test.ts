@@ -152,6 +152,36 @@ describe('RdfStoreIndexBTree', () => {
     checkAgainstReference();
   });
 
+  it('matches a nested-map index with other tuning options', () => {
+    // Tiny leaves split and empty constantly, and without probes every group is skipped by searching.
+    index = new RdfStoreIndexBTree(options(), { leafCapacity: 4, mergeThreshold: 2, linearProbes: 0 });
+    const inserted: EncodedQuadTerms<number>[] = [];
+    for (let i = 0; i < 1000; i++) {
+      const quad = randomQuad();
+      expect(index.set(quad, true)).toBe(reference.set(quad, true));
+      inserted.push(quad);
+    }
+    for (const batchSize of [ 600, 100 ]) {
+      const batch = new Int32Array(batchSize * 4);
+      let expectedAdded = 0;
+      for (let i = 0; i < batchSize; i++) {
+        const quad = randomQuad();
+        batch.set(quad, i * 4);
+        if (reference.set(quad, true)) {
+          expectedAdded++;
+        }
+      }
+      expect(index.setAll(batch, batchSize)).toBe(expectedAdded);
+    }
+    expect(index.leaves.length).toBeGreaterThan(100);
+    expect(Math.max(...index.sizes)).toBeLessThanOrEqual(4);
+    for (let i = 0; i < 800; i++) {
+      const quad = inserted[Math.floor(next() * inserted.length)];
+      expect(index.remove(quad)).toBe(reference.remove(quad));
+    }
+    checkAgainstReference();
+  });
+
   it('removes down to empty and inserts again', () => {
     const quads = Array.from({ length: 2000 }, () => randomQuad());
     for (const quad of quads) {

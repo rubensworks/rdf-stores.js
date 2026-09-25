@@ -9,6 +9,7 @@ export * from './lib/dictionary/TermDictionaryQuotedReferential';
 export * from './lib/dictionary/TermDictionarySymbol';
 export * from './lib/index/IRdfStoreIndex';
 export * from './lib/index/RdfStoreIndexBTree';
+export * from './lib/index/RdfStoreIndexBTreeIterator';
 export * from './lib/index/RdfStoreIndexNestedMap';
 export * from './lib/index/RdfStoreIndexNestedMapQuoted';
 export * from './lib/index/RdfStoreIndexNestedMapRecursive';

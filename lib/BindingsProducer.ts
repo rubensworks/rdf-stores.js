@@ -4,6 +4,18 @@ import type { ITermDictionary } from './dictionary/ITermDictionary';
 import type { EncodedQuadTerms } from './PatternTerm';
 
 /**
+ * An iterator over the encoded results of an index lookup, which an ordered index can ask to skip ahead.
+ */
+export interface IIndexResultIterator<TE> extends Iterator<EncodedQuadTerms<TE>> {
+  /**
+   * Skip forward to the first result whose component at `level` is not before the sought term.
+   * @param level The nesting level, in the component order of the index being read.
+   * @param isBefore Whether an encoded key at that level precedes the sought term.
+   */
+  seek?: (level: number, isBefore: (key: TE) => boolean) => void;
+}
+
+/**
  * Converts the encoded results of an index lookup into bindings objects.
  *
  * This is a plain class with a `read` method instead of a generator function,
@@ -20,7 +32,7 @@ import type { EncodedQuadTerms } from './PatternTerm';
  */
 export class BindingsProducer<TE> {
   protected readonly bindingsFactory: RDF.BindingsFactory;
-  protected readonly source: Iterator<EncodedQuadTerms<TE>>;
+  protected readonly source: IIndexResultIterator<TE>;
   protected readonly dictionary: ITermDictionary<TE>;
   /**
    * The pattern terms, ordered in the component order of the index that is being read.
@@ -34,7 +46,7 @@ export class BindingsProducer<TE> {
 
   public constructor(
     bindingsFactory: RDF.BindingsFactory,
-    source: Iterator<EncodedQuadTerms<TE>>,
+    source: IIndexResultIterator<TE>,
     dictionary: ITermDictionary<TE>,
     terms: RDF.Term[],
     variableIndexes: number[],
@@ -56,10 +68,7 @@ export class BindingsProducer<TE> {
    * @param isBefore Whether an encoded key at that level precedes the sought term.
    */
   public seek(level: number, isBefore: (key: TE) => boolean): void {
-    const source = <{ seek?: (level: number, isBefore: (key: TE) => boolean) => void }> <unknown> this.source;
-    if (source.seek) {
-      source.seek(level, isBefore);
-    }
+    this.source.seek?.(level, isBefore);
   }
 
   /**
@@ -149,7 +158,7 @@ export class FilteringBindingsProducer<TE> extends BindingsProducer<TE> {
 
   public constructor(
     bindingsFactory: RDF.BindingsFactory,
-    source: Iterator<EncodedQuadTerms<TE>>,
+    source: IIndexResultIterator<TE>,
     dictionary: ITermDictionary<TE>,
     terms: RDF.Term[],
     variableIndexes: number[],

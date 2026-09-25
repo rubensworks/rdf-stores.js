@@ -5,21 +5,37 @@ import { computeEndDepth, encodeOptionalTerms, isPatternQuoted } from '../OrderU
 import type { EncodedQuadTerms, QuadPatternTerms, QuadTerms } from '../PatternTerm';
 import { TermOrder } from '../TermOrder';
 import type { IRdfStoreIndex } from './IRdfStoreIndex';
+import { RdfStoreIndexBTreeIterator } from './RdfStoreIndexBTreeIterator';
 import { EMPTY_QUAD_ITERATOR, RdfStoreIndexSingleQuadIterator } from './RdfStoreIndexNestedMapIterator';
 
 /**
- * The maximum number of quads per leaf.
+ * Tuning options for {@link RdfStoreIndexBTree}.
+ * The defaults come from a parameter sweep over WatDiv (1.1M triples), and should rarely need changing.
  */
-const LEAF_CAPACITY = 512;
-/**
- * Batches smaller than this fraction of the index are inserted one by one rather than merged in.
- */
-const MERGE_THRESHOLD = 32;
-/**
- * The number of quads checked one by one when skipping a group, before searching instead.
- */
-const LINEAR_PROBES = 8;
-const DONE = <IteratorResult<never>> { value: undefined, done: true };
+export interface IRdfStoreIndexBTreeOptions {
+  /**
+   * The maximum number of quads per leaf.
+   * Larger leaves make scans and memory use more compact, but make every single insert shift more quads.
+   * On WatDiv, 128 and 256 were up to 1.5 times slower on exact lookups and single inserts,
+   * and 512 to 2048 performed the same.
+   * @default 512
+   */
+  leafCapacity?: number;
+  /**
+   * A batch is merged into the leaves when it holds at least one in this many of the quads in the index,
+   * and is inserted one quad at a time otherwise, which is cheaper for small batches into large indexes.
+   * On WatDiv, both took about as long for a batch of 7% of the index.
+   * @default 32
+   */
+  mergeThreshold?: number;
+  /**
+   * The number of quads checked one by one when skipping a group of quads that share a prefix, before
+   * searching for its end instead. Groups are often short, for example when counting distinct objects.
+   * On WatDiv, 0 made counting distinct objects twice as slow, and 4 to 32 performed the same.
+   * @default 8
+   */
+  linearProbes?: number;
+}
 
 /**
  * A position within the leaves of an index.
@@ -63,11 +79,14 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
 
   public readonly termOrder: TermOrder;
   protected readonly dictionary: ITermDictionary<number>;
+  private readonly leafCapacity: number;
+  private readonly mergeThreshold: number;
+  private readonly linearProbes: number;
   /**
    * The leaves, each holding `sizes[i]` quads of four encodings each. Only the first leaf may be empty,
    * and only when the whole index is.
    */
-  public leaves: Int32Array[] = [ new Int32Array(LEAF_CAPACITY * 4) ];
+  public leaves: Int32Array[];
   public sizes: number[] = [ 0 ];
   /**
    * Incremented on every change, so that iterators can notice that their position is stale.
@@ -82,7 +101,15 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
   private readonly termCounts = new Map<string, number>();
   private termCountsVersion = 0;
 
-  public constructor(options: IRdfStoreOptions<number>) {
+  /**
+   * @param options The store options.
+   * @param indexOptions Tuning options for this index.
+   */
+  public constructor(options: IRdfStoreOptions<number>, indexOptions: IRdfStoreIndexBTreeOptions = {}) {
+    this.leafCapacity = indexOptions.leafCapacity ?? 512;
+    this.mergeThreshold = indexOptions.mergeThreshold ?? 32;
+    this.linearProbes = indexOptions.linearProbes ?? 8;
+    this.leaves = [ new Int32Array(this.leafCapacity * 4) ];
     this.dictionary = options.dictionary;
     // Quoted triple patterns are matched against the quoted triples that the dictionary finds for them.
     this.features = { quotedTripleFiltering: Boolean(options.dictionary.features.quotedTriples) };
@@ -237,7 +264,7 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
   public skipGroup(cursor: IBTreeCursor, length: number): void {
     const start = this.leaves[cursor.leaf];
     const startOffset = cursor.offset * 4;
-    for (let probe = 0; probe < LINEAR_PROBES; probe++) {
+    for (let probe = 0; probe < this.linearProbes; probe++) {
       this.step(cursor);
       if (cursor.leaf >= this.leaves.length) {
         return;
@@ -404,10 +431,11 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
   private insertAt(leaf: number, offset: number, key: ArrayLike<number>): void {
     let data = this.leaves[leaf];
     let size = this.sizes[leaf];
-    if (size === LEAF_CAPACITY) {
+    const capacity = this.leafCapacity;
+    if (size === capacity) {
       // Split the leaf in two halves.
-      const half = LEAF_CAPACITY >>> 1;
-      const right = new Int32Array(LEAF_CAPACITY * 4);
+      const half = capacity >>> 1;
+      const right = new Int32Array(capacity * 4);
       right.set(data.subarray(half * 4, size * 4));
       this.leaves.splice(leaf + 1, 0, right);
       this.sizes.splice(leaf + 1, 0, size - half);
@@ -450,10 +478,13 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
   }
 
   /**
-   * Insert many quads at once.
+   * Add many quads at once, to the quads that are already present.
+   * Nothing is removed, and quads that are already present, or occur more than once in `keys`, are only kept once.
    *
    * The quads are sorted a single time and then merged into the leaves, instead of being inserted one
    * by one, and every new term is added to the term order in a single pass as well.
+   * A batch that is small compared to this index is inserted one quad at a time instead,
+   * as merging would rewrite every leaf.
    * @param keys Encoded quads in the component order of this index, four entries per quad.
    * @param count The number of quads in `keys`.
    * @return number The number of quads that were not yet present.
@@ -461,7 +492,7 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
   public setAll(keys: Int32Array, count: number): number {
     const termOrder = this.termOrder;
     termOrder.addAll(keys, count * 4);
-    if (count * MERGE_THRESHOLD < this.quadCount) {
+    if (count * this.mergeThreshold < this.quadCount) {
       let added = 0;
       for (let i = 0; i < count; i++) {
         const offset = i * 4;
@@ -475,13 +506,14 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
     const [ sorted, sortedCount ] = this.sortUnique(keys, count);
     const merged: Int32Array[] = [];
     const mergedSizes: number[] = [];
-    let leaf = new Int32Array(LEAF_CAPACITY * 4);
+    const capacity = this.leafCapacity;
+    let leaf = new Int32Array(capacity * 4);
     let leafSize = 0;
     const push = (data: Int32Array, offset: number): void => {
-      if (leafSize === LEAF_CAPACITY) {
+      if (leafSize === capacity) {
         merged.push(leaf);
         mergedSizes.push(leafSize);
-        leaf = new Int32Array(LEAF_CAPACITY * 4);
+        leaf = new Int32Array(capacity * 4);
         leafSize = 0;
       }
       const target = leafSize * 4;
@@ -658,7 +690,14 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
         return <IterableIterator<EncodedQuadTerms<number>>> EMPTY_QUAD_ITERATOR;
       }
     }
-    return new RdfStoreIndexBTreeIterator(this, ids, candidates);
+    const levels: number[] = [];
+    for (let i = 0; i < 4; i++) {
+      if (ids[i] !== undefined || candidates?.[i] !== undefined) {
+        levels.push(i);
+      }
+    }
+    const leading = RdfStoreIndexBTree.leadingLevels(levels, candidates);
+    return new RdfStoreIndexBTreeIterator(this, ids, levels, leading, candidates);
   }
 
   public count(terms: QuadPatternTerms): number {
@@ -801,112 +840,5 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
       this.skipGroup(cursor, length);
     }
     return count;
-  }
-}
-
-/**
- * Iterates over the quads of a {@link RdfStoreIndexBTree} that match a pattern, in index order.
- *
- * Components that the pattern binds after an unbound one are matched with a skip-scan: a quad that
- * does not match makes the scan jump ahead with a binary search rather than read on.
- *
- * The index may change while this iterates. The iterator then relocates itself after the last quad
- * it produced, so it neither repeats nor loses quads that were there all along.
- */
-export class RdfStoreIndexBTreeIterator implements IterableIterator<EncodedQuadTerms<number>> {
-  private readonly index: RdfStoreIndexBTree;
-  private readonly ids: (number | undefined)[];
-  private readonly levels: number[];
-  private readonly leading: number;
-  private readonly candidates: (IBTreeCandidates | undefined)[] | undefined;
-  private cursor: IBTreeCursor;
-  private version: number;
-  private last: EncodedQuadTerms<number> | undefined;
-  private done = false;
-
-  public constructor(
-    index: RdfStoreIndexBTree,
-    ids: (number | undefined)[],
-    candidates?: (IBTreeCandidates | undefined)[],
-  ) {
-    this.index = index;
-    this.ids = ids;
-    this.candidates = candidates;
-    const levels: number[] = [];
-    for (let i = 0; i < 4; i++) {
-      if (ids[i] !== undefined || candidates?.[i] !== undefined) {
-        levels.push(i);
-      }
-    }
-    this.levels = levels;
-    this.leading = RdfStoreIndexBTree.leadingLevels(levels, candidates);
-    this.cursor = index.start();
-    this.version = index.version;
-  }
-
-  private resync(): void {
-    if (this.version !== this.index.version) {
-      this.version = this.index.version;
-      this.cursor = this.last === undefined ? this.index.start() : this.index.seekKey(this.last, 4, true);
-    }
-  }
-
-  /**
-   * Skip forward to the first result whose component at `level` is not before the sought term.
-   *
-   * Only quads that share the components before `level` with the next quad are skipped, and they are
-   * found by binary search, so skipping costs logarithmic time in the number of skipped quads.
-   * @param level The level to skip within.
-   * @param isBefore Whether a key at that level precedes the sought term.
-   */
-  public seek(level: number, isBefore: (key: number) => boolean): void {
-    if (this.done) {
-      return;
-    }
-    this.resync();
-    const index = this.index;
-    const cursor = this.cursor;
-    // Skip within the group of the next result, which is not necessarily that of the next quad.
-    if (!index.nextMatch(cursor, this.ids, this.levels, this.leading, this.candidates)) {
-      return;
-    }
-    const offset = cursor.offset * 4;
-    const prefix = index.leaves[cursor.leaf].slice(offset, offset + level);
-    index.advance(cursor, (data, dataOffset) => {
-      for (let i = 0; i < level; i++) {
-        if (data[dataOffset + i] !== prefix[i]) {
-          return false;
-        }
-      }
-      return isBefore(data[dataOffset + level]);
-    });
-  }
-
-  public [Symbol.iterator](): IterableIterator<EncodedQuadTerms<number>> {
-    return this;
-  }
-
-  public next(): IteratorResult<EncodedQuadTerms<number>> {
-    if (this.done) {
-      return DONE;
-    }
-    this.resync();
-    const index = this.index;
-    const cursor = this.cursor;
-    if (!index.nextMatch(cursor, this.ids, this.levels, this.leading, this.candidates)) {
-      this.done = true;
-      return DONE;
-    }
-    const data = index.leaves[cursor.leaf];
-    const offset = cursor.offset * 4;
-    const value: EncodedQuadTerms<number> = [ data[offset], data[offset + 1], data[offset + 2], data[offset + 3] ];
-    this.last = value;
-    index.step(cursor);
-    return { value, done: false };
-  }
-
-  public return(): IteratorResult<EncodedQuadTerms<number>> {
-    this.done = true;
-    return DONE;
   }
 }

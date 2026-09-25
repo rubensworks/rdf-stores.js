@@ -3,12 +3,17 @@ import type { ITermDictionary } from './dictionary/ITermDictionary';
 
 /**
  * The distance between the labels of neighbouring terms right after a relabel.
- * Terms inserted one by one take the midpoint of their neighbours, so this leaves room for about
- * twenty such insertions at one spot before everything has to be relabelled.
+ *
+ * A term inserted between two others takes the midpoint of their labels. Labels are doubles, so midpoints
+ * keep halving well below 1: at rank r, about 52 - log2(r) insertions fit at one spot before all terms must be
+ * relabelled, whatever this spacing is. The spacing only bounds the number of terms, to 2^53 divided by it,
+ * which is 2^33 here. A parameter sweep over WatDiv found no difference in speed between 2^10 and 2^30.
  */
 const SPACING = 1 << 20;
 /**
  * The number of encodings per chunk of the sorted term list.
+ * Adding a single term shifts the rest of its chunk, and finding one searches the chunks first.
+ * A parameter sweep over WatDiv found no difference in speed between 256 and 4096.
  */
 const CHUNK_SIZE = 1024;
 /**

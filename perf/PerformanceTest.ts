@@ -23,6 +23,10 @@ export class PerformanceTest {
    * end up inside the measured region and show up as part of the results.
    */
   public quiet = false;
+  /**
+   * Quads that are waiting to be added in one batch, if the current approach adds quads in batches.
+   */
+  protected pending: RDF.Quad[] | undefined;
 
   public constructor(
     public readonly approaches: IPerformanceTestApproach[],
@@ -50,9 +54,50 @@ export class PerformanceTest {
     }
   }
 
+  /**
+   * Add a quad to the store, or hold it until the batch is flushed.
+   * @param store The store.
+   * @param quad The quad to add.
+   */
+  protected add(store: RdfStore | Store, quad: RDF.Quad): void {
+    if (this.pending) {
+      this.pending.push(quad);
+    } else {
+      store.addQuad(quad);
+    }
+  }
+
+  /**
+   * Add all held quads to the store at once.
+   * @param store The store.
+   */
+  protected flush(store: RdfStore | Store): void {
+    if (this.pending && this.pending.length > 0) {
+      (<RdfStore> store).addQuads(this.pending);
+      this.pending = [];
+    }
+  }
+
+  /**
+   * Print the memory in use. When garbage collection can be triggered (`node --expose-gc`), this is the heap
+   * in use right after collecting, plus memory outside the heap such as the buffers of typed arrays, which is
+   * what the current store holds, as the stores of earlier scopes are garbage by then. Otherwise, it is the
+   * resident set size, which also includes memory that is no longer in use but was not returned to the
+   * operating system.
+   * @param label What was just added.
+   */
   protected printMemory(label: string): void {
     if (!this.quiet) {
-      console.log(`* Memory usage for ${label}: ${Math.round(process.memoryUsage().rss / 1_024 / 1_024)}MB`);
+      const gc = (<{ gc?: () => void }> globalThis).gc;
+      let bytes = process.memoryUsage().rss;
+      if (gc) {
+        // The buffers of garbage typed arrays are only released by the collection after the one that finds them.
+        gc();
+        gc();
+        const usage = process.memoryUsage();
+        bytes = usage.heapUsed + usage.external;
+      }
+      console.log(`* Memory usage for ${label}: ${Math.round(bytes / 1_024 / 1_024)}MB`);
     }
   }
 
@@ -61,83 +106,109 @@ export class PerformanceTest {
   ): Promise<void> {
     for (const approach of this.approaches) {
       this.print(`\n# ${approach.name}\n`);
+      this.pending = approach.options.type === 'rdfstore' && approach.options.batch ? [] : undefined;
+      // Only used by the scopes that skip the N3 store.
+      const options = approach.options.type === 'rdfstore' ? approach.options.options : <IRdfStoreOptions<any, any>> {};
 
       if (scope === 'all' || scope === 'triples') {
-        const store = approach.options.type === 'n3' ? new Store() : new RdfStore(approach.options.options);
-        this.addTriplesToDefaultGraph(this.dimension, store);
-        this.findTriplesNoVariables(this.dimension, store);
-        this.findTriples1Variable(this.dimension, store);
-        this.findTriples2Variables(this.dimension, store);
-        if (approach.options.type !== 'n3') {
-          this.findBindings2Variables(this.dimension, <any> store);
-        }
-        await this.findTriples1VariableStream(this.dimension, <any>store);
-        this.countTriples1Variable(this.dimension, store);
-        this.print();
+        await this.inScope(async() => {
+          const store = approach.options.type === 'n3' ? new Store() : new RdfStore(approach.options.options);
+          this.addTriplesToDefaultGraph(this.dimension, store);
+          this.findTriplesNoVariables(this.dimension, store);
+          this.findTriples1Variable(this.dimension, store);
+          this.findTriples2Variables(this.dimension, store);
+          if (approach.options.type !== 'n3') {
+            this.findBindings2Variables(this.dimension, <any> store);
+          }
+          await this.findTriples1VariableStream(this.dimension, <any>store);
+          this.countTriples1Variable(this.dimension, store);
+          this.print();
+        });
       }
 
       // Reading bindings has its own scope, so that adding a case to it does not change what the
       // `triples` scope measures. It runs at half the dimension, like the `quoted` scope, to keep
       // the cost of the extra ingestion down. The N3 store has no bindings API, so it is skipped.
       if ((scope === 'all' || scope === 'bindings') && approach.options.type !== 'n3') {
-        const store = new RdfStore(approach.options.options);
-        this.addTriplesToDefaultGraph(this.dimension / 2, store);
-        this.findBindings2Variables(this.dimension / 2, store);
-        await this.findBindings2VariablesStream(this.dimension / 2, store);
-        this.findBindings1Variable(this.dimension / 2, store);
-        this.print();
+        await this.inScope(async() => {
+          const store = new RdfStore(options);
+          this.addTriplesToDefaultGraph(this.dimension / 2, store);
+          this.findBindings2Variables(this.dimension / 2, store);
+          await this.findBindings2VariablesStream(this.dimension / 2, store);
+          this.findBindings1Variable(this.dimension / 2, store);
+          this.print();
+        });
       }
 
       if (scope === 'all' || scope === 'quads') {
-        const store = approach.options.type === 'n3' ? new Store() : new RdfStore(approach.options.options);
-        this.addQuadsToGraphs(this.dimension / 4, store);
-        this.findQuadsInGraphs(this.dimension / 4, store);
-        this.print();
+        await this.inScope(async() => {
+          const store = approach.options.type === 'n3' ? new Store() : new RdfStore(approach.options.options);
+          this.addQuadsToGraphs(this.dimension / 4, store);
+          this.findQuadsInGraphs(this.dimension / 4, store);
+          this.print();
+        });
       }
 
       if ((scope === 'all' || scope === 'quoted') && approach.options.type !== 'n3') {
-        const store = new RdfStore(approach.options.options);
-        this.addQuotedTriplesToGraphs(this.dimension / 2, store);
-        this.findQuotedTriplesInGraphs(this.dimension / 2, store);
-        this.print();
+        await this.inScope(async() => {
+          const store = new RdfStore(options);
+          this.addQuotedTriplesToGraphs(this.dimension / 2, store);
+          this.findQuotedTriplesInGraphs(this.dimension / 2, store);
+          this.print();
+        });
       }
 
       if ((scope === 'all' || scope === 'terms') && approach.options.type !== 'n3' &&
         approach.options.options.indexCombinations.length >= 3) {
-        const store = new RdfStore(approach.options.options);
-        this.addQuadsToGraphs(this.dimension / 4, store);
-        this.findTerms1(this.dimension / 4, store);
-        this.countTerms1(this.dimension / 4, store);
-        this.findTerms2(this.dimension / 4, store);
-        this.countTerms2(this.dimension / 4, store);
-        this.findTerms3(this.dimension / 4, store);
-        this.countTerms3(this.dimension / 4, store);
-        this.findTerms4(this.dimension / 4, store);
-        this.countTerms4(this.dimension / 4, store);
-        this.findTerms1WithFilter(this.dimension / 4, store);
-        this.countTerms1WithFilter(this.dimension / 4, store);
-        this.print();
+        await this.inScope(async() => {
+          const store = new RdfStore(options);
+          this.addQuadsToGraphs(this.dimension / 4, store);
+          this.findTerms1(this.dimension / 4, store);
+          this.countTerms1(this.dimension / 4, store);
+          this.findTerms2(this.dimension / 4, store);
+          this.countTerms2(this.dimension / 4, store);
+          this.findTerms3(this.dimension / 4, store);
+          this.countTerms3(this.dimension / 4, store);
+          this.findTerms4(this.dimension / 4, store);
+          this.countTerms4(this.dimension / 4, store);
+          this.findTerms1WithFilter(this.dimension / 4, store);
+          this.countTerms1WithFilter(this.dimension / 4, store);
+          this.print();
+        });
       }
 
       // Counting distinct terms under filters has its own scope, because inside the `terms` scope
       // its cost is dwarfed by the ingestion and the unfiltered cases, which hides changes to it.
       if ((scope === 'all' || scope === 'terms-filtered') && approach.options.type !== 'n3' &&
         approach.options.options.indexCombinations.length >= 3) {
-        const store = new RdfStore(approach.options.options);
-        this.addQuadsToGraphs(this.dimension / 4, store);
-        this.countTerms1WithFilters(this.dimension / 4, store);
-        this.countTerms2WithFilters(this.dimension / 4, store);
-        this.print();
+        await this.inScope(async() => {
+          const store = new RdfStore(options);
+          this.addQuadsToGraphs(this.dimension / 4, store);
+          this.countTerms1WithFilters(this.dimension / 4, store);
+          this.countTerms2WithFilters(this.dimension / 4, store);
+          this.print();
+        });
       }
 
       if ((scope === 'all' || scope === 'nodes') && approach.options.type !== 'n3' &&
         approach.options.options.indexNodes) {
-        const store = new RdfStore(approach.options.options);
-        this.addQuadsToGraphs(this.dimension / 4, store);
-        this.findNodes(this.dimension / 4, store);
-        this.print();
+        await this.inScope(async() => {
+          const store = new RdfStore(options);
+          this.addQuadsToGraphs(this.dimension / 4, store);
+          this.findNodes(this.dimension / 4, store);
+          this.print();
+        });
       }
     }
+  }
+
+  /**
+   * Run a scope in its own function, so that its store is garbage once the scope ends,
+   * and is not counted in the memory usage that later scopes report.
+   * @param body The scope.
+   */
+  private async inScope(body: () => Promise<void>): Promise<void> {
+    await body();
   }
 
   public addTriplesToDefaultGraph(dimension: number, store: RdfStore | Store): void {
@@ -146,7 +217,7 @@ export class PerformanceTest {
     for (let subjectIt = 0; subjectIt < dimension; subjectIt++) {
       for (let predicateIt = 0; predicateIt < dimension; predicateIt++) {
         for (let objectIt = 0; objectIt < dimension; objectIt++) {
-          store.addQuad(this.dataFactory.quad(
+          this.add(store, this.dataFactory.quad(
             this.dataFactory.namedNode(`${this.prefix}${subjectIt}`),
             this.dataFactory.namedNode(`${this.prefix}${predicateIt}`),
             this.dataFactory.namedNode(`${this.prefix}${objectIt}`),
@@ -154,6 +225,7 @@ export class PerformanceTest {
         }
       }
     }
+    this.flush(store);
     this.timeEnd(TEST);
     this.printMemory('triples');
   }
@@ -302,7 +374,7 @@ export class PerformanceTest {
       for (let predicateIt = 0; predicateIt < dimension; predicateIt++) {
         for (let objectIt = 0; objectIt < dimension; objectIt++) {
           for (let graphIt = 0; graphIt < dimension; graphIt++) {
-            store.addQuad(this.dataFactory.quad(
+            this.add(store, this.dataFactory.quad(
               this.dataFactory.namedNode(`${this.prefix}${subjectIt}`),
               this.dataFactory.namedNode(`${this.prefix}${predicateIt}`),
               this.dataFactory.namedNode(`${this.prefix}${objectIt}`),
@@ -312,6 +384,7 @@ export class PerformanceTest {
         }
       }
     }
+    this.flush(store);
     this.timeEnd(TEST);
     this.printMemory('quads');
   }
@@ -340,7 +413,7 @@ export class PerformanceTest {
     for (let person1It = 0; person1It < dimension; person1It++) {
       for (let person2It = 0; person2It < dimension; person2It++) {
         for (let nameIt = 0; nameIt < dimension; nameIt++) {
-          store.addQuad(this.dataFactory.quad(
+          this.add(store, this.dataFactory.quad(
             this.dataFactory.namedNode(`${this.prefix}person-${person1It}`),
             this.dataFactory.namedNode(`${this.prefix}says`),
             this.dataFactory.quad(
@@ -352,6 +425,7 @@ export class PerformanceTest {
         }
       }
     }
+    this.flush(store);
     this.timeEnd(TEST);
     this.printMemory('quoted triples');
   }
@@ -607,6 +681,10 @@ export interface IPerformanceTestApproach {
   options: {
     type: 'rdfstore';
     options: IRdfStoreOptions<any, any>;
+    /**
+     * If quads must be added to the store in one batch with `addQuads`, rather than one by one.
+     */
+    batch?: boolean;
   } | {
     type: 'n3';
   };
