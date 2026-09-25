@@ -15,6 +15,7 @@ import type { ITermDictionary } from './dictionary/ITermDictionary';
 import { TermDictionaryNumberRecordFullTerms } from './dictionary/TermDictionaryNumberRecordFullTerms';
 import { TermDictionaryQuotedIndexed } from './dictionary/TermDictionaryQuotedIndexed';
 import type { IRdfStoreIndex } from './index/IRdfStoreIndex';
+import { RdfStoreIndexBTree } from './index/RdfStoreIndexBTree';
 import { RdfStoreIndexNestedMapQuoted } from './index/RdfStoreIndexNestedMapQuoted';
 import type { IRdfStoreOptions } from './IRdfStoreOptions';
 import {
@@ -28,6 +29,7 @@ import {
   quadToPattern,
 } from './OrderUtils';
 import type { EncodedQuadTerms, QuadPatternTerms } from './PatternTerm';
+import { TermOrder } from './TermOrder';
 
 /**
  * An RDF store allows quads to be stored and fetched, based on one or more customizable indexes.
@@ -56,6 +58,10 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * Lookup table from a bitmask of defined quad pattern components to the best index.
    */
   private readonly bestIndexLookup: Uint8Array;
+  /**
+   * If every index can insert a batch of quads at once, in which case imports are batched.
+   */
+  private readonly batchable: boolean;
 
   // eslint-disable-next-line ts/naming-convention
   private _size = 0;
@@ -64,13 +70,43 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     this.options = options;
     this.dataFactory = options.dataFactory;
     this.dictionary = options.dictionary;
-    this.indexesWrapped = RdfStore.constructIndexesWrapped(options);
+    // Ordered indexes must agree on the order of terms, so they share one term order.
+    this.indexesWrapped = RdfStore.constructIndexesWrapped({
+      ...options,
+      termOrder: options.termOrder ??
+        new TermOrder(<ITermDictionary<number>> <unknown> options.dictionary, options.termComparator),
+    });
     this.indexesWrappedComponentOrders = this.indexesWrapped.map(indexThis => indexThis.componentOrder);
     this.indexNodes = options.indexNodes ? new Map() : undefined;
     this.features.indexNodes = Boolean(options.indexNodes);
     this.indexesSupportQuotedPatterns = Boolean(this.dictionary.features.quotedTriples) &&
       this.indexesWrapped.every(wrapped => wrapped.index.features.quotedTripleFiltering);
     this.bestIndexLookup = getBestIndexLookupTable(this.indexesWrappedComponentOrders);
+    this.batchable = this.indexesWrapped.every(wrapped => wrapped.index.setAll !== undefined);
+  }
+
+  /**
+   * Create an RDF store whose indexes keep their quads sorted, so that scans produce ordered results
+   * and can skip ahead. Stores quads in GSPO, GPOS, and GOSP order by default, like
+   * {@link RdfStore#createDefault}.
+   * @param options Optional settings.
+   * @param options.termComparator The order to keep terms in, which defaults to {@link defaultTermComparator}.
+   * @param options.indexCombinations The component orders of the indexes to create.
+   * @param options.nodes If an index of nodes (subjects or objects) must be maintained.
+   */
+  public static createOrdered(options: {
+    termComparator?: (left: RDF.Term, right: RDF.Term) => number;
+    indexCombinations?: QuadTermName[][];
+    nodes?: true;
+  } = {}): RdfStore<number> {
+    return new RdfStore<number>({
+      indexCombinations: options.indexCombinations ?? RdfStore.DEFAULT_INDEX_COMBINATIONS,
+      indexConstructor: subOptions => new RdfStoreIndexBTree(subOptions),
+      indexNodes: options.nodes,
+      dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms()),
+      dataFactory: new DataFactory(),
+      termComparator: options.termComparator,
+    });
   }
 
   /**
@@ -126,6 +162,76 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
       }
     }
     return combination.length === 4;
+  }
+
+  /**
+   * Every order a scan of this store could come back in, one per index, as component names.
+   *
+   * A consumer that wants results in a particular order has to know whether this store can produce it
+   * before it plans around one. The order a given pattern actually gets is the entry for the index that
+   * serves it, with the components the pattern binds removed, since those do not vary across the scan.
+   *
+   * Only ordered indexes, such as {@link RdfStoreIndexBTree}, are listed: the others iterate in insertion
+   * order, so a scan of them has no useful order at all.
+   */
+  public get indexOrders(): QuadTermName[][] {
+    return this.indexesWrapped
+      .filter(indexWrapped => indexWrapped.index.termOrder !== undefined)
+      .map(indexWrapped => [ ...indexWrapped.componentOrder ]);
+  }
+
+  /**
+   * The components a scan of the given index varies over, in the order it will produce them.
+   *
+   * Components fixed by the pattern are constant across the scan and therefore left out. Only
+   * reported for an ordered index, since an unordered one produces no useful order.
+   * @param index The index being scanned.
+   * @param componentOrder The component order of the index being scanned.
+   * @param subject The subject of the pattern.
+   * @param predicate The predicate of the pattern.
+   * @param object The object of the pattern.
+   * @param graph The graph of the pattern.
+   */
+  private resultOrderOf(
+    index: IRdfStoreIndex<TE, boolean>,
+    componentOrder: QuadTermName[],
+    subject: RDF.Term,
+    predicate: RDF.Term,
+    object: RDF.Term,
+    graph: RDF.Term,
+  ): QuadTermName[] | undefined {
+    if (index.termOrder === undefined) {
+      return undefined;
+    }
+    const byComponent: Record<string, RDF.Term> = { subject, predicate, object, graph };
+    return componentOrder.filter(component => byComponent[component].termType === 'Variable');
+  }
+
+  /**
+   * Build the callback that lets a scan skip ahead to a term, or undefined when it cannot.
+   *
+   * Skipping is only sound on an ordered index.
+   * @param index The index being scanned.
+   * @param componentOrder The component order of that index.
+   * @param producer The producer reading that index.
+   */
+  private createSeeker(
+    index: IRdfStoreIndex<TE, boolean>,
+    componentOrder: QuadTermName[],
+    producer: BindingsProducer<TE>,
+  ): ((component: QuadTermName, term: RDF.Term) => void) | undefined {
+    const termOrder = index.termOrder;
+    if (termOrder === undefined) {
+      return undefined;
+    }
+    return (component: QuadTermName, term: RDF.Term): void => {
+      // Every component order names all four components, so this always finds one. Seeking a
+      // component the pattern binds is pointless rather than an error: that key is fixed, so the
+      // scan either carries on untouched or runs out.
+      // The sought term does not have to be in the store: keys before it are exactly those with a lower label.
+      const target = termOrder.lowerBound(term);
+      producer.seek(componentOrder.indexOf(component), key => termOrder.label(<number> <unknown> key) < target);
+    };
   }
 
   /**
@@ -271,8 +377,101 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * @param stream A stream of RDF quads.
    */
   public import(stream: RDF.Stream<TQ>): EventEmitter {
-    stream.on('data', (quad: TQ) => this.addQuad(quad));
+    if (!this.batchable) {
+      stream.on('data', (quad: TQ) => this.addQuad(quad));
+      return stream;
+    }
+
+    // Every index can insert a batch at once, so quads are encoded as they come in, and inserted when
+    // the stream ends. This listener is attached before the caller can attach its own, so the quads are
+    // in the store by the time the caller sees the end.
+    let buffer = new Int32Array(4096);
+    let count = 0;
+    stream.on('data', (quad: TQ) => {
+      if ((count + 1) * 4 > buffer.length) {
+        const grown = new Int32Array(buffer.length * 2);
+        grown.set(buffer);
+        buffer = grown;
+      }
+      this.encodeInto(quad, buffer, count * 4);
+      count++;
+    });
+    stream.on('end', () => {
+      this.addEncodedQuads(buffer, count);
+    });
     return stream;
+  }
+
+  /**
+   * Add many quads at once.
+   *
+   * If every index supports it, the quads are inserted as a single batch, which sorts them once per
+   * index rather than inserting them one by one. Otherwise, this is the same as adding them one by one.
+   * @param quads RDF quads.
+   * @return number The number of quads that were not yet present.
+   */
+  public addQuads(quads: Iterable<TQ>): number {
+    if (!this.batchable) {
+      let added = 0;
+      for (const quad of quads) {
+        if (this.addQuad(quad)) {
+          added++;
+        }
+      }
+      return added;
+    }
+    const quadsArray = Array.isArray(quads) ? <TQ[]> quads : [ ...quads ];
+    const buffer = new Int32Array(quadsArray.length * 4);
+    for (const [ i, quad ] of quadsArray.entries()) {
+      this.encodeInto(quad, buffer, i * 4);
+    }
+    return this.addEncodedQuads(buffer, quadsArray.length);
+  }
+
+  private encodeInto(quad: TQ, buffer: Int32Array, offset: number): void {
+    buffer[offset] = <number> <unknown> this.dictionary.encode(quad.subject);
+    buffer[offset + 1] = <number> <unknown> this.dictionary.encode(quad.predicate);
+    buffer[offset + 2] = <number> <unknown> this.dictionary.encode(quad.object);
+    buffer[offset + 3] = <number> <unknown> this.dictionary.encode(quad.graph);
+  }
+
+  /**
+   * Insert a batch of encoded quads into every index.
+   * @param buffer Encoded quads in SPOG order, four entries per quad.
+   * @param count The number of quads in the buffer.
+   * @return number The number of quads that were not yet present.
+   */
+  private addEncodedQuads(buffer: Int32Array, count: number): number {
+    let added = 0;
+    const permuted = new Int32Array(count * 4);
+    for (const [ i, indexWrapped ] of this.indexesWrapped.entries()) {
+      const permutation = indexWrapped.componentOrderPermutation;
+      for (let offset = 0; offset < count * 4; offset += 4) {
+        permuted[offset] = buffer[offset + permutation[0]];
+        permuted[offset + 1] = buffer[offset + permutation[1]];
+        permuted[offset + 2] = buffer[offset + permutation[2]];
+        permuted[offset + 3] = buffer[offset + permutation[3]];
+      }
+      const indexAdded = indexWrapped.index.setAll!(permuted, count);
+      if (i === 0) {
+        added = indexAdded;
+      }
+    }
+    this._size += added;
+
+    if (this.indexNodes) {
+      for (let offset = 0; offset < count * 4; offset += 4) {
+        const graph = <TE> <unknown> buffer[offset + 3];
+        let graphIndex = this.indexNodes.get(graph);
+        if (!graphIndex) {
+          graphIndex = new Set();
+          this.indexNodes.set(graph, graphIndex);
+        }
+        graphIndex.add(<TE> <unknown> buffer[offset]);
+        graphIndex.add(<TE> <unknown> buffer[offset + 2]);
+      }
+    }
+    return added;
   }
 
   /**
@@ -433,7 +632,11 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     predicate: RDF.Term,
     object: RDF.Term,
     graph: RDF.Term,
-  ): BindingsProducer<TE> | undefined {
+  ): {
+    producer: BindingsProducer<TE>;
+    componentOrder: QuadTermName[];
+    index: IRdfStoreIndex<TE, boolean>;
+  } | undefined {
     // Construct a quad pattern array
     const [ quadComponents ] =
       quadToPattern(subject, predicate, object, graph, this.indexesSupportQuotedPatterns);
@@ -500,18 +703,26 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     // Patterns without quoted triple patterns and without overlapping variables
     // never need post-filtering, and get a producer without any of that bookkeeping.
     if (!hasQuadVariables && filterIndexes === undefined) {
-      return new BindingsProducer<TE>(bindingsFactory, source, this.dictionary, terms, variableIndexes);
+      return {
+        producer: new BindingsProducer<TE>(bindingsFactory, source, this.dictionary, terms, variableIndexes),
+        componentOrder: indexWrapped.componentOrder,
+        index: indexWrapped.index,
+      };
     }
-    return new FilteringBindingsProducer<TE>(
-      bindingsFactory,
-      source,
-      this.dictionary,
-      terms,
-      variableIndexes,
-      this.dataFactory,
-      variableIsQuad,
-      filterIndexes,
-    );
+    return {
+      componentOrder: indexWrapped.componentOrder,
+      index: indexWrapped.index,
+      producer: new FilteringBindingsProducer<TE>(
+        bindingsFactory,
+        source,
+        this.dictionary,
+        terms,
+        variableIndexes,
+        this.dataFactory,
+        variableIsQuad,
+        filterIndexes,
+      ),
+    };
   }
 
   /**
@@ -529,10 +740,11 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     object: RDF.Term,
     graph: RDF.Term,
   ): IterableIterator<RDF.Bindings> {
-    const producer = this.prepareBindings(bindingsFactory, subject, predicate, object, graph);
-    if (!producer) {
+    const prepared = this.prepareBindings(bindingsFactory, subject, predicate, object, graph);
+    if (!prepared) {
       return;
     }
+    const producer = prepared.producer;
     let bindings: RDF.Bindings | null = producer.read();
     while (bindings !== null) {
       yield bindings;
@@ -558,8 +770,9 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     // This intentionally does not delegate to readBindings:
     // draining a generator costs an extra suspend/resume and an iterator result object per binding.
     const bindingsArray: RDF.Bindings[] = [];
-    const producer = this.prepareBindings(bindingsFactory, subject, predicate, object, graph);
-    if (producer) {
+    const prepared = this.prepareBindings(bindingsFactory, subject, predicate, object, graph);
+    if (prepared) {
+      const producer = prepared.producer;
       let bindings: RDF.Bindings | null = producer.read();
       while (bindings !== null) {
         bindingsArray.push(bindings);
@@ -584,7 +797,16 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     object: RDF.Term,
     graph: RDF.Term,
   ): AsyncIterator<RDF.Bindings> {
-    return new BindingsIterator(this.prepareBindings(bindingsFactory, subject, predicate, object, graph));
+    const prepared = this.prepareBindings(bindingsFactory, subject, predicate, object, graph);
+    return new BindingsIterator(
+      prepared?.producer,
+      prepared ?
+        this.createSeeker(prepared.index, prepared.componentOrder, prepared.producer) :
+        undefined,
+      prepared ?
+        this.resultOrderOf(prepared.index, prepared.componentOrder, subject, predicate, object, graph) :
+        undefined,
+    );
   }
 
   /**

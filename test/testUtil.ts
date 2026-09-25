@@ -8,6 +8,7 @@ import { TermDictionaryQuoted } from '../lib/dictionary/TermDictionaryQuoted';
 import { TermDictionaryQuotedIndexed } from '../lib/dictionary/TermDictionaryQuotedIndexed';
 import { TermDictionaryQuotedReferential } from '../lib/dictionary/TermDictionaryQuotedReferential';
 import type { IRdfStoreIndex } from '../lib/index/IRdfStoreIndex';
+import { RdfStoreIndexBTree } from '../lib/index/RdfStoreIndexBTree';
 import { RdfStoreIndexNestedMap } from '../lib/index/RdfStoreIndexNestedMap';
 import { RdfStoreIndexNestedMapQuoted } from '../lib/index/RdfStoreIndexNestedMapQuoted';
 import { RdfStoreIndexNestedMapRecursive } from '../lib/index/RdfStoreIndexNestedMapRecursive';
@@ -30,6 +31,8 @@ IRdfStoreIndex<number, boolean>> = {
     (subOptions: IRdfStoreOptions<number>) => new RdfStoreIndexNestedRecord<number, boolean>(subOptions),
   RdfStoreIndexNestedRecordQuoted:
     (subOptions: IRdfStoreOptions<number>) => new RdfStoreIndexNestedRecordQuoted<number, boolean>(subOptions),
+  RdfStoreIndexBTree:
+    (subOptions: IRdfStoreOptions<number>) => new RdfStoreIndexBTree(subOptions),
 };
 
 export const indexSupportsQuotedTriples: [ string, boolean ][] = [
@@ -39,6 +42,7 @@ export const indexSupportsQuotedTriples: [ string, boolean ][] = [
   [ 'RdfStoreIndexNestedMapRecursiveQuoted', true ],
   [ 'RdfStoreIndexNestedRecord', false ],
   [ 'RdfStoreIndexNestedRecordQuoted', true ],
+  [ 'RdfStoreIndexBTree', true ],
 ];
 
 export const dictClazzToInstance: Record<string, () => ITermDictionary<number>> = {
@@ -61,4 +65,15 @@ export function expectToEqualTerms(terms1: RDF.Term[][], terms2: RDF.Term[][]) {
       .localeCompare(right.map(element => termToString(element)).join(','));
   };
   expect(terms1.sort(compareFn)).toEqual(terms2.sort(compareFn));
+}
+
+/**
+ * Compare two lists of encoded quads regardless of their order,
+ * since ordered indexes produce them in term order rather than in insertion order.
+ * @param quads1 Encoded quads.
+ * @param quads2 Encoded quads.
+ */
+export function expectToEqualEncoded(quads1: number[][], quads2: number[][]) {
+  const compareFn = (left: number[], right: number[]) => left.join(',').localeCompare(right.join(','));
+  expect([ ...quads1 ].sort(compareFn)).toEqual([ ...quads2 ].sort(compareFn));
 }

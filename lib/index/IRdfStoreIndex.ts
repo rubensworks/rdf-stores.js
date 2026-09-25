@@ -1,4 +1,5 @@
 import type { EncodedQuadTerms, QuadPatternTerms, QuadTerms } from '../PatternTerm';
+import type { TermOrder } from '../TermOrder';
 
 /**
  * An RDF store index is a low-level index that can be used inside an RDF store.
@@ -73,6 +74,21 @@ export interface IRdfStoreIndex<TE, TV> {
    * @param terms An iterable of pattern terms, ordered in the component order of this index.
    */
   count: (terms: QuadPatternTerms) => number;
+  /**
+   * Present on indexes that always keep their quads sorted on this term order.
+   * Scans of such an index produce results in index order, and support skipping ahead.
+   */
+  termOrder?: TermOrder;
+  /**
+   * Add many quads at once, which may be much cheaper than setting them one by one.
+   * This adds to the quads that are already present,
+   * and can not result in duplicates.
+   * `keys` is not modified, and is not retained after this returns.
+   * @param keys Encoded quads in the component order of this index, four entries per quad.
+   * @param count The number of quads in `keys`.
+   * @return number The number of quads that were not yet present.
+   */
+  setAll?: (keys: Int32Array, count: number) => number;
   /**
    * Count the terms that exist in the index.
    * Each returned array corresponds to the terms specified by given quad term names.

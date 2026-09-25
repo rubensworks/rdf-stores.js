@@ -4,7 +4,12 @@ import type { ITermDictionary } from '../../lib/dictionary/ITermDictionary';
 import { TermDictionaryNumberMap } from '../../lib/dictionary/TermDictionaryNumberMap';
 import { TermDictionaryQuotedIndexed } from '../../lib/dictionary/TermDictionaryQuotedIndexed';
 import type { IRdfStoreIndex } from '../../lib/index/IRdfStoreIndex';
-import { indexClazzToInstance, indexSupportsQuotedTriples } from '../testUtil';
+import {
+  expectToEqualEncoded,
+  expectToEqualTerms,
+  indexClazzToInstance,
+  indexSupportsQuotedTriples,
+} from '../testUtil';
 
 const DF = new DataFactory();
 
@@ -3122,12 +3127,12 @@ describe('RdfStoreIndexes', () => {
 
           describe('find', () => {
             it('should produce all results for a variable pattern', () => {
-              expect([ ...index.find([
+              expectToEqualTerms([ ...index.find([
                 undefined,
                 undefined,
                 undefined,
                 undefined,
-              ]) ]).toEqual([
+              ]) ], [
                 [
                   DF.namedNode('g1'),
                   DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
@@ -3170,12 +3175,12 @@ describe('RdfStoreIndexes', () => {
             });
 
             it('should produce results for a variable', () => {
-              expect([ ...index.find([
+              expectToEqualTerms([ ...index.find([
                 DF.namedNode('g1'),
                 undefined,
                 DF.namedNode('says'),
                 undefined,
-              ]) ]).toEqual([
+              ]) ], [
                 [
                   DF.namedNode('g1'),
                   DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue')),
@@ -3248,7 +3253,7 @@ describe('RdfStoreIndexes', () => {
 
           describe('findEncoded', () => {
             it('should produce all results for a variable pattern', () => {
-              expect([ ...index.findEncoded([
+              expectToEqualEncoded([ ...index.findEncoded([
                 undefined,
                 undefined,
                 undefined,
@@ -3258,7 +3263,7 @@ describe('RdfStoreIndexes', () => {
                 undefined,
                 undefined,
                 undefined,
-              ]) ]).toEqual([
+              ]) ], [
                 [
                   dictionary.encode(DF.namedNode('g1')),
                   dictionary.encode(DF.quad(
@@ -3314,7 +3319,7 @@ describe('RdfStoreIndexes', () => {
             });
 
             it('should produce results for a variable', () => {
-              expect([ ...index.findEncoded([
+              expectToEqualEncoded([ ...index.findEncoded([
                 dictionary.encode(DF.namedNode('g1')),
                 undefined,
                 dictionary.encode(DF.namedNode('says')),
@@ -3324,7 +3329,7 @@ describe('RdfStoreIndexes', () => {
                 undefined,
                 DF.namedNode('says'),
                 undefined,
-              ]) ]).toEqual([
+              ]) ], [
                 [
                   dictionary.encode(DF.namedNode('g1')),
                   dictionary.encode(DF.quad(DF.namedNode('Violets'), DF.namedNode('haveColor'), DF.namedNode('Blue'))),

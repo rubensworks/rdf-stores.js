@@ -36,8 +36,8 @@ for (const [ approachId, approach ] of approaches.entries()) {
 
   // Only register the scopes that this approach actually executes,
   // so that no benchmark ends up measuring an empty function.
-  const scopes: ('triples' | 'bindings' | 'quads' | 'quoted' | 'terms' | 'terms-filtered' | 'nodes')[] =
-    [ 'triples', 'bindings', 'quads', 'quoted' ];
+  const scopes: ('triples' | 'bindings' | 'quads' | 'quoted' | 'terms' | 'terms-filtered' | 'nodes' | 'entities')[] =
+    [ 'triples', 'bindings', 'quads', 'quoted', 'entities' ];
   if (approach.options.options.indexCombinations.length >= 3) {
     scopes.push('terms', 'terms-filtered');
   }

@@ -7,6 +7,7 @@ import { TermDictionaryQuoted } from '../lib/dictionary/TermDictionaryQuoted';
 import { TermDictionaryQuotedIndexed } from '../lib/dictionary/TermDictionaryQuotedIndexed';
 import { TermDictionaryQuotedReferential } from '../lib/dictionary/TermDictionaryQuotedReferential';
 import { TermDictionarySymbol } from '../lib/dictionary/TermDictionarySymbol';
+import { RdfStoreIndexBTree } from '../lib/index/RdfStoreIndexBTree';
 import { RdfStoreIndexNestedMap } from '../lib/index/RdfStoreIndexNestedMap';
 import { RdfStoreIndexNestedMapQuoted } from '../lib/index/RdfStoreIndexNestedMapQuoted';
 import { RdfStoreIndexNestedMapRecursive } from '../lib/index/RdfStoreIndexNestedMapRecursive';
@@ -321,6 +322,31 @@ export function makeTests(optimal: boolean): IPerformanceTestApproach[] {
         options: {
           indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
           indexConstructor: subOptions => new RdfStoreIndexNestedRecordQuoted(subOptions),
+          dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms(), new DataFactory()),
+          dataFactory: new DataFactory(),
+        },
+      },
+    },
+    {
+      name: '3 BTree indexes with indexed quoted dict (number) OPT-BULK',
+      options: {
+        type: 'rdfstore',
+        options: {
+          indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+          indexConstructor: subOptions => new RdfStoreIndexBTree(subOptions),
+          dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms(), new DataFactory()),
+          dataFactory: new DataFactory(),
+        },
+        batch: true,
+      },
+    },
+    {
+      name: '3 BTree indexes with indexed quoted dict (number), added one by one',
+      options: {
+        type: 'rdfstore',
+        options: {
+          indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
+          indexConstructor: subOptions => new RdfStoreIndexBTree(subOptions),
           dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms(), new DataFactory()),
           dataFactory: new DataFactory(),
         },
