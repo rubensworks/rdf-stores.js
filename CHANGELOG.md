@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+<a name="v2.6.0"></a>
+## [v2.6.0](https://github.com/rubensworks/rdf-stores.js/compare/v2.5.1...v2.6.0) - 2026-09-25
+
+### Added
+* [Add an ordered B+tree index, with batch insertion and seekable scans (#42)](https://github.com/rubensworks/rdf-stores.js/commit/4de5427ec997a11b518b92226fd0025f22ba5fb1)
+
 <a name="v2.5.1"></a>
 ## [v2.5.1](https://github.com/rubensworks/rdf-stores.js/compare/v2.5.0...v2.5.1) - 2026-09-24
 
