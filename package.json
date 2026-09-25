@@ -68,7 +68,7 @@
     "streamify-array": "^2.0.0",
     "tinybench": "^6.0.0",
     "ts-jest": "^29.0.0",
-    "typescript": "^6.0.0",
+    "typescript": "^7.0.0",
     "yargs": "^18.0.0"
   },
   "jest": {
