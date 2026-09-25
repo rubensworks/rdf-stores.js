@@ -501,6 +501,54 @@ describe('TermOrder', () => {
     expect(encodings.map(encoding => order.rank(encoding))).toEqual(encodings.map((_, rank) => rank));
   });
 
+  it('relabels only a window around a spot that runs out of room', () => {
+    // Uniform labels over several chunks.
+    const initial = Array.from({ length: 5000 }, (_, i) => dictionary.encode(DF.literal(`v${String(i).padStart(5, '0')}`)));
+    order.addAll(initial, initial.length);
+    const far = [ initial[0], initial[100], initial[4900], initial[4999] ];
+    const farLabels = far.map(encoding => order.label(encoding));
+    // Crowd one spot near a chunk boundary, until its chunk splits, each term landing before the previous one.
+    for (let i = 0; i < 2500; i++) {
+      order.add(dictionary.encode(DF.literal(`v01023x${String(5000 - i).padStart(5, '0')}`)));
+    }
+    checkOrder();
+    expect(far.map(encoding => order.label(encoding))).toEqual(farLabels);
+    // Crowd the end of a chunk, each term landing just before its last one, so that the window grows into the next.
+    for (let i = 0; i < 300; i++) {
+      order.add(dictionary.encode(DF.literal(`v04094x${String(i).padStart(5, '0')}`)));
+    }
+    checkOrder();
+    // Crowd the end, each term landing just before the last one, and the start, before the first one.
+    for (let i = 0; i < 300; i++) {
+      order.add(dictionary.encode(DF.literal(`v04998x${String(i).padStart(5, '0')}`)));
+      order.add(dictionary.encode(DF.blankNode(`b${String(5000 - i).padStart(5, '0')}`)));
+    }
+    checkOrder();
+    order.makeUniform();
+    const encodings = [ ...dictionary.encodings() ].sort((left, right) => order.label(left) - order.label(right));
+    expect(encodings.map(encoding => order.rank(encoding))).toEqual(encodings.map((_, rank) => rank));
+  });
+
+  it('widens a relabel window across chunks up to both ends of the order when nothing has room', () => {
+    const initial = Array.from({ length: 3000 }, (_, i) => dictionary.encode(DF.literal(`v${String(i).padStart(5, '0')}`)));
+    order.addAll(initial, initial.length);
+    const internal = <any> order;
+    const squeeze = (): void => {
+      // Labels so close together that no window short of the end of the order has room.
+      for (const [ rank, encoding ] of initial.entries()) {
+        internal.setLabel(encoding, 1 + (rank * 1e-6));
+      }
+    };
+    // From the first term of the last chunk, whose window starts at the start of a chunk and reaches the end.
+    squeeze();
+    internal.relabelAround(2, 1);
+    checkOrder();
+    // From the first term of the middle chunk, whose window reaches both the start and the end.
+    squeeze();
+    internal.relabelAround(1, 0);
+    checkOrder();
+  });
+
   it('orders terms that the comparator considers equal on their encoding', () => {
     order = new TermOrder(dictionary, () => 0);
     const encodings = [ 'c', 'a', 'b' ].map(value => dictionary.encode(DF.namedNode(value)));

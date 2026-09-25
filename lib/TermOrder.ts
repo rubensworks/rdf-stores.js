@@ -5,8 +5,8 @@ import type { ITermDictionary } from './dictionary/ITermDictionary';
  * The distance between the labels of neighbouring terms right after a relabel.
  *
  * A term inserted between two others takes the midpoint of their labels. Labels are doubles, so midpoints
- * keep halving well below 1: at rank r, about 52 - log2(r) insertions fit at one spot before all terms must be
- * relabelled, whatever this spacing is. The spacing only bounds the number of terms, to 2^53 divided by it,
+ * keep halving well below 1: at rank r, about 52 - log2(r) insertions fit at one spot before the terms around it
+ * must be relabelled, whatever this spacing is. The spacing only bounds the number of terms, to 2^53 divided by it,
  * which is 2^33 here. A parameter sweep over WatDiv found no difference in speed between 2^10 and 2^30.
  */
 const SPACING = 1 << 20;
@@ -16,6 +16,12 @@ const SPACING = 1 << 20;
  * A parameter sweep over WatDiv found no difference in speed between 256 and 4096.
  */
 const CHUNK_SIZE = 1024;
+/**
+ * The smallest average distance between labels that a local relabel may leave, as a fraction of the spacing.
+ * A window around a term that found no room is widened until its labels can be spread at least this far apart,
+ * which leaves room for about ten more insertions at one spot before the next relabel there.
+ */
+const MIN_LOCAL_GAP = SPACING / 1024;
 /**
  * The bits of an encoding that remain after removing the flag that the quoted dictionaries set.
  */
@@ -75,7 +81,9 @@ export function defaultTermComparator(left: RDF.Term, right: RDF.Term): number {
  * that increases along it, so that indexes can compare encoded terms without decoding them.
  *
  * Labels only ever keep their relative order, never their value: a term that is added between two
- * others takes the midpoint of their labels, and when no midpoint is left, all terms are relabelled.
+ * others takes the midpoint of their labels, and when no midpoint is left, the labels of a window of terms
+ * around it are spread evenly, where the window is only as wide as needed to make room.
+ * Adding many terms at once relabels all terms instead.
  * Indexes therefore store encodings rather than labels, and look the labels up when comparing.
  *
  * Only dictionaries that encode to non-negative integers, optionally with the high bit set for
@@ -225,14 +233,95 @@ export class TermOrder {
 
     chunk.splice(position, 0, encoding);
     this.termCount++;
+    let insertedChunk = chunkIndex;
+    let insertedPosition = position;
     if (chunk.length > 2 * CHUNK_SIZE) {
       chunks.splice(chunkIndex + 1, 0, chunk.splice(CHUNK_SIZE));
+      if (position >= CHUNK_SIZE) {
+        insertedChunk++;
+        insertedPosition -= CHUNK_SIZE;
+      }
     }
     if (label <= previousLabel || (next !== undefined && label >= this.label(next))) {
       // No room was left between the neighbours.
-      this.relabel();
+      this.relabelAround(insertedChunk, insertedPosition);
     } else {
       this.setLabel(encoding, label);
+    }
+  }
+
+  /**
+   * Spread the labels of a window around a term evenly, widening the window until there is room enough.
+   *
+   * Relabelling all terms whenever one finds no room makes adding many terms one by one take quadratic time,
+   * as terms that are added in order tend to keep landing between the same neighbours.
+   * A window only as wide as needed costs about as much as the number of terms that crowded into it.
+   * @param chunkIndex The chunk of the term, whose label is not set yet.
+   * @param position The position of the term within its chunk.
+   */
+  private relabelAround(chunkIndex: number, position: number): void {
+    const chunks = this.chunks;
+    // The window runs from (leftChunk, leftPosition) to (rightChunk, rightPosition), both included.
+    let leftChunk = chunkIndex;
+    let leftPosition = position;
+    let rightChunk = chunkIndex;
+    let rightPosition = position;
+    let count = 1;
+    for (let radius = 1; ; radius *= 2) {
+      // Widen the window by up to `radius` terms on each side.
+      for (let step = 0; step < radius; step++) {
+        if (leftPosition > 0) {
+          leftPosition--;
+          count++;
+        } else if (leftChunk > 0) {
+          leftChunk--;
+          leftPosition = chunks[leftChunk].length - 1;
+          count++;
+        }
+        if (rightPosition < chunks[rightChunk].length - 1) {
+          rightPosition++;
+          count++;
+        } else if (rightChunk < chunks.length - 1) {
+          rightChunk++;
+          rightPosition = 0;
+          count++;
+        }
+      }
+
+      const atStart = leftChunk === 0 && leftPosition === 0;
+      const atEnd = rightChunk === chunks.length - 1 && rightPosition === chunks[rightChunk].length - 1;
+      const lowerBound = atStart ?
+        0 :
+        this.label(leftPosition > 0 ?
+          chunks[leftChunk][leftPosition - 1] :
+          chunks[leftChunk - 1].at(-1)!);
+      let gap: number;
+      if (atEnd) {
+        // Nothing follows the window, so its labels can grow as far as needed.
+        gap = SPACING;
+      } else {
+        const upperBound = this.label(rightPosition < chunks[rightChunk].length - 1 ?
+          chunks[rightChunk][rightPosition + 1] :
+          chunks[rightChunk + 1][0]);
+        gap = (upperBound - lowerBound) / (count + 1);
+        if (gap < MIN_LOCAL_GAP) {
+          continue;
+        }
+      }
+
+      let label = lowerBound;
+      let currentChunk = leftChunk;
+      let currentPosition = leftPosition;
+      for (let i = 0; i < count; i++) {
+        label += gap;
+        this.setLabel(chunks[currentChunk][currentPosition], label);
+        if (++currentPosition >= chunks[currentChunk].length) {
+          currentChunk++;
+          currentPosition = 0;
+        }
+      }
+      this.uniform = false;
+      return;
     }
   }
 
