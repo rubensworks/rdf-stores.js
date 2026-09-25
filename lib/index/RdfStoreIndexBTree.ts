@@ -12,6 +12,10 @@ import { EMPTY_QUAD_ITERATOR, RdfStoreIndexSingleQuadIterator } from './RdfStore
  */
 const LEAF_CAPACITY = 512;
 /**
+ * The number of quads that a batch fills a new leaf with, leaving room for later inserts without a split.
+ */
+const LEAF_FILL = 460;
+/**
  * Batches smaller than this fraction of the index are inserted one by one rather than merged in.
  */
 const MERGE_THRESHOLD = 32;
@@ -660,7 +664,7 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
     let leaf = new Int32Array(LEAF_CAPACITY * 4);
     let leafSize = 0;
     const push = (data: Int32Array, offset: number): void => {
-      if (leafSize === LEAF_CAPACITY) {
+      if (leafSize === LEAF_FILL) {
         merged.push(leaf);
         mergedSizes.push(leafSize);
         leaf = new Int32Array(LEAF_CAPACITY * 4);
