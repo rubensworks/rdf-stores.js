@@ -46,14 +46,4 @@ export interface ITermDictionary<TE> {
    * @param quotedTriplePattern A triple pattern to match with quoted triples.
    */
   findQuotedTriplesEncoded: (quotedTriplePattern: RDF.Quad) => IterableIterator<TE>;
-  /**
-   * Renumber the encodings of this dictionary, so that the given encodings get increasing new encodings,
-   * in the given order. This is optional: a dictionary that can not renumber itself omits it.
-   *
-   * Anything else that holds encodings of this dictionary must apply the returned mapping to them.
-   * @param encodings Every encoding of this dictionary, each exactly once, in the desired order.
-   * @return A function mapping each old encoding to its new one,
-   *         or undefined if this dictionary can not be renumbered in its current state.
-   */
-  reorder?: (encodings: TE[]) => ((encoding: TE) => TE) | undefined;
 }
