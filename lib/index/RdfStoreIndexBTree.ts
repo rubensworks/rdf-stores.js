@@ -52,6 +52,10 @@ export interface IBTreeCandidates {
  * defines. Scans therefore produce sorted results, can skip ahead to a term with a binary search,
  * and count a range without visiting it.
  *
+ * The last quad of every leaf is also kept in a single contiguous array, which is all that the search for
+ * a leaf reads, and the number of quads before every leaf is tracked, so that counting a range takes two
+ * searches whatever its length.
+ *
  * Inserting one quad costs a binary search and a shift within one leaf. {@link RdfStoreIndexBTree#setAll}
  * inserts many quads at once by sorting them a single time and merging them into the leaves.
  *
@@ -69,6 +73,21 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
    */
   public leaves: Int32Array[] = [ new Int32Array(LEAF_CAPACITY * 4) ];
   public sizes: number[] = [ 0 ];
+  /**
+   * The last quad of every leaf, four encodings each, so that finding a leaf reads one contiguous array
+   * rather than a quad from every leaf it passes. The entry of an empty leaf is meaningless.
+   */
+  private separators = new Int32Array(4);
+  /**
+   * The number of quads before each leaf, of which only the first `startsValid` entries are up to date.
+   * These are brought up to date when needed, so that a change only costs the invalidation.
+   */
+  private starts: number[] = [ 0 ];
+  private startsValid = 1;
+  /**
+   * A key to seek to, reused to avoid allocating one per seek.
+   */
+  private readonly seekScratch = new Int32Array(4);
   /**
    * Incremented on every change, so that iterators can notice that their position is stale.
    */
@@ -125,6 +144,7 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
   public advance(cursor: IBTreeCursor, skip: (data: Int32Array, offset: number) => boolean): void {
     const leaves = this.leaves;
     const sizes = this.sizes;
+    const separators = this.separators;
     const leafCount = leaves.length;
     let leaf = cursor.leaf;
     if (leaf >= leafCount || !skip(leaves[leaf], cursor.offset * 4)) {
@@ -132,12 +152,12 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
     }
 
     // The target lies in the current leaf if its last quad is not skipped.
-    if (skip(leaves[leaf], (sizes[leaf] - 1) * 4)) {
+    if (skip(separators, leaf * 4)) {
       // Gallop over the leaves on their last quad, then narrow down with a binary search.
       let low = leaf;
       let step = 1;
       let high = leaf + 1;
-      while (high < leafCount && skip(leaves[high], (sizes[high] - 1) * 4)) {
+      while (high < leafCount && skip(separators, high * 4)) {
         low = high;
         step *= 2;
         high = low + step;
@@ -148,7 +168,7 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
       let start = low + 1;
       while (start < high) {
         const middle = (start + high) >>> 1;
-        if (skip(leaves[middle], (sizes[middle] - 1) * 4)) {
+        if (skip(separators, middle * 4)) {
           start = middle + 1;
         } else {
           high = middle;
@@ -186,10 +206,90 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
    */
   public seekKey(key: ArrayLike<number>, length: number, after: boolean): IBTreeCursor {
     const cursor = this.start();
-    this.advance(cursor, after ?
-        (data, offset) => this.compare(data, offset, key, length) <= 0 :
-        (data, offset) => this.compare(data, offset, key, length) < 0);
+    this.seekForward(cursor, key, length, after);
     return cursor;
+  }
+
+  /**
+   * Whether the quad at `offset` in `data` comes before `key` on its first `length` components,
+   * or, if `after` is set, is equal to it on those.
+   * @param data A leaf or the separators.
+   * @param offset The offset of a quad within `data`.
+   * @param key An encoded quad or prefix of one.
+   * @param length The number of components to compare.
+   * @param after If a quad that is equal on those components counts as before.
+   */
+  private precedes(data: Int32Array, offset: number, key: ArrayLike<number>, length: number, after: boolean): boolean {
+    for (let i = 0; i < length; i++) {
+      const left = data[offset + i];
+      const right = key[i];
+      if (left !== right) {
+        return this.termOrder.before(left, right);
+      }
+    }
+    return after;
+  }
+
+  /**
+   * Move a cursor forward to the first quad whose first `length` components are not before those of `key`,
+   * or, if `after` is set, to the first quad after all quads with those components.
+   * This does what {@link RdfStoreIndexBTree#advance} does for such a condition, without a callback.
+   * @param cursor The cursor to move.
+   * @param key An encoded quad or prefix of one.
+   * @param length The number of components to compare.
+   * @param after If the cursor must be placed after the quads with those components.
+   */
+  public seekForward(cursor: IBTreeCursor, key: ArrayLike<number>, length: number, after: boolean): void {
+    const leafCount = this.leaves.length;
+    let leaf = cursor.leaf;
+    if (leaf >= leafCount || !this.precedes(this.leaves[leaf], cursor.offset * 4, key, length, after)) {
+      return;
+    }
+
+    const separators = this.separators;
+    if (this.precedes(separators, leaf * 4, key, length, after)) {
+      let low = leaf;
+      let step = 1;
+      let high = leaf + 1;
+      while (high < leafCount && this.precedes(separators, high * 4, key, length, after)) {
+        low = high;
+        step *= 2;
+        high = low + step;
+      }
+      if (high > leafCount) {
+        high = leafCount;
+      }
+      let start = low + 1;
+      while (start < high) {
+        const middle = (start + high) >>> 1;
+        if (this.precedes(separators, middle * 4, key, length, after)) {
+          start = middle + 1;
+        } else {
+          high = middle;
+        }
+      }
+      leaf = start;
+      if (leaf === leafCount) {
+        cursor.leaf = leafCount;
+        cursor.offset = 0;
+        return;
+      }
+      cursor.offset = 0;
+    }
+
+    const data = this.leaves[leaf];
+    let low = cursor.offset;
+    let high = this.sizes[leaf] - 1;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (this.precedes(data, middle * 4, key, length, after)) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    cursor.leaf = leaf;
+    cursor.offset = low;
   }
 
   /**
@@ -219,11 +319,75 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
     if (from.leaf === to.leaf) {
       return to.offset - from.offset;
     }
-    let distance = this.sizes[from.leaf] - from.offset;
-    for (let leaf = from.leaf + 1; leaf < to.leaf; leaf++) {
-      distance += this.sizes[leaf];
+    return this.position(to) - this.position(from);
+  }
+
+  /**
+   * The number of quads before a cursor.
+   * @param cursor A cursor.
+   */
+  public position(cursor: IBTreeCursor): number {
+    const leaf = cursor.leaf;
+    if (leaf >= this.leaves.length) {
+      return this.quadCount;
     }
-    return distance + to.offset;
+    const starts = this.starts;
+    const sizes = this.sizes;
+    for (let i = this.startsValid; i <= leaf; i++) {
+      starts[i] = starts[i - 1] + sizes[i - 1];
+    }
+    if (this.startsValid <= leaf) {
+      this.startsValid = leaf + 1;
+    }
+    return starts[leaf] + cursor.offset;
+  }
+
+  /**
+   * Mark the quad counts before the leaves from the given one onwards as outdated.
+   * @param leaf A leaf index above zero, as nothing ever precedes the first leaf.
+   */
+  private invalidateStarts(leaf: number): void {
+    if (leaf < this.startsValid) {
+      this.startsValid = leaf;
+    }
+  }
+
+  /**
+   * Copy the last quad of a leaf into the separators.
+   * @param leaf A non-empty leaf index.
+   */
+  private updateSeparator(leaf: number): void {
+    const from = (this.sizes[leaf] - 1) * 4;
+    this.separators.set(this.leaves[leaf].subarray(from, from + 4), leaf * 4);
+  }
+
+  /**
+   * Make room in the separators for a leaf that is inserted at the given index.
+   * @param leaf The index of the new leaf.
+   */
+  private insertSeparator(leaf: number): void {
+    const used = (this.leaves.length - 1) * 4;
+    if (used + 4 > this.separators.length) {
+      const grown = new Int32Array(this.separators.length * 2);
+      grown.set(this.separators);
+      this.separators = grown;
+    }
+    this.separators.copyWithin((leaf + 1) * 4, leaf * 4, used);
+  }
+
+  /**
+   * Rebuild all separators, for after the leaves have been replaced.
+   */
+  private rebuildSeparators(): void {
+    const leafCount = this.leaves.length;
+    this.separators = new Int32Array(leafCount * 4);
+    for (let leaf = 0; leaf < leafCount; leaf++) {
+      if (this.sizes[leaf] > 0) {
+        this.updateSeparator(leaf);
+      }
+    }
+    this.starts = [ 0 ];
+    this.startsValid = 1;
   }
 
   /**
@@ -250,8 +414,11 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
         }
       }
     }
-    const key = start.slice(startOffset, startOffset + length);
-    this.advance(cursor, (leaf, leafOffset) => this.compare(leaf, leafOffset, key, length) <= 0);
+    const key = this.seekScratch;
+    for (let i = 0; i < length; i++) {
+      key[i] = start[startOffset + i];
+    }
+    this.seekForward(cursor, key, length, true);
   }
 
   /**
@@ -305,13 +472,12 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
 
       if (target !== undefined) {
         // Jump to where that term would start under the current prefix.
-        const key: number[] = [];
+        const key = this.seekScratch;
         for (let i = 0; i < mismatch; i++) {
-          key.push(data[offset + i]);
+          key[i] = data[offset + i];
         }
-        key.push(target);
-        const length = mismatch + 1;
-        this.advance(cursor, (leaf, leafOffset) => this.compare(leaf, leafOffset, key, length) < 0);
+        key[mismatch] = target;
+        this.seekForward(cursor, key, mismatch + 1, false);
       } else if (mismatch < leading) {
         // Everything after this is past a prefix that the pattern fixes.
         cursor.leaf = leafCount;
@@ -319,7 +485,12 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
         return false;
       } else {
         // The sought term is not under the current prefix, so move on to the next prefix.
-        this.skipGroup(cursor, mismatch);
+        // That group was entered at the sought term, so it rarely ends within a few quads.
+        const key = this.seekScratch;
+        for (let i = 0; i < mismatch; i++) {
+          key[i] = data[offset + i];
+        }
+        this.seekForward(cursor, key, mismatch, true);
       }
     }
   }
@@ -411,6 +582,10 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
       this.leaves.splice(leaf + 1, 0, right);
       this.sizes.splice(leaf + 1, 0, size - half);
       this.sizes[leaf] = half;
+      this.insertSeparator(leaf + 1);
+      this.updateSeparator(leaf);
+      this.updateSeparator(leaf + 1);
+      this.invalidateStarts(leaf + 1);
       if (offset > half) {
         leaf++;
         offset -= half;
@@ -424,6 +599,10 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
     data[(offset * 4) + 2] = key[2];
     data[(offset * 4) + 3] = key[3];
     this.sizes[leaf] = size + 1;
+    if (offset === size) {
+      this.updateSeparator(leaf);
+    }
+    this.invalidateStarts(leaf + 1);
   }
 
   public remove(key: EncodedQuadTerms<number>): boolean {
@@ -442,7 +621,11 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
     if (size === 1 && this.leaves.length > 1) {
       this.leaves.splice(leaf, 1);
       this.sizes.splice(leaf, 1);
+      this.separators.copyWithin(leaf * 4, (leaf + 1) * 4, (this.leaves.length + 1) * 4);
+    } else if (cursor.offset === size - 1 && size > 1) {
+      this.updateSeparator(leaf);
     }
+    this.invalidateStarts(leaf + 1);
     this.quadCount--;
     this.version++;
     return true;
@@ -521,6 +704,7 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
 
     this.leaves = merged;
     this.sizes = mergedSizes;
+    this.rebuildSeparators();
     this.quadCount += added;
     this.version++;
     return added;
@@ -682,6 +866,15 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
     }
     if (levels.length === 0) {
       return this.quadCount;
+    }
+    const leading = RdfStoreIndexBTree.leadingLevels(levels, candidates);
+    if (leading === levels.length) {
+      // The pattern fixes a prefix, whose quads are contiguous.
+      const key = <number[]> ids;
+      const from = this.seekKey(key, leading, false);
+      const to = { leaf: from.leaf, offset: from.offset };
+      this.seekForward(to, key, leading, true);
+      return this.distance(from, to);
     }
     return this.countGroups(ids, levels, levels.at(-1)! + 1, candidates);
   }
