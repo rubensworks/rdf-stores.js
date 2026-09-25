@@ -81,8 +81,8 @@ export interface IRdfStoreIndex<TE, TV> {
   termOrder?: TermOrder;
   /**
    * Add many quads at once, which may be much cheaper than setting them one by one.
-   * This adds to the quads that are already present, as calling set for each quad would: nothing is removed,
-   * and quads that are already present, or occur more than once in `keys`, are only kept once.
+   * This adds to the quads that are already present,
+   * and can not result in duplicates.
    * `keys` is not modified, and is not retained after this returns.
    * @param keys Encoded quads in the component order of this index, four entries per quad.
    * @param count The number of quads in `keys`.
