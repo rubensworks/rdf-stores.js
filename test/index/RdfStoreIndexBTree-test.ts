@@ -74,7 +74,29 @@ describe('RdfStoreIndexBTree', () => {
     return [ ids, patternTerms ];
   }
 
+  /**
+   * Check that the separators hold the last quad of every leaf, and that positions count the quads before them.
+   * @param leafToCheck If set, only the position of this leaf is checked, which leaves the others outdated.
+   */
+  function checkStructure(leafToCheck?: number): void {
+    const separators: Int32Array = (<any> index).separators;
+    let before = 0;
+    for (let leaf = 0; leaf < index.leaves.length; leaf++) {
+      const size = index.sizes[leaf];
+      if (size > 0) {
+        expect([ ...separators.subarray(leaf * 4, (leaf * 4) + 4) ])
+          .toEqual([ ...index.leaves[leaf].subarray((size - 1) * 4, size * 4) ]);
+      }
+      if (leafToCheck === undefined || leafToCheck === leaf) {
+        expect(index.position({ leaf, offset: 0 })).toBe(before);
+      }
+      before += size;
+    }
+    expect(index.position({ leaf: index.leaves.length, offset: 0 })).toBe(index.size);
+  }
+
   function checkAgainstReference(): void {
+    checkStructure();
     expect(index.size).toBe(reference.count([ undefined, undefined, undefined, undefined ]));
     const all = [ ...index.findEncoded([ undefined, undefined, undefined, undefined ], <any> [ undefined ]) ];
     expect(all).toEqual(sorted(all));
@@ -125,6 +147,9 @@ describe('RdfStoreIndexBTree', () => {
       const quad = randomQuad();
       expect(index.set(quad, true)).toBe(reference.set(quad, true));
       inserted.push(quad);
+      if (i % 250 === 0) {
+        checkStructure(Math.floor(next() * index.leaves.length));
+      }
     }
     expect(index.leaves.length).toBeGreaterThan(8);
     checkAgainstReference();
@@ -132,6 +157,9 @@ describe('RdfStoreIndexBTree', () => {
       const quad = inserted[Math.floor(next() * inserted.length)];
       expect(index.remove(quad)).toBe(reference.remove(quad));
       expect(index.getEncoded(quad)).toBe(reference.getEncoded(quad));
+      if (i % 250 === 0) {
+        checkStructure(Math.floor(next() * index.leaves.length));
+      }
     }
     checkAgainstReference();
   });
@@ -283,6 +311,15 @@ describe('RdfStoreIndexBTree', () => {
     const first = randomQuad();
     index.set(first, true);
     expect([ ...iterator ]).toHaveLength(index.size);
+  });
+
+  it('stays usable after an empty batch into an empty index', () => {
+    expect(index.setAll(new Int32Array(0), 0)).toBe(0);
+    expect(index.size).toBe(0);
+    const quad = randomQuad();
+    expect(index.set(quad, true)).toBe(true);
+    expect(index.getEncoded(quad)).toBe(true);
+    expect(index.count([ undefined, undefined, undefined, undefined ])).toBe(1);
   });
 
   it('counts a prefix that spans many leaves', () => {

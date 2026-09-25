@@ -669,6 +669,8 @@ new RdfStore<number>({
     mergeThreshold: 32,
     // Optional: quads checked one by one when skipping a group, before searching instead
     linearProbes: 8,
+    // Optional: the fraction of a leaf that batches fill new leaves up to
+    leafFill: 0.9,
   }),
   dictionary,
   dataFactory: new DataFactory(),
