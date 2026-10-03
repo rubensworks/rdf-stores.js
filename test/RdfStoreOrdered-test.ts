@@ -3,8 +3,8 @@ import { DataFactory } from 'rdf-data-factory';
 import type { QuadTermName } from 'rdf-terms';
 import { TermDictionaryNumberRecordFullTerms } from '../lib/dictionary/TermDictionaryNumberRecordFullTerms';
 import { TermDictionaryQuotedIndexed } from '../lib/dictionary/TermDictionaryQuotedIndexed';
-import { RdfStoreIndexBTree } from '../lib/index/RdfStoreIndexBTree';
 import { RdfStoreIndexNestedMapQuoted } from '../lib/index/RdfStoreIndexNestedMapQuoted';
+import { RdfStoreIndexSortedBlocks } from '../lib/index/RdfStoreIndexSortedBlocks';
 import { RdfStore } from '../lib/RdfStore';
 import 'jest-rdf';
 
@@ -31,7 +31,7 @@ function createStore(indexCombinations?: QuadTermName[][]): RdfStore<number> {
       [ 'graph', 'object', 'subject', 'predicate' ],
       [ 'graph', 'predicate', 'object', 'subject' ],
     ],
-    indexConstructor: subOptions => new RdfStoreIndexBTree(subOptions),
+    indexConstructor: subOptions => new RdfStoreIndexSortedBlocks(subOptions),
     indexNodes: true,
     dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms()),
     dataFactory: new DataFactory(),
