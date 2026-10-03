@@ -64,8 +64,9 @@ export interface ISortedBlocksCandidates {
  * An RDF store index that keeps its quads in a sorted array split into fixed-capacity blocks (leaves),
  * each of which holds a sorted run of quads as a flat Int32Array.
  *
- * This is not a B-tree: the block directory is a single unbounded array, with no separator keys or
- * minimum occupancy. A full leaf is split in two, and leaves are only removed when they become empty.
+ * This is inspired by concepts of the B-tree, but there are some key differences.
+ * Our block here directory is a single unbounded array, with no separator keys or
+ * minimum occupancy. And our full leaf is split in two, and leaves are only removed when they become empty.
  *
  * Quads are ordered lexicographically on the order of their terms, which a shared {@link TermOrder}
  * defines. Scans therefore produce sorted results, can skip ahead to a term with a binary search,
