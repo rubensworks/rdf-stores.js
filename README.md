@@ -129,7 +129,7 @@ const added = store.addQuads([
 ]);
 ```
 
-If every index supports batches, as [`RdfStoreIndexBTree`](#createdefault-vs-createordered) does,
+If every index supports batches, as [`RdfStoreIndexSortedBlocks`](#createdefault-vs-createordered) does,
 the quads are sorted once per index and merged in, which is much faster than adding them one by one.
 Otherwise, this is the same as calling `addQuad` for each of them.
 
@@ -193,7 +193,7 @@ result.on('end', () => {
 });
 ```
 
-If every index supports batches, as [`RdfStoreIndexBTree`](#createdefault-vs-createordered) does,
+If every index supports batches, as [`RdfStoreIndexSortedBlocks`](#createdefault-vs-createordered) does,
 the quads are collected while the stream flows, and inserted as a single batch (like [`addQuads`](#addquads)) when it ends.
 They only become visible in the store at that point.
 The store listens for the end of the stream before `import` returns,
@@ -594,7 +594,7 @@ This library implements different approaches for storing indexes.
 * `RdfStoreIndexNestedRecordQuoted`: Stores quads inside nested `Record` objects, and supports quoted triples.
 * `RdfStoreIndexNestedMap`: Stores quads inside nested `Map` objects. (**Fastest querying**)
 * `RdfStoreIndexNestedMapQuoted`: Stores quads inside nested `Map` objects, and supports quoted triples. (**Fastest querying and ingestion for quoted triples**)
-* `RdfStoreIndexBTree`: Stores quads sorted in a B+tree of packed integer arrays, and supports quoted triples. (**Ordered scans that can skip ahead, and compact for data with many distinct terms**) See [`createDefault` vs `createOrdered`](#createdefault-vs-createordered).
+* `RdfStoreIndexSortedBlocks`: Stores quads in a sorted array of packed integers split into fixed-capacity blocks, and supports quoted triples. This is inspired by concepts of the B-Tree, but optimized for in-memory storage. (**Ordered scans that can skip ahead, and compact for data with many distinct terms**) See [`createDefault` vs `createOrdered`](#createdefault-vs-createordered).
 
 The following types also exist, but are mainly for illustration purposes,
 as they are always outperformed by other approaches:
@@ -617,7 +617,7 @@ but with a different index type:
 
 |                                              | `createDefault()`                           | `createOrdered()`                                                  |
 |----------------------------------------------|---------------------------------------------|--------------------------------------------------------------------|
-| Index type                                   | `RdfStoreIndexNestedMapQuoted` (nested `Map` objects) | `RdfStoreIndexBTree` (sorted leaves of packed 32-bit integers) |
+| Index type                                   | `RdfStoreIndexNestedMapQuoted` (nested `Map` objects) | `RdfStoreIndexSortedBlocks` (sorted leaves of packed 32-bit integers) |
 | Memory                                       | Grows with the number of distinct terms: 420 MB for WatDiv (1.1M triples) | 16 bytes per quad per index: 111 MB for WatDiv |
 | Loading a batch with `import` or `addQuads` | Quad by quad: 7.8s for WatDiv               | Sorted once and merged in: 5.1s for WatDiv                         |
 | Adding quads one by one                      | Faster                                      | Slower: each insert shifts quads within a leaf                     |
@@ -632,7 +632,7 @@ So `createOrdered` suits data that is loaded in bulk and then mainly queried,
 especially by engines that can make use of sorted results, such as merge joins.
 `createDefault` remains the better choice for stores that are filled incrementally while being queried.
 
-Components that `RdfStoreIndexBTree` has to match after an unbound one are matched with a skip-scan, which jumps over non-matching ranges.
+Components that `RdfStoreIndexSortedBlocks` has to match after an unbound one are matched with a skip-scan, which jumps over non-matching ranges.
 It requires a dictionary that encodes terms as 32-bit integers, which all bundled number dictionaries do.
 Quoted triple patterns are matched inside the index when the dictionary supports quoted triples, such as `TermDictionaryQuotedIndexed`.
 
@@ -662,7 +662,7 @@ which also allows tuning the index, although its defaults should rarely need cha
 const dictionary = new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms());
 new RdfStore<number>({
   indexCombinations: RdfStore.DEFAULT_INDEX_COMBINATIONS,
-  indexConstructor: subOptions => new RdfStoreIndexBTree(subOptions, {
+  indexConstructor: subOptions => new RdfStoreIndexSortedBlocks(subOptions, {
     // Optional: the maximum number of quads per leaf
     leafCapacity: 512,
     // Optional: batches with fewer than 1 in this many of the quads in the index are inserted one by one
@@ -724,19 +724,19 @@ Experimental results show the following:
   Most scopes use data with only a few hundred distinct terms, which nested indexes store compactly.
   The entities scope has about as many distinct terms as triples, as real data tends to:
   2M triples about 131072 entities, each with a distinct value for each of 16 properties.
-* On the data with few distinct terms, `RdfStoreIndexBTree` scans patterns with one or two variables about as fast as the nested indexes,
+* On the data with few distinct terms, `RdfStoreIndexSortedBlocks` scans patterns with one or two variables about as fast as the nested indexes,
   but is 1.7 to 2 times slower on lookups without variables, 1.5 to 3 times slower on ingestion (also when adding in batches),
   and 2 to 3 times slower on finding and counting distinct terms of one or two components.
   It holds 2M triples in 109 MB, between `RdfStoreIndexNestedRecordQuoted` (67 MB) and `RdfStoreIndexNestedMapQuoted` (183 MB).
-* On the entities data, `RdfStoreIndexBTree` holds the 2M triples in 609 MB, against 2126 MB for `RdfStoreIndexNestedMapQuoted`
+* On the entities data, `RdfStoreIndexSortedBlocks` holds the 2M triples in 609 MB, against 2126 MB for `RdfStoreIndexNestedMapQuoted`
   and 2883 MB for `RdfStoreIndexNestedRecordQuoted`, and loads them in a batch in 9.1s, against 9.9s and 15.5s.
   It counts the triples of a property with a few binary searches instead of a walk over them (13ms against 17s for 1024 counts),
   and reads the triples of a property in the order of their values without sorting them (0.6s against 1.1s).
-* Adding the entities data one quad at a time to `RdfStoreIndexBTree` is slow (2 minutes), because every new term that finds no room
+* Adding the entities data one quad at a time to `RdfStoreIndexSortedBlocks` is slow (2 minutes), because every new term that finds no room
   between the labels of its neighbours in the term order makes all terms be relabelled. So for data with many distinct terms,
   load in batches through `import` or `addQuads`, or use nested indexes for stores that are filled one quad at a time.
 * On real data, loading WatDiv (1.1M triples) through `import` into 3 indexes with node indexing takes 111 MB and 5.1s including parsing
-  with `RdfStoreIndexBTree`, against 420 MB and 7.8s for `RdfStoreIndexNestedMapQuoted`.
+  with `RdfStoreIndexSortedBlocks`, against 420 MB and 7.8s for `RdfStoreIndexNestedMapQuoted`.
 
 These conclusions are drawn from the measurements of the command `node --expose-gc perf/run.js -d 128 -o` (part of this repository).
 With `--expose-gc`, memory usage is the heap and off-heap memory in use after garbage collection, which is what the store holds.
@@ -1074,7 +1074,7 @@ The measurements below were taken on a single machine with Node.js 22:
 - Counting the 1024 distinct predicate-object pairs of one graph 1024 times: 12.916ms
 
 
-# 3 BTree indexes with indexed quoted dict (number) OPT-BULK
+# 3 sorted-blocks indexes with indexed quoted dict (number) OPT-BULK
 
 - Adding 2097152 triples to the default graph: 3.391s
 * Memory usage for triples: 109MB
@@ -1123,7 +1123,7 @@ The measurements below were taken on a single machine with Node.js 22:
 - Counting the 1024 distinct predicate-object pairs of one graph 1024 times: 15.094ms
 
 
-# 3 BTree indexes with indexed quoted dict (number), added one by one
+# 3 sorted-blocks indexes with indexed quoted dict (number), added one by one
 
 - Adding 2097152 triples to the default graph: 6.132s
 * Memory usage for triples: 165MB

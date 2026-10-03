@@ -15,8 +15,8 @@ import type { ITermDictionary } from './dictionary/ITermDictionary';
 import { TermDictionaryNumberRecordFullTerms } from './dictionary/TermDictionaryNumberRecordFullTerms';
 import { TermDictionaryQuotedIndexed } from './dictionary/TermDictionaryQuotedIndexed';
 import type { IRdfStoreIndex } from './index/IRdfStoreIndex';
-import { RdfStoreIndexBTree } from './index/RdfStoreIndexBTree';
 import { RdfStoreIndexNestedMapQuoted } from './index/RdfStoreIndexNestedMapQuoted';
+import { RdfStoreIndexSortedBlocks } from './index/RdfStoreIndexSortedBlocks';
 import type { IRdfStoreOptions } from './IRdfStoreOptions';
 import {
   encodeAndExtendFilters,
@@ -101,7 +101,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
   } = {}): RdfStore<number> {
     return new RdfStore<number>({
       indexCombinations: options.indexCombinations ?? RdfStore.DEFAULT_INDEX_COMBINATIONS,
-      indexConstructor: subOptions => new RdfStoreIndexBTree(subOptions),
+      indexConstructor: subOptions => new RdfStoreIndexSortedBlocks(subOptions),
       indexNodes: options.nodes,
       dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms()),
       dataFactory: new DataFactory(),
@@ -171,7 +171,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * before it plans around one. The order a given pattern actually gets is the entry for the index that
    * serves it, with the components the pattern binds removed, since those do not vary across the scan.
    *
-   * Only ordered indexes, such as {@link RdfStoreIndexBTree}, are listed: the others iterate in insertion
+   * Only ordered indexes, such as {@link RdfStoreIndexSortedBlocks}, are listed: the others iterate in insertion
    * order, so a scan of them has no useful order at all.
    */
   public get indexOrders(): QuadTermName[][] {

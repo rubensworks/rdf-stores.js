@@ -7,9 +7,9 @@ import 'jest-rdf';
 import type { ITermDictionary } from '../../lib/dictionary/ITermDictionary';
 import { TermDictionaryNumberRecordFullTerms } from '../../lib/dictionary/TermDictionaryNumberRecordFullTerms';
 import { TermDictionaryQuotedIndexed } from '../../lib/dictionary/TermDictionaryQuotedIndexed';
-import { RdfStoreIndexBTree } from '../../lib/index/RdfStoreIndexBTree';
 import { RdfStoreIndexNestedMap } from '../../lib/index/RdfStoreIndexNestedMap';
 import { RdfStoreIndexNestedMapQuoted } from '../../lib/index/RdfStoreIndexNestedMapQuoted';
+import { RdfStoreIndexSortedBlocks } from '../../lib/index/RdfStoreIndexSortedBlocks';
 import type { EncodedQuadTerms, QuadPatternTerms } from '../../lib/PatternTerm';
 import { RdfStore } from '../../lib/RdfStore';
 import { defaultTermComparator, TermOrder } from '../../lib/TermOrder';
@@ -30,9 +30,9 @@ function random(seed: number): () => number {
   };
 }
 
-describe('RdfStoreIndexBTree', () => {
+describe('RdfStoreIndexSortedBlocks', () => {
   let dictionary: ITermDictionary<number>;
-  let index: RdfStoreIndexBTree;
+  let index: RdfStoreIndexSortedBlocks;
   let reference: RdfStoreIndexNestedMap<number, boolean>;
   let next: () => number;
   let terms: RDF.Term[];
@@ -108,7 +108,7 @@ describe('RdfStoreIndexBTree', () => {
 
   beforeEach(() => {
     dictionary = new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms());
-    index = new RdfStoreIndexBTree(options());
+    index = new RdfStoreIndexSortedBlocks(options());
     reference = new RdfStoreIndexNestedMap(options());
     next = random(42);
     terms = [];
@@ -154,7 +154,7 @@ describe('RdfStoreIndexBTree', () => {
 
   it('matches a nested-map index with other tuning options', () => {
     // Tiny leaves split and empty constantly, and without probes every group is skipped by searching.
-    index = new RdfStoreIndexBTree(options(), { leafCapacity: 4, mergeThreshold: 2, linearProbes: 0 });
+    index = new RdfStoreIndexSortedBlocks(options(), { leafCapacity: 4, mergeThreshold: 2, linearProbes: 0 });
     const inserted: EncodedQuadTerms<number>[] = [];
     for (let i = 0; i < 1000; i++) {
       const quad = randomQuad();
@@ -338,9 +338,9 @@ describe('RdfStoreIndexBTree', () => {
   });
 });
 
-describe('RdfStoreIndexBTree with quoted triples', () => {
+describe('RdfStoreIndexSortedBlocks with quoted triples', () => {
   let dictionary: ITermDictionary<number>;
-  let index: RdfStoreIndexBTree;
+  let index: RdfStoreIndexSortedBlocks;
   let reference: RdfStoreIndexNestedMapQuoted<number, boolean>;
   let next: () => number;
   let plain: RDF.NamedNode[];
@@ -381,7 +381,7 @@ describe('RdfStoreIndexBTree with quoted triples', () => {
 
   beforeEach(() => {
     dictionary = new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms());
-    index = new RdfStoreIndexBTree(options());
+    index = new RdfStoreIndexSortedBlocks(options());
     reference = new RdfStoreIndexNestedMapQuoted(options());
     next = random(3);
     plain = Array.from({ length: 30 }, (_, i) => DF.namedNode(`ex:t${(i * 37) % 30}`));
@@ -404,7 +404,7 @@ describe('RdfStoreIndexBTree with quoted triples', () => {
 
   it('supports quoted triple filtering with a quoted dictionary', () => {
     expect(index.features.quotedTripleFiltering).toBe(true);
-    expect(new RdfStoreIndexBTree(<any> {
+    expect(new RdfStoreIndexSortedBlocks(<any> {
       dictionary: new TermDictionaryNumberRecordFullTerms(),
     }).features.quotedTripleFiltering).toBe(false);
   });

@@ -1,10 +1,14 @@
 import type { EncodedQuadTerms } from '../PatternTerm';
-import type { IBTreeCandidates, IBTreeCursor, RdfStoreIndexBTree } from './RdfStoreIndexBTree';
+import type {
+  ISortedBlocksCandidates,
+  ISortedBlocksCursor,
+  RdfStoreIndexSortedBlocks,
+} from './RdfStoreIndexSortedBlocks';
 
 const DONE = <IteratorResult<never>> { value: undefined, done: true };
 
 /**
- * Iterates over the quads of a {@link RdfStoreIndexBTree} that match a pattern, in index order.
+ * Iterates over the quads of a {@link RdfStoreIndexSortedBlocks} that match a pattern, in index order.
  *
  * Components that the pattern binds after an unbound one are matched with a skip-scan: a quad that
  * does not match makes the scan jump ahead with a binary search rather than read on.
@@ -12,13 +16,13 @@ const DONE = <IteratorResult<never>> { value: undefined, done: true };
  * The index may change while this iterates. The iterator then relocates itself after the last quad
  * it produced, so it neither repeats nor loses quads that were there all along.
  */
-export class RdfStoreIndexBTreeIterator implements IterableIterator<EncodedQuadTerms<number>> {
-  private readonly index: RdfStoreIndexBTree;
+export class RdfStoreIndexSortedBlocksIterator implements IterableIterator<EncodedQuadTerms<number>> {
+  private readonly index: RdfStoreIndexSortedBlocks;
   private readonly ids: (number | undefined)[];
   private readonly levels: number[];
   private readonly leading: number;
-  private readonly candidates: (IBTreeCandidates | undefined)[] | undefined;
-  private cursor: IBTreeCursor;
+  private readonly candidates: (ISortedBlocksCandidates | undefined)[] | undefined;
+  private cursor: ISortedBlocksCursor;
   private version: number;
   private last: EncodedQuadTerms<number> | undefined;
   private done = false;
@@ -31,11 +35,11 @@ export class RdfStoreIndexBTreeIterator implements IterableIterator<EncodedQuadT
    * @param candidates For levels with a quoted triple pattern, the quoted triples it matches.
    */
   public constructor(
-    index: RdfStoreIndexBTree,
+    index: RdfStoreIndexSortedBlocks,
     ids: (number | undefined)[],
     levels: number[],
     leading: number,
-    candidates?: (IBTreeCandidates | undefined)[],
+    candidates?: (ISortedBlocksCandidates | undefined)[],
   ) {
     this.index = index;
     this.ids = ids;

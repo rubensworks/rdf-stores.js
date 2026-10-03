@@ -8,13 +8,13 @@ import { TermDictionaryQuoted } from '../lib/dictionary/TermDictionaryQuoted';
 import { TermDictionaryQuotedIndexed } from '../lib/dictionary/TermDictionaryQuotedIndexed';
 import { TermDictionaryQuotedReferential } from '../lib/dictionary/TermDictionaryQuotedReferential';
 import type { IRdfStoreIndex } from '../lib/index/IRdfStoreIndex';
-import { RdfStoreIndexBTree } from '../lib/index/RdfStoreIndexBTree';
 import { RdfStoreIndexNestedMap } from '../lib/index/RdfStoreIndexNestedMap';
 import { RdfStoreIndexNestedMapQuoted } from '../lib/index/RdfStoreIndexNestedMapQuoted';
 import { RdfStoreIndexNestedMapRecursive } from '../lib/index/RdfStoreIndexNestedMapRecursive';
 import { RdfStoreIndexNestedMapRecursiveQuoted } from '../lib/index/RdfStoreIndexNestedMapRecursiveQuoted';
 import { RdfStoreIndexNestedRecord } from '../lib/index/RdfStoreIndexNestedRecord';
 import { RdfStoreIndexNestedRecordQuoted } from '../lib/index/RdfStoreIndexNestedRecordQuoted';
+import { RdfStoreIndexSortedBlocks } from '../lib/index/RdfStoreIndexSortedBlocks';
 import type { IRdfStoreOptions } from '../lib/IRdfStoreOptions';
 
 export const indexClazzToInstance: Record<string, (subOptions: IRdfStoreOptions<number>) =>
@@ -31,8 +31,8 @@ IRdfStoreIndex<number, boolean>> = {
     (subOptions: IRdfStoreOptions<number>) => new RdfStoreIndexNestedRecord<number, boolean>(subOptions),
   RdfStoreIndexNestedRecordQuoted:
     (subOptions: IRdfStoreOptions<number>) => new RdfStoreIndexNestedRecordQuoted<number, boolean>(subOptions),
-  RdfStoreIndexBTree:
-    (subOptions: IRdfStoreOptions<number>) => new RdfStoreIndexBTree(subOptions),
+  RdfStoreIndexSortedBlocks:
+    (subOptions: IRdfStoreOptions<number>) => new RdfStoreIndexSortedBlocks(subOptions),
 };
 
 export const indexSupportsQuotedTriples: [ string, boolean ][] = [
@@ -42,7 +42,7 @@ export const indexSupportsQuotedTriples: [ string, boolean ][] = [
   [ 'RdfStoreIndexNestedMapRecursiveQuoted', true ],
   [ 'RdfStoreIndexNestedRecord', false ],
   [ 'RdfStoreIndexNestedRecordQuoted', true ],
-  [ 'RdfStoreIndexBTree', true ],
+  [ 'RdfStoreIndexSortedBlocks', true ],
 ];
 
 export const dictClazzToInstance: Record<string, () => ITermDictionary<number>> = {

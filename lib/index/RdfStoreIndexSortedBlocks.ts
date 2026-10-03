@@ -5,14 +5,14 @@ import { computeEndDepth, encodeOptionalTerms, isPatternQuoted } from '../OrderU
 import type { EncodedQuadTerms, QuadPatternTerms, QuadTerms } from '../PatternTerm';
 import { TermOrder } from '../TermOrder';
 import type { IRdfStoreIndex } from './IRdfStoreIndex';
-import { RdfStoreIndexBTreeIterator } from './RdfStoreIndexBTreeIterator';
 import { EMPTY_QUAD_ITERATOR, RdfStoreIndexSingleQuadIterator } from './RdfStoreIndexNestedMapIterator';
+import { RdfStoreIndexSortedBlocksIterator } from './RdfStoreIndexSortedBlocksIterator';
 
 /**
- * Tuning options for {@link RdfStoreIndexBTree}.
+ * Tuning options for {@link RdfStoreIndexSortedBlocks}.
  * The defaults come from a parameter sweep over WatDiv (1.1M triples), and should rarely need changing.
  */
-export interface IRdfStoreIndexBTreeOptions {
+export interface IRdfStoreIndexSortedBlocksOptions {
   /**
    * The maximum number of quads per leaf.
    * Larger leaves make scans and memory use more compact, but make every single insert shift more quads.
@@ -41,7 +41,7 @@ export interface IRdfStoreIndexBTreeOptions {
  * A position within the leaves of an index.
  * A leaf index equal to the number of leaves means the end has been reached.
  */
-export interface IBTreeCursor {
+export interface ISortedBlocksCursor {
   leaf: number;
   offset: number;
 }
@@ -49,7 +49,7 @@ export interface IBTreeCursor {
 /**
  * The quoted triples that a quoted triple pattern at some level of an index can match.
  */
-export interface IBTreeCandidates {
+export interface ISortedBlocksCandidates {
   /**
    * The encodings of the matching quoted triples.
    */
@@ -61,20 +61,24 @@ export interface IBTreeCandidates {
 }
 
 /**
- * An RDF store index that keeps its quads sorted, in a B+tree of height two:
- * a directory of fixed-size leaves, each of which holds a sorted run of quads as a flat Int32Array.
+ * An RDF store index that keeps its quads in a sorted array split into fixed-capacity blocks (leaves),
+ * each of which holds a sorted run of quads as a flat Int32Array.
+ *
+ * This is inspired by concepts of the B-tree, but there are some key differences.
+ * Our block here directory is a single unbounded array, with no separator keys or
+ * minimum occupancy. And our full leaf is split in two, and leaves are only removed when they become empty.
  *
  * Quads are ordered lexicographically on the order of their terms, which a shared {@link TermOrder}
  * defines. Scans therefore produce sorted results, can skip ahead to a term with a binary search,
  * and count a range without visiting it.
  *
- * Inserting one quad costs a binary search and a shift within one leaf. {@link RdfStoreIndexBTree#setAll}
+ * Inserting one quad costs a binary search and a shift within one leaf. {@link RdfStoreIndexSortedBlocks#setAll}
  * inserts many quads at once by sorting them a single time and merging them into the leaves.
  *
  * Only dictionaries that encode to 32-bit integers are supported, and values are not stored:
  * every quad in the index maps to `true`.
  */
-export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
+export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean> {
   public readonly features: { quotedTripleFiltering: boolean };
 
   public readonly termOrder: TermOrder;
@@ -105,7 +109,7 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
    * @param options The store options.
    * @param indexOptions Tuning options for this index.
    */
-  public constructor(options: IRdfStoreOptions<number>, indexOptions: IRdfStoreIndexBTreeOptions = {}) {
+  public constructor(options: IRdfStoreOptions<number>, indexOptions: IRdfStoreIndexSortedBlocksOptions = {}) {
     this.leafCapacity = indexOptions.leafCapacity ?? 512;
     this.mergeThreshold = indexOptions.mergeThreshold ?? 32;
     this.linearProbes = indexOptions.linearProbes ?? 8;
@@ -149,7 +153,7 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
    * @param cursor The cursor to move.
    * @param skip Whether the quad at an offset within a leaf must be skipped.
    */
-  public advance(cursor: IBTreeCursor, skip: (data: Int32Array, offset: number) => boolean): void {
+  public advance(cursor: ISortedBlocksCursor, skip: (data: Int32Array, offset: number) => boolean): void {
     const leaves = this.leaves;
     const sizes = this.sizes;
     const leafCount = leaves.length;
@@ -211,7 +215,7 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
    * @param length The number of components to compare.
    * @param after If the cursor must instead be placed after all quads with those components.
    */
-  public seekKey(key: ArrayLike<number>, length: number, after: boolean): IBTreeCursor {
+  public seekKey(key: ArrayLike<number>, length: number, after: boolean): ISortedBlocksCursor {
     const cursor = this.start();
     this.advance(cursor, after ?
         (data, offset) => this.compare(data, offset, key, length) <= 0 :
@@ -222,7 +226,7 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
   /**
    * A cursor at the first quad, or at the end if the index is empty.
    */
-  public start(): IBTreeCursor {
+  public start(): ISortedBlocksCursor {
     return { leaf: this.sizes[0] === 0 ? this.leaves.length : 0, offset: 0 };
   }
 
@@ -230,7 +234,7 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
    * Move the cursor to the next quad.
    * @param cursor A cursor that is not at the end.
    */
-  public step(cursor: IBTreeCursor): void {
+  public step(cursor: ISortedBlocksCursor): void {
     if (++cursor.offset >= this.sizes[cursor.leaf]) {
       cursor.leaf++;
       cursor.offset = 0;
@@ -242,7 +246,7 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
    * @param from The first cursor.
    * @param to A cursor at or after the first one.
    */
-  public distance(from: IBTreeCursor, to: IBTreeCursor): number {
+  public distance(from: ISortedBlocksCursor, to: ISortedBlocksCursor): number {
     if (from.leaf === to.leaf) {
       return to.offset - from.offset;
     }
@@ -261,7 +265,7 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
    * @param cursor A cursor that is not at the end.
    * @param length The number of components that define the group.
    */
-  public skipGroup(cursor: IBTreeCursor, length: number): void {
+  public skipGroup(cursor: ISortedBlocksCursor, length: number): void {
     const start = this.leaves[cursor.leaf];
     const startOffset = cursor.offset * 4;
     for (let probe = 0; probe < this.linearProbes; probe++) {
@@ -293,11 +297,11 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
    * @return boolean If a matching quad was found, rather than the end.
    */
   public nextMatch(
-    cursor: IBTreeCursor,
+    cursor: ISortedBlocksCursor,
     ids: ArrayLike<number | undefined>,
     levels: number[],
     leading: number,
-    candidates?: (IBTreeCandidates | undefined)[],
+    candidates?: (ISortedBlocksCandidates | undefined)[],
   ): boolean {
     const leafCount = this.leaves.length;
     for (;;) {
@@ -377,11 +381,11 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
    * @return The candidates per level, undefined if no level holds a quoted triple pattern,
    *         or null if some quoted triple pattern matches nothing.
    */
-  protected quotedCandidates(terms: QuadPatternTerms): (IBTreeCandidates | undefined)[] | undefined | null {
+  protected quotedCandidates(terms: QuadPatternTerms): (ISortedBlocksCandidates | undefined)[] | undefined | null {
     if (!this.features.quotedTripleFiltering) {
       return undefined;
     }
-    let candidates: (IBTreeCandidates | undefined)[] | undefined;
+    let candidates: (ISortedBlocksCandidates | undefined)[] | undefined;
     for (let level = 0; level < 4; level++) {
       const term = terms[level];
       if (isPatternQuoted(term)) {
@@ -696,8 +700,8 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
         levels.push(i);
       }
     }
-    const leading = RdfStoreIndexBTree.leadingLevels(levels, candidates);
-    return new RdfStoreIndexBTreeIterator(this, ids, levels, leading, candidates);
+    const leading = RdfStoreIndexSortedBlocks.leadingLevels(levels, candidates);
+    return new RdfStoreIndexSortedBlocksIterator(this, ids, levels, leading, candidates);
   }
 
   public count(terms: QuadPatternTerms): number {
@@ -738,9 +742,9 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
     ids: ArrayLike<number | undefined>,
     levels: number[],
     groupLength: number,
-    candidates?: (IBTreeCandidates | undefined)[],
+    candidates?: (ISortedBlocksCandidates | undefined)[],
   ): number {
-    const leading = RdfStoreIndexBTree.leadingLevels(levels, candidates);
+    const leading = RdfStoreIndexSortedBlocks.leadingLevels(levels, candidates);
     const cursor = this.start();
     let count = 0;
     while (this.nextMatch(cursor, ids, levels, leading, candidates)) {
@@ -756,7 +760,7 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
    * @param levels Bound levels in ascending order.
    * @param candidates For levels with a quoted triple pattern, the quoted triples it matches.
    */
-  public static leadingLevels(levels: number[], candidates?: (IBTreeCandidates | undefined)[]): number {
+  public static leadingLevels(levels: number[], candidates?: (ISortedBlocksCandidates | undefined)[]): number {
     let leading = 0;
     while (leading < levels.length && levels[leading] === leading && candidates?.[leading] === undefined) {
       leading++;
@@ -778,13 +782,13 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
 
   public* findTerms(matchTerms: boolean[], filterTerms?: (number | undefined)[]): IterableIterator<number[]> {
     const endDepth = computeEndDepth(matchTerms, filterTerms);
-    const levels = RdfStoreIndexBTree.filterLevels(endDepth, filterTerms);
+    const levels = RdfStoreIndexSortedBlocks.filterLevels(endDepth, filterTerms);
     for (const level of levels) {
       if (this.termOrder.label(filterTerms![level]!) === 0) {
         return;
       }
     }
-    const leading = RdfStoreIndexBTree.leadingLevels(levels);
+    const leading = RdfStoreIndexSortedBlocks.leadingLevels(levels);
     const length = matchTerms.length;
     const ids = filterTerms ?? [];
     let cursor = this.start();
@@ -824,13 +828,13 @@ export class RdfStoreIndexBTree implements IRdfStoreIndex<number, boolean> {
 
   private countTermsUncached(matchTerms: boolean[], filterTerms?: (number | undefined)[]): number {
     const endDepth = computeEndDepth(matchTerms, filterTerms);
-    const levels = RdfStoreIndexBTree.filterLevels(endDepth, filterTerms);
+    const levels = RdfStoreIndexSortedBlocks.filterLevels(endDepth, filterTerms);
     for (const level of levels) {
       if (this.termOrder.label(filterTerms![level]!) === 0) {
         return 0;
       }
     }
-    const leading = RdfStoreIndexBTree.leadingLevels(levels);
+    const leading = RdfStoreIndexSortedBlocks.leadingLevels(levels);
     const length = matchTerms.length;
     const ids = filterTerms ?? [];
     const cursor = this.start();
