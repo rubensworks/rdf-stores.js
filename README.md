@@ -594,7 +594,7 @@ This library implements different approaches for storing indexes.
 * `RdfStoreIndexNestedRecordQuoted`: Stores quads inside nested `Record` objects, and supports quoted triples.
 * `RdfStoreIndexNestedMap`: Stores quads inside nested `Map` objects. (**Fastest querying**)
 * `RdfStoreIndexNestedMapQuoted`: Stores quads inside nested `Map` objects, and supports quoted triples. (**Fastest querying and ingestion for quoted triples**)
-* `RdfStoreIndexSortedBlocks`: Stores quads in a sorted array of packed integers split into fixed-capacity blocks, and supports quoted triples. (**Ordered scans that can skip ahead, and compact for data with many distinct terms**) See [`createDefault` vs `createOrdered`](#createdefault-vs-createordered).
+* `RdfStoreIndexSortedBlocks`: Stores quads in a sorted array of packed integers split into fixed-capacity blocks, and supports quoted triples. This is inspired by concepts of the B-Tree, but optimized for in-memory storage. (**Ordered scans that can skip ahead, and compact for data with many distinct terms**) See [`createDefault` vs `createOrdered`](#createdefault-vs-createordered).
 
 The following types also exist, but are mainly for illustration purposes,
 as they are always outperformed by other approaches:
