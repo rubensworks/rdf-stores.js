@@ -5,6 +5,7 @@ import { TermDictionaryNumberRecordFullTerms } from '../lib/dictionary/TermDicti
 import { TermDictionaryQuotedIndexed } from '../lib/dictionary/TermDictionaryQuotedIndexed';
 import { RdfStoreIndexNestedMapQuoted } from '../lib/index/RdfStoreIndexNestedMapQuoted';
 import { RdfStoreIndexSortedBlocks } from '../lib/index/RdfStoreIndexSortedBlocks';
+import { getBestIndex } from '../lib/OrderUtils';
 import { RdfStore } from '../lib/RdfStore';
 import 'jest-rdf';
 
@@ -140,6 +141,30 @@ describe('resultOrder', () => {
     expect(orderOf(V('s'), N('p'), V('o'))).toEqual([ 'subject', 'object' ]);
     expect(orderOf(V('s'), N('p'), N('o001'))).toEqual([ 'subject' ]);
     expect(orderOf(N('s001'), V('p'), V('o'))).toEqual([ 'predicate', 'object' ]);
+  });
+
+  it('has subject order for the patterns that star joins use in a store from createOrdered', () => {
+    const store = RdfStore.createOrdered();
+    fill(store, [ 1 ]);
+    expect(store.indexOrders).toEqual(RdfStore.ORDERED_INDEX_COMBINATIONS);
+    const orderOf = (subject: any, predicate: any, object: any): any =>
+      (<any> store.matchBindings(BF, subject, predicate, object, DG)).resultOrder;
+    expect(orderOf(V('s'), V('p'), V('o'))).toEqual([ 'subject', 'object', 'predicate' ]);
+    expect(orderOf(V('s'), N('p'), V('o'))).toEqual([ 'subject', 'object' ]);
+    expect(orderOf(V('s'), N('p'), N('o001'))).toEqual([ 'subject' ]);
+    expect(orderOf(N('s001'), V('p'), V('o'))).toEqual([ 'object', 'predicate' ]);
+    expect(orderOf(V('s'), V('p'), N('o001'))).toEqual([ 'predicate', 'subject' ]);
+  });
+
+  it('has an index in a store from createOrdered of which the bound components of any pattern are a prefix', () => {
+    const indexOf = (subject?: any, predicate?: any, object?: any): number =>
+      getBestIndex(RdfStore.ORDERED_INDEX_COMBINATIONS, [ subject, predicate, object, DG ]);
+    expect(indexOf(N('s'))).toBe(0);
+    expect(indexOf(N('s'), undefined, N('o'))).toBe(0);
+    expect(indexOf(undefined, N('p'))).toBe(1);
+    expect(indexOf(N('s'), N('p'))).toBe(1);
+    expect(indexOf(undefined, undefined, N('o'))).toBe(2);
+    expect(indexOf(undefined, N('p'), N('o'))).toBe(2);
   });
 
   it('puts the object first when only an object-before-subject index is available', () => {

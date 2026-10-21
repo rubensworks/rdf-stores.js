@@ -44,6 +44,17 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     [ 'graph', 'object', 'subject', 'predicate' ],
   ];
 
+  /**
+   * The index combinations of {@link RdfStore#createOrdered}.
+   * Like with the default ones, the bound components of any pattern are a prefix of one of them.
+   */
+  // eslint-disable-next-line ts/naming-convention
+  public static readonly ORDERED_INDEX_COMBINATIONS: QuadTermName[][] = [
+    [ 'graph', 'subject', 'object', 'predicate' ],
+    [ 'graph', 'predicate', 'subject', 'object' ],
+    [ 'graph', 'object', 'predicate', 'subject' ],
+  ];
+
   public readonly options: IRdfStoreOptions<TE, TQ>;
   public readonly dataFactory: RDF.DataFactory<TQ>;
   public readonly dictionary: ITermDictionary<TE>;
@@ -89,8 +100,8 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
 
   /**
    * Create an RDF store whose indexes keep their quads sorted, so that scans produce ordered results
-   * and can skip ahead. Stores quads in GSPO, GPOS, and GOSP order by default, like
-   * {@link RdfStore#createDefault}.
+   * and can skip ahead. Stores quads in GSOP, GPSO, and GOPS order by default,
+   * see {@link RdfStore#ORDERED_INDEX_COMBINATIONS}.
    * @param options Optional settings.
    * @param options.termComparator The order to keep terms in, which defaults to {@link defaultTermComparator}.
    * @param options.indexCombinations The component orders of the indexes to create.
@@ -102,7 +113,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     nodes?: true;
   } = {}): RdfStore<number> {
     return new RdfStore<number>({
-      indexCombinations: options.indexCombinations ?? RdfStore.DEFAULT_INDEX_COMBINATIONS,
+      indexCombinations: options.indexCombinations ?? RdfStore.ORDERED_INDEX_COMBINATIONS,
       indexConstructor: subOptions => new RdfStoreIndexSortedBlocks(subOptions),
       indexNodes: options.nodes,
       dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms()),
