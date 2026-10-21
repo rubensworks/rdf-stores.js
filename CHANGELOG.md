@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+<a name="v2.8.0"></a>
+## [v2.8.0](https://github.com/rubensworks/rdf-stores.js/compare/v2.7.0...v2.8.0) - 2026-10-21
+
+### Changed
+* [Use GSOP, GPSO, GOPS for createOrdered](https://github.com/rubensworks/rdf-stores.js/commit/adfd0f400844400bc8e6bb39c25a43be371b7071)
+* [Speed up distinct terms when no index has the filtered components first](https://github.com/rubensworks/rdf-stores.js/commit/a98880dd84e5257bb7c811763d0421d23943ff63)
+
 <a name="v2.7.0"></a>
 ## [v2.7.0](https://github.com/rubensworks/rdf-stores.js/compare/v2.6.0...v2.7.0) - 2026-10-05
 
