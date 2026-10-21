@@ -299,7 +299,7 @@ The orders a scan of this store can come back in, one entry per ordered index:
 
 ```typescript
 console.log(store.indexOrders);
-// [ [ 'graph', 'subject', 'predicate', 'object' ], [ 'graph', 'predicate', 'object', 'subject' ], ... ]
+// [ [ 'graph', 'subject', 'object', 'predicate' ], [ 'graph', 'predicate', 'subject', 'object' ], ... ]
 ```
 
 This is empty for stores without ordered indexes, since the other indexes iterate in insertion order.
@@ -612,14 +612,15 @@ For example, the following will use `RdfStoreIndexNestedRecord` for all indexes:
 
 ### `createDefault` vs `createOrdered`
 
-`RdfStore.createDefault()` and `RdfStore.createOrdered()` create stores with the same index combinations (`GSPO`, `GPOS`, `GOSP`), dictionary and data factory,
-but with a different index type:
+`RdfStore.createDefault()` and `RdfStore.createOrdered()` create stores with the same dictionary and data factory,
+but with a different index type and index combinations:
 
 |                                              | `createDefault()`                           | `createOrdered()`                                                  |
 |----------------------------------------------|---------------------------------------------|--------------------------------------------------------------------|
 | Index type                                   | `RdfStoreIndexNestedMapQuoted` (nested `Map` objects) | `RdfStoreIndexSortedBlocks` (sorted leaves of packed 32-bit integers) |
-| Memory                                       | Grows with the number of distinct terms: 420 MB for WatDiv (1.1M triples) | 16 bytes per quad per index: 111 MB for WatDiv |
-| Loading a batch with `import` or `addQuads` | Quad by quad: 7.8s for WatDiv               | Sorted once and merged in: 5.1s for WatDiv                         |
+| Index combinations                           | `GSPO`, `GPOS`, `GOSP`                      | `GSOP`, `GPSO`, `GOPS`, see `RdfStore.ORDERED_INDEX_COMBINATIONS` |
+| Memory                                       | Grows with the number of distinct terms: 418 MB for WatDiv (1.1M triples) | 16 bytes per quad per index: 111 MB for WatDiv |
+| Loading a batch with `import` or `addQuads` | Quad by quad: 6.6s for WatDiv               | Sorted once and merged in: 4.2s for WatDiv                         |
 | Adding quads one by one                      | Faster                                      | Slower: each insert shifts quads within a leaf                     |
 | Order of results                             | Insertion order                             | Sorted on the term order, reported by [`resultOrder`](#resultorder-and-seekto) |
 | Skipping ahead in results                    | Not supported                               | [`seekTo`](#resultorder-and-seekto)                                 |
@@ -627,6 +628,11 @@ but with a different index type:
 | Counting quads of a pattern                  | Walks the matching maps                     | A few binary searches for bound prefixes                           |
 | Finding and counting distinct terms          | Read off map sizes                          | 2 to 3 times slower: walks the range, and caches counts until the store changes |
 | Quoted triples                               | Supported                                   | Supported                                                          |
+
+With both sets, the bound components of any pattern are a prefix of one of the indexes, so every pattern is a range in an index.
+`createOrdered` focuses on the orders that are most useful for merge joins.
+However, not all interesting orders are available, to save on memory usage.
+Adding a `GPOS` index would make more orders available, at the cost of a third more memory for the indexes and a higher ingestion time.
 
 So `createOrdered` suits data that is loaded in bulk and then mainly queried,
 especially by engines that can make use of sorted results, such as merge joins.
@@ -644,9 +650,9 @@ which is defined by the `termComparator` option, and defaults to ordering on ter
 const store = RdfStore.createOrdered({
   // Optional: the order to keep terms in
   termComparator: (termA, termB) => termA.value.localeCompare(termB.value) || termA.termType.localeCompare(termB.termType),
-  // Optional: defaults to GSPO, GPOS, GOSP
+  // Optional: defaults to RdfStore.ORDERED_INDEX_COMBINATIONS (GSOP, GPSO, GOPS)
   indexCombinations: [
-    [ 'graph', 'predicate', 'subject', 'object' ],
+    [ 'graph', 'subject', 'predicate', 'object' ],
     [ 'graph', 'predicate', 'object', 'subject' ],
     [ 'graph', 'object', 'subject', 'predicate' ],
   ],
@@ -735,8 +741,9 @@ Experimental results show the following:
 * Adding the entities data one quad at a time to `RdfStoreIndexSortedBlocks` is slow (2 minutes), because every new term that finds no room
   between the labels of its neighbours in the term order makes all terms be relabelled. So for data with many distinct terms,
   load in batches through `import` or `addQuads`, or use nested indexes for stores that are filled one quad at a time.
-* On real data, loading WatDiv (1.1M triples) through `import` into 3 indexes with node indexing takes 111 MB and 5.1s including parsing
-  with `RdfStoreIndexSortedBlocks`, against 420 MB and 7.8s for `RdfStoreIndexNestedMapQuoted`.
+* On real data, loading WatDiv (1.1M triples) through `import` with node indexing takes 111 MB and 4.2s including parsing
+  into the 3 `RdfStoreIndexSortedBlocks` indexes of `createOrdered`,
+  against 418 MB and 6.6s into the 3 `RdfStoreIndexNestedMapQuoted` indexes of `createDefault`.
 
 These conclusions are drawn from the measurements of the command `node --expose-gc perf/run.js -d 128 -o` (part of this repository).
 With `--expose-gc`, memory usage is the heap and off-heap memory in use after garbage collection, which is what the store holds.

@@ -619,7 +619,7 @@ describe('RdfStore with ordered indexes', () => {
     expect(store.addQuads(new Set(quads.slice(0, 10)))).toBe(0);
     expect(store.addQuads([ DF.quad(DF.namedNode('ex:new'), DF.namedNode('ex:p'), DF.namedNode('ex:o')) ])).toBe(1);
     expect(store.size).toBe(reference.size + 1);
-    expect(store.indexOrders).toEqual(RdfStore.DEFAULT_INDEX_COMBINATIONS);
+    expect(store.indexOrders).toEqual(RdfStore.ORDERED_INDEX_COMBINATIONS);
   });
 
   it('adds quads one by one when an index can not take batches', async() => {
@@ -775,11 +775,11 @@ describe('RdfStore with ordered indexes', () => {
     }
     const iterator = <any> store
       .matchBindings(BF, DF.variable('s'), DF.namedNode('ex:p'), DF.variable('o'), DF.defaultGraph());
-    expect(iterator.resultOrder).toEqual([ 'object', 'subject' ]);
-    expect(iterator.read().get('o').value).toBe('0');
-    iterator.seekTo('object', DF.literal('500'));
-    expect(iterator.read().get('o').value).toBe('500');
-    iterator.seekTo('object', DF.literal('9999'));
+    expect(iterator.resultOrder).toEqual([ 'subject', 'object' ]);
+    expect(iterator.read().get('s').value).toBe('ex:s0000');
+    iterator.seekTo('subject', DF.namedNode('ex:s0500'));
+    expect(iterator.read().get('s').value).toBe('ex:s0500');
+    iterator.seekTo('subject', DF.namedNode('ex:s9999'));
     expect(iterator.read()).toBeNull();
   });
 });
