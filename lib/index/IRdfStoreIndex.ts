@@ -97,4 +97,21 @@ export interface IRdfStoreIndex<TE, TV> {
    * @param filterTerms An iterable of encoded pattern terms to filter by, ordered in the component order of this index.
    */
   countTerms: (matchTerms: boolean[], filterTerms?: EncodedQuadTerms<TE | undefined>) => number;
+  /**
+   * Like {@link #countTerms}, but counts every distinct array of terms once,
+   * also when the matched terms leave out a level that is not filtered.
+   * Present on indexes that can do this faster than deduplicating the results of {@link #findTerms}.
+   * @param matchTerms An array of booleans indicating which terms to match. Length may be shorter than 4.
+   * @param filterTerms An iterable of encoded pattern terms to filter by, ordered in the component order of this index.
+   */
+  countDistinctTerms?: (matchTerms: boolean[], filterTerms?: EncodedQuadTerms<TE | undefined>) => number;
+  /**
+   * Like {@link #findTerms}, but produces every distinct array of terms once,
+   * also when the matched terms leave out a level that is not filtered.
+   * Present on indexes that can do this faster than deduplicating the results of {@link #findTerms}.
+   * @param matchTerms An array of booleans indicating which terms to match. Length may be shorter than 4.
+   * @param filterTerms An iterable of encoded pattern terms to filter by, ordered in the component order of this index.
+   */
+  findDistinctTerms?: (matchTerms: boolean[], filterTerms?: EncodedQuadTerms<TE | undefined>) =>
+  IterableIterator<TE[]>;
 }

@@ -1,9 +1,16 @@
 import type * as RDF from '@rdfjs/types';
 import type { ITermDictionary } from '../dictionary/ITermDictionary';
 import type { IRdfStoreOptions } from '../IRdfStoreOptions';
-import { computeEndDepth, encodeOptionalTerms, isPatternQuoted } from '../OrderUtils';
+import {
+  computeEndDepth,
+  countDistinctEncodedTerms,
+  encodeOptionalTerms,
+  filterDistinctEncodedTerms,
+  isPatternQuoted,
+} from '../OrderUtils';
 import type { EncodedQuadTerms, QuadPatternTerms, QuadTerms } from '../PatternTerm';
 import { TermOrder } from '../TermOrder';
+import { EncodingSet } from './EncodingSet';
 import type { IRdfStoreIndex } from './IRdfStoreIndex';
 import { EMPTY_QUAD_ITERATOR, RdfStoreIndexSingleQuadIterator } from './RdfStoreIndexNestedMapIterator';
 import { RdfStoreIndexSortedBlocksIterator } from './RdfStoreIndexSortedBlocksIterator';
@@ -813,17 +820,106 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
   }
 
   public countTerms(matchTerms: boolean[], filterTerms?: (number | undefined)[]): number {
+    return this.countTermsCached(false, matchTerms, filterTerms);
+  }
+
+  public countDistinctTerms(matchTerms: boolean[], filterTerms?: (number | undefined)[]): number {
+    return this.countTermsCached(true, matchTerms, filterTerms);
+  }
+
+  public* findDistinctTerms(matchTerms: boolean[], filterTerms?: (number | undefined)[]): IterableIterator<number[]> {
+    const level = RdfStoreIndexSortedBlocks.singleMatchedLevel(matchTerms);
+    if (level === undefined) {
+      yield* filterDistinctEncodedTerms(this.findTerms(matchTerms, filterTerms));
+      return;
+    }
+    for (const encoding of this.findDistinctEncodings(level, matchTerms, filterTerms)) {
+      yield [ encoding ];
+    }
+  }
+
+  /**
+   * The only level that the given match terms match, if they match exactly one.
+   * @param matchTerms An array of booleans indicating which terms to match.
+   */
+  private static singleMatchedLevel(matchTerms: boolean[]): number | undefined {
+    const level = matchTerms.indexOf(true);
+    return level >= 0 && !matchTerms.includes(true, level + 1) ? level : undefined;
+  }
+
+  /**
+   * The distinct encodings at one level of the quads that match the filters, in order of first occurrence.
+   * @param level The level to read.
+   * @param matchTerms An array of booleans indicating which terms to match, of which only `level` is true.
+   * @param filterTerms Encoded terms to filter by, ordered in the component order of this index.
+   */
+  private findDistinctEncodings(level: number, matchTerms: boolean[], filterTerms?: (number | undefined)[]): number[] {
+    const endDepth = computeEndDepth(matchTerms, filterTerms);
+    const levels = RdfStoreIndexSortedBlocks.filterLevels(endDepth, filterTerms);
+    for (const filterLevel of levels) {
+      if (this.termOrder.label(filterTerms![filterLevel]!) === 0) {
+        return [];
+      }
+    }
+    const leading = RdfStoreIndexSortedBlocks.leadingLevels(levels);
+    const ids = filterTerms ?? [];
+    const seen = new EncodingSet();
+    const encodings: number[] = [];
+    if (leading === levels.length) {
+      // The filters bind a prefix, so the matching quads form one range that can be read without comparing them.
+      // The first `leading` filter terms are all defined.
+      const prefix = <number[]> ids;
+      const start = this.seekKey(prefix, leading, false);
+      const end = this.seekKey(prefix, leading, true);
+      let previous: number | undefined;
+      for (let leaf = start.leaf; leaf < this.leaves.length && leaf <= end.leaf; leaf++) {
+        const data = this.leaves[leaf];
+        const to = (leaf === end.leaf ? end.offset : this.sizes[leaf]) * 4;
+        for (let offset = (leaf === start.leaf ? start.offset : 0) * 4 + level; offset < to; offset += 4) {
+          const encoding = data[offset];
+          // Neighbouring quads often share the encoding, which is cheaper to check than the set.
+          if (encoding !== previous) {
+            previous = encoding;
+            if (seen.add(encoding)) {
+              encodings.push(encoding);
+            }
+          }
+        }
+      }
+    } else {
+      const cursor = this.start();
+      while (this.nextMatch(cursor, ids, levels, leading)) {
+        const encoding = this.leaves[cursor.leaf][cursor.offset * 4 + level];
+        if (seen.add(encoding)) {
+          encodings.push(encoding);
+        }
+        this.skipGroup(cursor, level + 1);
+      }
+    }
+    return encodings;
+  }
+
+  private countTermsCached(distinct: boolean, matchTerms: boolean[], filterTerms?: (number | undefined)[]): number {
     if (this.termCountsVersion !== this.version) {
       this.termCounts.clear();
       this.termCountsVersion = this.version;
     }
-    const cacheKey = `${matchTerms.join(',')}|${filterTerms?.join(',') ?? ''}`;
+    const cacheKey = `${distinct}|${matchTerms.join(',')}|${filterTerms?.join(',') ?? ''}`;
     let count = this.termCounts.get(cacheKey);
     if (count === undefined) {
-      count = this.countTermsUncached(matchTerms, filterTerms);
+      count = distinct ?
+        this.countDistinctTermsUncached(matchTerms, filterTerms) :
+        this.countTermsUncached(matchTerms, filterTerms);
       this.termCounts.set(cacheKey, count);
     }
     return count;
+  }
+
+  private countDistinctTermsUncached(matchTerms: boolean[], filterTerms?: (number | undefined)[]): number {
+    const level = RdfStoreIndexSortedBlocks.singleMatchedLevel(matchTerms);
+    return level === undefined ?
+      countDistinctEncodedTerms(this.findTerms(matchTerms, filterTerms)) :
+      this.findDistinctEncodings(level, matchTerms, filterTerms).length;
   }
 
   private countTermsUncached(matchTerms: boolean[], filterTerms?: (number | undefined)[]): number {
