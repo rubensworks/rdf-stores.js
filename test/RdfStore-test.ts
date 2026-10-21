@@ -2691,16 +2691,13 @@ describe('RdfStore', () => {
       ));
     });
 
-    it('should materialise terms when a component before the term is unbound', () => {
+    it('should count distinct encoded terms when a component before the term is unbound', () => {
       const spy = jest.spyOn(defaultStore, 'getDistinctTerms');
       expect(defaultStore.countDistinctTerms(
         [ 'object' ],
         [ DF.namedNode('s1'), undefined, undefined, undefined ],
       )).toBe(3);
-      expect(spy).toHaveBeenCalledWith(
-        [ 'object' ],
-        [ DF.namedNode('s1'), undefined, undefined, undefined ],
-      );
+      expect(spy).not.toHaveBeenCalled();
     });
   });
 

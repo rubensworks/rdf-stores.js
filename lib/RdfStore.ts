@@ -19,8 +19,10 @@ import { RdfStoreIndexNestedMapQuoted } from './index/RdfStoreIndexNestedMapQuot
 import { RdfStoreIndexSortedBlocks } from './index/RdfStoreIndexSortedBlocks';
 import type { IRdfStoreOptions } from './IRdfStoreOptions';
 import {
+  countDistinctEncodedTerms,
   encodeAndExtendFilters,
   encodeOptionalTerms,
+  filterDistinctEncodedTerms,
   getBestIndexLookupTable,
   getBestIndexTerms,
   getComponentOrderPermutation,
@@ -852,7 +854,9 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     // Ensure distinctness: a depth that is neither counted nor pinned to a single term by a filter
     // fans out over the index, which would count the same term once per branch it occurs in
     if (matchTerms.some((matched, i) => !matched && filterTermsEncoded?.[i] === undefined)) {
-      return this.getDistinctTerms(terms, filters).length;
+      return indexWrapped.index.countDistinctTerms ?
+        indexWrapped.index.countDistinctTerms(matchTerms, filterTermsEncoded) :
+        countDistinctEncodedTerms(indexWrapped.index.findTerms(matchTerms, filterTermsEncoded));
     }
 
     // Call the best index's count method
@@ -877,8 +881,9 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     terms: QuadTermName[],
     filters?: (RDF.Term | undefined)[],
   ): IterableIterator<RDF.Term[]> {
-    // Determine the best index for this pattern
-    const bestIndex = getBestIndexTerms(this.indexesWrappedComponentOrders, terms);
+    // Determine the best index for this pattern, taking into account the components the filters bind,
+    // as those must be matched before the terms can be read off the index
+    const bestIndex = getBestIndexTerms(this.indexesWrappedComponentOrders, terms, filters);
     const indexWrapped = this.indexesWrapped[bestIndex];
 
     // Order terms, and keep index for fast inverse ordering during decoding
@@ -911,42 +916,20 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
       ({ filterTermsEncoded, matchTerms } = encodedFilters);
     }
 
-    // Ensure distinctness (this can only occur when insufficient indexes are available,
-    // or when filters go beyond match depths)
-    // Distinctness is tracked on the *encoded* terms, in a trie of nested Maps.
-    // Dictionaries encode every distinct term to a distinct value, so this is equivalent to
-    // comparing the string representations of the decoded terms, but needs no string building at all.
-    let distinctTerms: Map<TE, any> | undefined;
-    if (matchTerms.includes(false)) {
-      // TODO: if the first index level (e.g. graph) has just one term, distinctness is already guaranteed and we can
-      //  skip this step. Also applies to countDistinctTerms.
-      distinctTerms = new Map<TE, any>();
+    // Ensure distinctness: a depth that is neither read nor pinned to a single term by a filter
+    // fans out over the index, which would produce the same terms once per branch they occur in
+    const index = indexWrapped.index;
+    let foundTerms: IterableIterator<TE[]>;
+    if (matchTerms.some((matched, i) => !matched && filterTermsEncoded?.[i] === undefined)) {
+      foundTerms = index.findDistinctTerms ?
+        index.findDistinctTerms(matchTerms, filterTermsEncoded) :
+        filterDistinctEncodedTerms(index.findTerms(matchTerms, filterTermsEncoded));
+    } else {
+      foundTerms = index.findTerms(matchTerms, filterTermsEncoded);
     }
 
     const dictionary = this.dictionary;
-
-    // Call the best index's find method
-    for (const readTerms of indexWrapped.index.findTerms(matchTerms, filterTermsEncoded)) {
-      // Filter to ensure distinct terms are returned
-      if (distinctTerms) {
-        const lastI = readTerms.length - 1;
-        let node = distinctTerms;
-        for (let i = 0; i < lastI; i++) {
-          // eslint-disable-next-line ts/no-unsafe-assignment
-          let subNode = node.get(readTerms[i]);
-          if (subNode === undefined) {
-            subNode = new Map<TE, any>();
-            node.set(readTerms[i], subNode);
-          }
-          // eslint-disable-next-line ts/no-unsafe-assignment
-          node = subNode;
-        }
-        if (node.has(readTerms[lastI])) {
-          continue;
-        }
-        node.set(readTerms[lastI], true);
-      }
-
+    for (const readTerms of foundTerms) {
       // Decode terms, inversing the term ordering along the way.
       // The results are pushed in output order so that a packed array is built in one pass.
       const decodedTerms: RDF.Term[] = [];

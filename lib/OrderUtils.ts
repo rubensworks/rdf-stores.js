@@ -409,3 +409,44 @@ export function encodeAndExtendFilters<TE>(
 
   return { filterTermsEncoded, matchTerms };
 }
+
+/**
+ * Produce the distinct arrays of encoded terms, such as the ones an index finds, in order of first occurrence.
+ * Dictionaries encode distinct terms to distinct values, so this needs no decoding.
+ * Distinctness is tracked in a trie of nested Maps.
+ * @param termsIterator Arrays of encoded terms, which all have the same length.
+ */
+export function* filterDistinctEncodedTerms<TE>(termsIterator: Iterable<TE[]>): IterableIterator<TE[]> {
+  const root = new Map<TE, any>();
+  for (const terms of termsIterator) {
+    const lastI = terms.length - 1;
+    let node = root;
+    for (let i = 0; i < lastI; i++) {
+      // eslint-disable-next-line ts/no-unsafe-assignment
+      let subNode = node.get(terms[i]);
+      if (subNode === undefined) {
+        subNode = new Map<TE, any>();
+        node.set(terms[i], subNode);
+      }
+      // eslint-disable-next-line ts/no-unsafe-assignment
+      node = subNode;
+    }
+    if (!node.has(terms[lastI])) {
+      node.set(terms[lastI], true);
+      yield terms;
+    }
+  }
+}
+
+/**
+ * Count the distinct arrays of encoded terms, such as the ones an index finds.
+ * @param termsIterator Arrays of encoded terms, which all have the same length.
+ */
+export function countDistinctEncodedTerms<TE>(termsIterator: Iterable<TE[]>): number {
+  let count = 0;
+  const distinct = filterDistinctEncodedTerms(termsIterator);
+  while (!distinct.next().done) {
+    count++;
+  }
+  return count;
+}

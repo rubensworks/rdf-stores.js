@@ -3,6 +3,7 @@ import { BindingsFactory } from '@comunica/utils-bindings-factory';
 import type * as RDF from '@rdfjs/types';
 import { DataFactory } from 'rdf-data-factory';
 import { termToString } from 'rdf-string';
+import type { QuadTermName } from 'rdf-terms';
 import 'jest-rdf';
 import type { ITermDictionary } from '../../lib/dictionary/ITermDictionary';
 import { TermDictionaryNumberRecordFullTerms } from '../../lib/dictionary/TermDictionaryNumberRecordFullTerms';
@@ -666,6 +667,105 @@ describe('RdfStore with ordered indexes', () => {
         .toEqual(toStrings(reference.getBindings(BF, subject, predicate, object, DF.defaultGraph())));
     }
     expect(ordered.countQuads(DF.variable('s'), DF.namedNode('says'), patterns[0][2])).toBe(2);
+  });
+
+  describe('distinct terms without an index that has the filtered components first', () => {
+    // GPSO is the only index that starts with the predicate, so objects of a predicate repeat across subjects.
+    const indexCombinations: QuadTermName[][] = [
+      [ 'graph', 'subject', 'object', 'predicate' ],
+      [ 'graph', 'predicate', 'subject', 'object' ],
+      [ 'graph', 'object', 'predicate', 'subject' ],
+    ];
+    let store: RdfStore<number>;
+    let reference: RdfStore<number>;
+    const p1 = DF.namedNode('ex:p1');
+    const filters = [ undefined, p1, undefined, DF.defaultGraph() ];
+    const values = (terms: RDF.Term[][]): string[] => terms.map(([ term ]) => term.value).sort();
+
+    beforeEach(() => {
+      store = RdfStore.createOrdered({ indexCombinations });
+      reference = RdfStore.createDefault();
+      for (let i = 0; i < 600; i++) {
+        const quad = DF.quad(DF.namedNode(`ex:s${i % 37}`), DF.namedNode(`ex:p${i % 3}`), DF.literal(`${i % 53}`));
+        store.addQuad(quad);
+        reference.addQuad(quad);
+      }
+    });
+
+    it('counts them like a store that has such an index', () => {
+      expect(store.countDistinctTerms([ 'object' ], filters)).toBe(reference.countDistinctTerms([ 'object' ], filters));
+      expect(store.countDistinctTerms([ 'object' ], filters)).toBe(53);
+      expect(store.countDistinctTerms([ 'graph', 'predicate', 'object' ], filters)).toBe(53);
+    });
+
+    it('counts them from the index that has the filtered components first', () => {
+      const index = <RdfStoreIndexSortedBlocks> store.indexesWrapped[1].index;
+      const countDistinctTerms = jest.spyOn(index, 'countDistinctTerms');
+      expect(store.countDistinctTerms([ 'object' ], filters)).toBe(53);
+      expect(countDistinctTerms).toHaveBeenCalledTimes(1);
+    });
+
+    it('caches counts until the store changes', () => {
+      const index = <RdfStoreIndexSortedBlocks> store.indexesWrapped[1].index;
+      const seekKey = jest.spyOn(index, 'seekKey');
+      expect(store.countDistinctTerms([ 'object' ], filters)).toBe(53);
+      const seeks = seekKey.mock.calls.length;
+      expect(store.countDistinctTerms([ 'object' ], filters)).toBe(53);
+      expect(seekKey).toHaveBeenCalledTimes(seeks);
+      store.addQuad(DF.quad(DF.namedNode('ex:s0'), p1, DF.literal('new')));
+      expect(store.countDistinctTerms([ 'object' ], filters)).toBe(54);
+      expect(seekKey.mock.calls.length).toBeGreaterThan(seeks + 1);
+    });
+
+    it('does not share cached counts with non-distinct counts of the same arguments', () => {
+      const index = <RdfStoreIndexSortedBlocks> store.indexesWrapped[1].index;
+      const filterTerms = [ store.dictionary.encode(DF.defaultGraph()), store.dictionary.encode(p1) ];
+      expect(index.countTerms([ false, false, false, true ], filterTerms)).toBe(200);
+      expect(index.countDistinctTerms([ false, false, false, true ], filterTerms)).toBe(53);
+    });
+
+    it('reads them from the index that has the filtered components first', () => {
+      const index = <RdfStoreIndexSortedBlocks> store.indexesWrapped[1].index;
+      const findDistinctTerms = jest.spyOn(index, 'findDistinctTerms');
+      expect(values(store.getDistinctTerms([ 'object' ], filters)))
+        .toEqual(values(reference.getDistinctTerms([ 'object' ], filters)));
+      expect(findDistinctTerms).toHaveBeenCalledTimes(1);
+    });
+
+    it('reads and counts them when the filters do not bind a prefix of the index', () => {
+      // Without a graph, the predicate is not at the start of GPSO.
+      const unboundGraph = [ undefined, p1, undefined, undefined ];
+      expect(values(store.getDistinctTerms([ 'object' ], unboundGraph)))
+        .toEqual(values(reference.getDistinctTerms([ 'object' ], unboundGraph)));
+      expect(store.countDistinctTerms([ 'object' ], unboundGraph)).toBe(53);
+    });
+
+    it('reads and counts several distinct terms per result', () => {
+      const pairs = (terms: RDF.Term[][]): string[] => terms.map(([ left, right ]) => `${left.value} ${right.value}`).sort();
+      const unboundGraph = [ undefined, p1, undefined, undefined ];
+      expect(pairs(store.getDistinctTerms([ 'subject', 'object' ], unboundGraph)))
+        .toEqual(pairs(reference.getDistinctTerms([ 'subject', 'object' ], unboundGraph)));
+      expect(store.countDistinctTerms([ 'subject', 'object' ], unboundGraph)).toBe(200);
+    });
+
+    it('reads and counts the terms at one level of the whole index', () => {
+      const index = <RdfStoreIndexSortedBlocks> store.indexesWrapped[1].index;
+      expect([ ...index.findDistinctTerms([ false, false, false, true ]) ]).toHaveLength(53);
+      expect(index.countDistinctTerms([ false, false, false, true ])).toBe(53);
+    });
+
+    it('finds nothing for a filter term that is not in the index', () => {
+      const index = <RdfStoreIndexSortedBlocks> store.indexesWrapped[1].index;
+      const none = store.dictionary.encode(DF.namedNode('ex:none'));
+      const filterTerms = [ store.dictionary.encode(DF.defaultGraph()), none ];
+      expect([ ...index.findDistinctTerms([ false, false, false, true ], filterTerms) ]).toEqual([]);
+      expect(index.countDistinctTerms([ false, false, false, true ], filterTerms)).toBe(0);
+    });
+
+    it('finds nothing in an empty index', () => {
+      const index = <RdfStoreIndexSortedBlocks> RdfStore.createOrdered({ indexCombinations }).indexesWrapped[1].index;
+      expect([ ...index.findDistinctTerms([ false, false, false, true ]) ]).toEqual([]);
+    });
   });
 
   it('reports order and seeks within a scan', async() => {
