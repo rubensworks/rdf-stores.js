@@ -223,11 +223,42 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
    * @param after If the cursor must instead be placed after all quads with those components.
    */
   public seekKey(key: ArrayLike<number>, length: number, after: boolean): ISortedBlocksCursor {
-    const cursor = this.start();
-    this.advance(cursor, after ?
-        (data, offset) => this.compare(data, offset, key, length) <= 0 :
-        (data, offset) => this.compare(data, offset, key, length) < 0);
-    return cursor;
+    // Quads are skipped while they compare below this threshold to the key.
+    // This is a plain binary search, which avoids the callbacks of advance, as seeks are frequent.
+    const threshold = after ? 1 : 0;
+    const leaves = this.leaves;
+    const sizes = this.sizes;
+    if (sizes[0] === 0) {
+      return { leaf: leaves.length, offset: 0 };
+    }
+    // The first leaf of which the last quad is not skipped
+    let low = 0;
+    let high = leaves.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (this.compare(leaves[middle], (sizes[middle] - 1) * 4, key, length) < threshold) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    if (low === leaves.length) {
+      return { leaf: low, offset: 0 };
+    }
+    // The first quad in that leaf that is not skipped
+    const leaf = low;
+    const data = leaves[leaf];
+    low = 0;
+    high = sizes[leaf] - 1;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (this.compare(data, middle * 4, key, length) < threshold) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    return { leaf, offset: low };
   }
 
   /**
@@ -235,6 +266,15 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
    */
   public start(): ISortedBlocksCursor {
     return { leaf: this.sizes[0] === 0 ? this.leaves.length : 0, offset: 0 };
+  }
+
+  /**
+   * A cursor at the first quad that can match a pattern, which is the start of the range of its leading levels.
+   * @param ids The encoded terms of the pattern.
+   * @param leading The number of levels that are bound to a single term from the first one onwards without a gap.
+   */
+  public startMatch(ids: ArrayLike<number | undefined>, leading: number): ISortedBlocksCursor {
+    return leading > 0 ? this.seekKey(<ArrayLike<number>> ids, leading, false) : this.start();
   }
 
   /**
@@ -752,7 +792,7 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
     candidates?: (ISortedBlocksCandidates | undefined)[],
   ): number {
     const leading = RdfStoreIndexSortedBlocks.leadingLevels(levels, candidates);
-    const cursor = this.start();
+    const cursor = this.startMatch(ids, leading);
     let count = 0;
     while (this.nextMatch(cursor, ids, levels, leading, candidates)) {
       const from = { leaf: cursor.leaf, offset: cursor.offset };
@@ -798,7 +838,7 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
     const leading = RdfStoreIndexSortedBlocks.leadingLevels(levels);
     const length = matchTerms.length;
     const ids = filterTerms ?? [];
-    let cursor = this.start();
+    let cursor = this.startMatch(ids, leading);
     while (this.nextMatch(cursor, ids, levels, leading)) {
       const data = this.leaves[cursor.leaf];
       const offset = cursor.offset * 4;
@@ -887,7 +927,7 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
         }
       }
     } else {
-      const cursor = this.start();
+      const cursor = this.startMatch(ids, leading);
       while (this.nextMatch(cursor, ids, levels, leading)) {
         const encoding = this.leaves[cursor.leaf][cursor.offset * 4 + level];
         if (seen.add(encoding)) {
@@ -933,7 +973,7 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
     const leading = RdfStoreIndexSortedBlocks.leadingLevels(levels);
     const length = matchTerms.length;
     const ids = filterTerms ?? [];
-    const cursor = this.start();
+    const cursor = this.startMatch(ids, leading);
     let count = 0;
     while (this.nextMatch(cursor, ids, levels, leading)) {
       count++;

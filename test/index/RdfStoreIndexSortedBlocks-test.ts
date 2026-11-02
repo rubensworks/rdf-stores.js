@@ -153,6 +153,32 @@ describe('RdfStoreIndexSortedBlocks', () => {
     checkAgainstReference();
   });
 
+  it('seeks keys like a linear scan', () => {
+    index = new RdfStoreIndexSortedBlocks(options(), { leafCapacity: 4 });
+    for (let i = 0; i < 400; i++) {
+      index.set(randomQuad(), true);
+    }
+    const all = [ ...index.findEncoded([ undefined, undefined, undefined, undefined ], <any> [ undefined ]) ];
+    const position = (cursor: { leaf: number; offset: number }): number => index.distance(index.start(), cursor);
+    const keys = [ ...Array.from({ length: 60 }, () => randomQuad()), all[0], all.at(-1)!, [ -1, -1, -1, -1 ]];
+    for (const key of keys) {
+      for (let length = 1; length <= 4; length++) {
+        for (const after of [ false, true ]) {
+          const compare = (quad: number[]): number => index.compare(Int32Array.from(quad), 0, key, length);
+          let expected = all.findIndex(quad => after ? compare(quad) > 0 : compare(quad) >= 0);
+          if (expected < 0) {
+            expected = all.length;
+          }
+          expect(position(index.seekKey(key, length, after))).toBe(expected);
+        }
+      }
+    }
+  });
+
+  it('seeks to the end of an empty index', () => {
+    expect(index.seekKey([ 1, 2, 3, 4 ], 2, false)).toEqual({ leaf: index.leaves.length, offset: 0 });
+  });
+
   it('matches a nested-map index with other tuning options', () => {
     // Tiny leaves split and empty constantly, and without probes every group is skipped by searching.
     index = new RdfStoreIndexSortedBlocks(options(), { leafCapacity: 4, mergeThreshold: 2, linearProbes: 0 });
