@@ -7,6 +7,7 @@ import type { QuadTermName } from 'rdf-terms';
 import {
   matchPattern,
   QUAD_TERM_NAMES,
+  someTermsNested,
 } from 'rdf-terms';
 import { BindingsIterator } from './BindingsIterator';
 import { BindingsProducer, FilteringBindingsProducer } from './BindingsProducer';
@@ -78,6 +79,8 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
 
   // eslint-disable-next-line ts/naming-convention
   private _size = 0;
+  // eslint-disable-next-line ts/naming-convention
+  private _hasBlankNodes = false;
 
   public constructor(options: IRdfStoreOptions<TE, TQ>) {
     this.options = options;
@@ -255,11 +258,20 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
   }
 
   /**
+   * If a quad with a blank node, also within a quoted triple, was ever added to this store.
+   * Removing quads does not reset this, so if this is false, the store certainly contains no blank nodes.
+   */
+  public get hasBlankNodes(): boolean {
+    return this._hasBlankNodes;
+  }
+
+  /**
    * Add a quad to the store.
    * @param quad An RDF quad.
    * @return boolean If the quad was not yet present in the index.
    */
   public addQuad(quad: TQ): boolean {
+    this.checkBlankNodes(quad);
     const quadEncoded = [
       this.dictionary.encode(quad.subject),
       this.dictionary.encode(quad.predicate),
@@ -442,10 +454,21 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
   }
 
   private encodeInto(quad: TQ, buffer: Int32Array, offset: number): void {
+    this.checkBlankNodes(quad);
     buffer[offset] = <number> <unknown> this.dictionary.encode(quad.subject);
     buffer[offset + 1] = <number> <unknown> this.dictionary.encode(quad.predicate);
     buffer[offset + 2] = <number> <unknown> this.dictionary.encode(quad.object);
     buffer[offset + 3] = <number> <unknown> this.dictionary.encode(quad.graph);
+  }
+
+  /**
+   * Remember if the given quad has a blank node, also within a quoted triple.
+   * @param quad A quad that is being added.
+   */
+  private checkBlankNodes(quad: RDF.BaseQuad): void {
+    if (!this._hasBlankNodes && someTermsNested(quad, term => term.termType === 'BlankNode')) {
+      this._hasBlankNodes = true;
+    }
   }
 
   /**
