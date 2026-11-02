@@ -7,7 +7,6 @@ import type { QuadTermName } from 'rdf-terms';
 import {
   matchPattern,
   QUAD_TERM_NAMES,
-  someTermsNested,
 } from 'rdf-terms';
 import { BindingsIterator } from './BindingsIterator';
 import { BindingsProducer, FilteringBindingsProducer } from './BindingsProducer';
@@ -466,7 +465,8 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * @param quad A quad that is being added.
    */
   private checkBlankNodes(quad: RDF.BaseQuad): void {
-    if (!this._hasBlankNodes && someTermsNested(quad, term => term.termType === 'BlankNode')) {
+    if (!this._hasBlankNodes && (hasBlankNode(quad.subject) || hasBlankNode(quad.object) ||
+      hasBlankNode(quad.graph) || hasBlankNode(quad.predicate))) {
       this._hasBlankNodes = true;
     }
   }
@@ -1161,4 +1161,13 @@ export interface IRdfStoreIndexWrapped<TE> {
   componentOrderPermutation: number[];
   componentOrderInverse: Record<QuadTermName, number>;
   index: IRdfStoreIndex<TE, boolean>;
+}
+
+/**
+ * Check if the given term is a blank node, or a quoted triple that contains one.
+ * @param term An RDF term.
+ */
+function hasBlankNode(term: RDF.Term): boolean {
+  return term.termType === 'BlankNode' || (term.termType === 'Quad' && (hasBlankNode(term.subject) ||
+    hasBlankNode(term.predicate) || hasBlankNode(term.object) || hasBlankNode(term.graph)));
 }
