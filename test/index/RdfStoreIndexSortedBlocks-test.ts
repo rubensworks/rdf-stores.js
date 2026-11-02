@@ -537,6 +537,49 @@ describe('TermOrder', () => {
     expect(order.lowerBound(DF.literal('~'))).toBe(Number.POSITIVE_INFINITY);
   });
 
+  it('finds the lower bound of known and unknown terms like a linear scan', () => {
+    const next = random(11);
+    const terms = Array.from({ length: 3000 }, () => DF.literal(`${Math.floor(next() * 100000)}`));
+    for (const term of terms) {
+      order.add(dictionary.encode(term));
+    }
+    // Known to the dictionary, but not to the order
+    const unordered = DF.literal('50000y');
+    dictionary.encode(unordered);
+    const sorted = [ ...dictionary.encodings() ]
+      .filter(encoding => order.label(encoding) !== 0)
+      .sort((left, right) => order.label(left) - order.label(right));
+    function expected(term: RDF.Term): number {
+      const first = sorted.find(encoding => defaultTermComparator(dictionary.decode(encoding), term) >= 0);
+      return first === undefined ? Number.POSITIVE_INFINITY : order.label(first);
+    }
+    for (const term of [ ...terms.slice(0, 300), unordered, DF.literal('0'), DF.literal('50000x'), DF.literal('~') ]) {
+      expect(order.lowerBound(term)).toBe(expected(term));
+    }
+    // In a total order, every known term is its own lower bound, also at the edges of chunks
+    for (const encoding of sorted) {
+      expect(order.lowerBound(dictionary.decode(encoding))).toBe(order.label(encoding));
+    }
+  });
+
+  it('finds the first of equal terms as lower bound of a known term', () => {
+    order = new TermOrder(dictionary, (left, right) => {
+      const leftValue = left.value.toLowerCase();
+      const rightValue = right.value.toLowerCase();
+      return leftValue < rightValue ? -1 : (leftValue > rightValue ? 1 : 0);
+    });
+    const [ upper, lower, a, c ] = [ 'ex:B', 'ex:b', 'ex:a', 'ex:c' ]
+      .map(value => dictionary.encode(DF.namedNode(value)));
+    for (const encoding of [ lower, c, upper, a ]) {
+      order.add(encoding);
+    }
+    // Equal terms are ordered on their encoding, so ex:B comes before ex:b.
+    expect(order.lowerBound(DF.namedNode('ex:b'))).toBe(order.label(upper));
+    expect(order.lowerBound(DF.namedNode('ex:B'))).toBe(order.label(upper));
+    expect(order.lowerBound(DF.namedNode('ex:a'))).toBe(order.label(a));
+    expect(order.lowerBound(DF.namedNode('ex:c'))).toBe(order.label(c));
+  });
+
   it('orders terms of different types and quoted triples', () => {
     const all = [
       DF.defaultGraph(),

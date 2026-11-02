@@ -316,6 +316,19 @@ export class TermOrder {
    * @param term A term.
    */
   public lowerBound(term: RDF.Term): number {
+    // A known term is its own lower bound, unless a term right before it compares as equal to it.
+    // This avoids decoding and comparing terms along the search, as seeks are mostly to known terms.
+    const encoding = this.dictionary.encodeOptional(term);
+    if (encoding !== undefined) {
+      const label = this.label(encoding);
+      if (label !== 0) {
+        const previous = this.previousByLabel(label);
+        if (previous === undefined || this.comparator(this.dictionary.decode(previous), term) < 0) {
+          return label;
+        }
+      }
+    }
+
     const chunks = this.chunks;
     let low = 0;
     let high = chunks.length;
@@ -343,5 +356,38 @@ export class TermOrder {
       }
     }
     return this.label(chunk[position]);
+  }
+
+  /**
+   * The encoding right before the known encoding with the given label, or undefined if it is the first.
+   * @param label The label of a known encoding.
+   */
+  private previousByLabel(label: number): number | undefined {
+    const chunks = this.chunks;
+    let low = 0;
+    let high = chunks.length - 1;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (this.label(chunks[middle].at(-1)!) < label) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    const chunk = chunks[low];
+    let position = 0;
+    let end = chunk.length - 1;
+    while (position < end) {
+      const middle = (position + end) >>> 1;
+      if (this.label(chunk[middle]) < label) {
+        position = middle + 1;
+      } else {
+        end = middle;
+      }
+    }
+    if (position > 0) {
+      return chunk[position - 1];
+    }
+    return low > 0 ? chunks[low - 1].at(-1) : undefined;
   }
 }
