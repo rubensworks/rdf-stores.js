@@ -316,8 +316,7 @@ export class TermOrder {
    * @param term A term.
    */
   public lowerBound(term: RDF.Term): number {
-    // A known term is its own lower bound, unless a term right before it compares as equal to it.
-    // This avoids decoding and comparing terms along the search, as seeks are mostly to known terms.
+    // Quickly check if the term is already the lowest known bound.
     const encoding = this.dictionary.encodeOptional(term);
     if (encoding !== undefined) {
       const label = this.label(encoding);
