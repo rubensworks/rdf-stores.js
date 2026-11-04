@@ -2354,6 +2354,63 @@ describe('RdfStore', () => {
     });
   });
 
+  describe('hasBlankNodes', () => {
+    each([
+      [ 'default', () => RdfStore.createDefault() ],
+      [ 'ordered', () => RdfStore.createOrdered() ],
+    ]).describe('for a %s store', (_, create: () => RdfStore) => {
+      beforeEach(() => {
+        store = create();
+      });
+
+      it('is false for an empty store', () => {
+        expect(store.hasBlankNodes).toBe(false);
+      });
+
+      it('is false after adding quads without blank nodes', async() => {
+        store.addQuad(DF.quad(DF.namedNode('s'), DF.namedNode('p'), DF.literal('o')));
+        store.addQuads([ DF.quad(DF.namedNode('s'), DF.namedNode('p'), DF.namedNode('o'), DF.namedNode('g')) ]);
+        await new Promise(resolve => store.import(streamifyArray([
+          DF.quad(
+            DF.namedNode('s'),
+            DF.namedNode('p'),
+            DF.quad(DF.namedNode('a'), DF.namedNode('b'), DF.namedNode('c')),
+          ),
+        ])).on('end', resolve));
+        expect(store.hasBlankNodes).toBe(false);
+      });
+
+      it('is true after adding a quad with a blank node', () => {
+        store.addQuad(DF.quad(DF.blankNode('s'), DF.namedNode('p'), DF.literal('o')));
+        expect(store.hasBlankNodes).toBe(true);
+      });
+
+      it('is true after adding quads with a blank node', () => {
+        store.addQuads([ DF.quad(DF.namedNode('s'), DF.namedNode('p'), DF.namedNode('o'), DF.blankNode('g')) ]);
+        expect(store.hasBlankNodes).toBe(true);
+      });
+
+      it('is true after importing a quad with a blank node in a quoted triple', async() => {
+        await new Promise(resolve => store.import(streamifyArray([
+          DF.quad(
+            DF.namedNode('s'),
+            DF.namedNode('p'),
+            DF.quad(DF.blankNode('a'), DF.namedNode('b'), DF.namedNode('c')),
+          ),
+        ])).on('end', resolve));
+        expect(store.hasBlankNodes).toBe(true);
+      });
+
+      it('stays true after removing all quads', () => {
+        const quad = DF.quad(DF.namedNode('s'), DF.namedNode('p'), DF.blankNode('o'));
+        store.addQuad(quad);
+        store.removeQuad(quad);
+        expect(store.size).toBe(0);
+        expect(store.hasBlankNodes).toBe(true);
+      });
+    });
+  });
+
   describe('createDefault', () => {
     beforeEach(() => {
       store = RdfStore.createDefault();
