@@ -223,8 +223,7 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
    * @param after If the cursor must instead be placed after all quads with those components.
    */
   public seekKey(key: ArrayLike<number>, length: number, after: boolean): ISortedBlocksCursor {
-    // Quads are skipped while they compare below this threshold to the key.
-    // This is a plain binary search, which avoids the callbacks of advance, as seeks are frequent.
+    // Quads are skipped in binary search while they compare below this threshold to the key.
     const threshold = after ? 1 : 0;
     const leaves = this.leaves;
     const sizes = this.sizes;
