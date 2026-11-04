@@ -46,7 +46,7 @@ export class RdfStoreIndexSortedBlocksIterator implements IterableIterator<Encod
     this.levels = levels;
     this.leading = leading;
     this.candidates = candidates;
-    this.cursor = index.start();
+    this.cursor = index.startMatch(ids, leading);
     this.version = index.version;
   }
 
