@@ -1,6 +1,16 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+<a name="v2.9.0"></a>
+## [v2.9.0](https://github.com/rubensworks/rdf-stores.js/compare/v2.8.0...v2.9.0) - 2026-11-04
+
+### Added
+* [Add `hasBlankNodes` method on stores (#50)](https://github.com/rubensworks/rdf-stores.js/commit/dc4469164fa2e3cfc52ad04bf3b0cc42d26464b7)
+
+### Changed
+* [Optimize lower bounds of known terms (#49)](https://github.com/rubensworks/rdf-stores.js/commit/f4d3893b403ddaa9fed702ad29c20cdabe5929d6)
+* [Start sorted block scanning at leading id's and optimize seekKey (#48)](https://github.com/rubensworks/rdf-stores.js/commit/375d1ae69dc11a6bc20637ce2390c59713185b1f)
+
 <a name="v2.8.0"></a>
 ## [v2.8.0](https://github.com/rubensworks/rdf-stores.js/compare/v2.7.0...v2.8.0) - 2026-10-21
 
