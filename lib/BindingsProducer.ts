@@ -41,7 +41,7 @@ export class BindingsProducer<TE> {
   /**
    * The positions within {@link BindingsProducer#terms} that must be bound.
    */
-  protected readonly variableIndexes: number[];
+  protected readonly variableIndexes: readonly number[];
   protected readonly variableCount: number;
 
   public constructor(
@@ -49,7 +49,7 @@ export class BindingsProducer<TE> {
     source: IIndexResultIterator<TE>,
     dictionary: ITermDictionary<TE>,
     terms: RDF.Term[],
-    variableIndexes: number[],
+    variableIndexes: readonly number[],
   ) {
     this.bindingsFactory = bindingsFactory;
     this.source = source;
@@ -161,7 +161,7 @@ export class FilteringBindingsProducer<TE> extends BindingsProducer<TE> {
     source: IIndexResultIterator<TE>,
     dictionary: ITermDictionary<TE>,
     terms: RDF.Term[],
-    variableIndexes: number[],
+    variableIndexes: readonly number[],
     dataFactory: RDF.DataFactory<any>,
     variableIsQuad: boolean[],
     filterIndexes: number[][] | undefined,

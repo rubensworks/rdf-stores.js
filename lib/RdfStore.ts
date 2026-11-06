@@ -19,6 +19,7 @@ import { RdfStoreIndexNestedMapQuoted } from './index/RdfStoreIndexNestedMapQuot
 import { RdfStoreIndexSortedBlocks } from './index/RdfStoreIndexSortedBlocks';
 import type { IRdfStoreOptions } from './IRdfStoreOptions';
 import {
+  COMPONENT_INDEXES_BY_MASK,
   countDistinctEncodedTerms,
   encodeAndExtendFilters,
   encodeOptionalTerms,
@@ -695,18 +696,16 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
       indexWrapped.componentOrderPermutation,
       [ subject, predicate, object, graph ],
     );
-    const variableIndexes: number[] = [];
-    const variableIsQuad: boolean[] = [];
+    let variableMask = 0;
     let hasQuadVariables = false;
     for (let i = 0; i < terms.length; i++) {
       const termType = terms[i].termType;
       if (termType === 'Variable' || termType === 'Quad') {
-        variableIndexes.push(i);
-        const isQuad = termType === 'Quad';
-        variableIsQuad.push(isQuad);
-        hasQuadVariables = hasQuadVariables || isQuad;
+        variableMask |= 1 << i;
+        hasQuadVariables = hasQuadVariables || termType === 'Quad';
       }
     }
+    const variableIndexes = COMPONENT_INDEXES_BY_MASK[variableMask];
 
     // Check if we need to do post-filtering for overlapping variables.
     // Overlapping variables are rare, so the per-component filter lists are only
@@ -755,7 +754,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
         terms,
         variableIndexes,
         this.dataFactory,
-        variableIsQuad,
+        variableIndexes.map(i => terms[i].termType === 'Quad'),
         filterIndexes,
       ),
     };

@@ -2,6 +2,7 @@ import type * as RDF from '@rdfjs/types';
 import type { ITermDictionary } from '../dictionary/ITermDictionary';
 import type { IRdfStoreOptions } from '../IRdfStoreOptions';
 import {
+  COMPONENT_INDEXES_BY_MASK,
   computeEndDepth,
   countDistinctEncodedTerms,
   encodeOptionalTerms,
@@ -345,7 +346,7 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
   public nextMatch(
     cursor: ISortedBlocksCursor,
     ids: ArrayLike<number | undefined>,
-    levels: number[],
+    levels: readonly number[],
     leading: number,
     candidates?: (ISortedBlocksCandidates | undefined)[],
   ): boolean {
@@ -740,12 +741,13 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
         return <IterableIterator<EncodedQuadTerms<number>>> EMPTY_QUAD_ITERATOR;
       }
     }
-    const levels: number[] = [];
+    let levelMask = 0;
     for (let i = 0; i < 4; i++) {
       if (ids[i] !== undefined || candidates?.[i] !== undefined) {
-        levels.push(i);
+        levelMask |= 1 << i;
       }
     }
+    const levels = COMPONENT_INDEXES_BY_MASK[levelMask];
     const leading = RdfStoreIndexSortedBlocks.leadingLevels(levels, candidates);
     return new RdfStoreIndexSortedBlocksIterator(this, ids, levels, leading, candidates);
   }
@@ -786,7 +788,7 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
    */
   private countGroups(
     ids: ArrayLike<number | undefined>,
-    levels: number[],
+    levels: readonly number[],
     groupLength: number,
     candidates?: (ISortedBlocksCandidates | undefined)[],
   ): number {
@@ -806,7 +808,7 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
    * @param levels Bound levels in ascending order.
    * @param candidates For levels with a quoted triple pattern, the quoted triples it matches.
    */
-  public static leadingLevels(levels: number[], candidates?: (ISortedBlocksCandidates | undefined)[]): number {
+  public static leadingLevels(levels: readonly number[], candidates?: (ISortedBlocksCandidates | undefined)[]): number {
     let leading = 0;
     while (leading < levels.length && levels[leading] === leading && candidates?.[leading] === undefined) {
       leading++;

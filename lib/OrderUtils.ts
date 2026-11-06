@@ -186,6 +186,17 @@ export function getComponentOrderPermutation(componentOrder: QuadTermName[]): nu
 }
 
 /**
+ * For every combination of quad components, the indexes of the components in it, in ascending order.
+ * Indexed by a bitmask in which bit `i` is set when component `i` is in the combination.
+ *
+ * Lookups take these shared arrays instead of building their own,
+ * as such arrays live as long as the lookup, which can make V8 allocate all of them in the old generation.
+ * They are not frozen, as V8 iterates over frozen arrays much slower.
+ */
+export const COMPONENT_INDEXES_BY_MASK: readonly (readonly number[])[] = [ ...Array.from({ length: 16 }).keys() ]
+  .map(mask => [ 0, 1, 2, 3 ].filter(i => (mask & (1 << i)) !== 0));
+
+/**
  * Precompute, for every possible combination of defined quad pattern components,
  * the index of the best suitable component order.
  *
