@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+<a name="v2.9.1"></a>
+## [v2.9.1](https://github.com/rubensworks/rdf-stores.js/compare/v2.8.0...v2.9.1) - 2026-11-07
+
+### Changed
+* [Share the level and variable index arrays of lookups (#51)](https://github.com/rubensworks/rdf-stores.js/commit/9b37289f38310de7bc52944b5d8f0e3fcbc1fa6f)
+
 <a name="v2.9.0"></a>
 ## [v2.9.0](https://github.com/rubensworks/rdf-stores.js/compare/v2.8.0...v2.9.0) - 2026-11-04
 
