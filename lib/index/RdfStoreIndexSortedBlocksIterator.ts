@@ -19,7 +19,7 @@ const DONE = <IteratorResult<never>> { value: undefined, done: true };
 export class RdfStoreIndexSortedBlocksIterator implements IterableIterator<EncodedQuadTerms<number>> {
   private readonly index: RdfStoreIndexSortedBlocks;
   private readonly ids: (number | undefined)[];
-  private readonly levels: number[];
+  private readonly levels: readonly number[];
   private readonly leading: number;
   private readonly candidates: (ISortedBlocksCandidates | undefined)[] | undefined;
   private cursor: ISortedBlocksCursor;
@@ -37,7 +37,7 @@ export class RdfStoreIndexSortedBlocksIterator implements IterableIterator<Encod
   public constructor(
     index: RdfStoreIndexSortedBlocks,
     ids: (number | undefined)[],
-    levels: number[],
+    levels: readonly number[],
     leading: number,
     candidates?: (ISortedBlocksCandidates | undefined)[],
   ) {
