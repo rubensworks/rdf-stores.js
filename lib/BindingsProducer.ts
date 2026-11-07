@@ -1,6 +1,7 @@
 import type * as RDF from '@rdfjs/types';
 import { matchPatternMappings } from 'rdf-terms';
 import type { ITermDictionary } from './dictionary/ITermDictionary';
+import type { IEncodedBindingsCreator } from './IEncodedBindingsFactory';
 import type { EncodedQuadTerms } from './PatternTerm';
 
 /**
@@ -43,13 +44,27 @@ export class BindingsProducer<TE> {
    */
   protected readonly variableIndexes: readonly number[];
   protected readonly variableCount: number;
+  /**
+   * If the bindings factory supports it, the creator of bindings that keep the encoded terms.
+   */
+  protected readonly encodedCreator: IEncodedBindingsCreator<TE> | undefined;
 
+  /**
+   * @param bindingsFactory The factory to create bindings with.
+   * @param source The encoded results of an index lookup.
+   * @param dictionary The dictionary to decode results with.
+   * @param terms The pattern terms, in the component order of the index.
+   * @param variableIndexes The positions within `terms` that must be bound.
+   * @param encodedCreator An optional creator of bindings that keep the encoded terms,
+   *                       which is used instead of decoding them.
+   */
   public constructor(
     bindingsFactory: RDF.BindingsFactory,
     source: IIndexResultIterator<TE>,
     dictionary: ITermDictionary<TE>,
     terms: RDF.Term[],
     variableIndexes: readonly number[],
+    encodedCreator?: IEncodedBindingsCreator<TE>,
   ) {
     this.bindingsFactory = bindingsFactory;
     this.source = source;
@@ -57,6 +72,7 @@ export class BindingsProducer<TE> {
     this.terms = terms;
     this.variableIndexes = variableIndexes;
     this.variableCount = variableIndexes.length;
+    this.encodedCreator = encodedCreator;
   }
 
   /**
@@ -80,6 +96,9 @@ export class BindingsProducer<TE> {
       return null;
     }
     const decomposedQuadEncoded = next.value;
+    if (this.encodedCreator !== undefined) {
+      return this.encodedCreator.create(decomposedQuadEncoded);
+    }
     const variableIndexes = this.variableIndexes;
     const terms = this.terms;
     // This producer only handles patterns without quoted triple patterns, so every bound component

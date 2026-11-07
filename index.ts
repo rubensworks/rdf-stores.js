@@ -16,6 +16,7 @@ export * from './lib/index/RdfStoreIndexNestedMapRecursive';
 export * from './lib/index/RdfStoreIndexNestedMapRecursiveQuoted';
 export * from './lib/index/RdfStoreIndexNestedRecord';
 export * from './lib/index/RdfStoreIndexNestedRecordQuoted';
+export * from './lib/IEncodedBindingsFactory';
 export * from './lib/IRdfStoreOptions';
 export * from './lib/OrderUtils';
 export * from './lib/PatternTerm';

@@ -269,6 +269,32 @@ stream.on('end', () => {
 });
 ```
 
+### Bindings with encoded terms
+
+By default, `readBindings`, `getBindings` and `matchBindings` decode every bound term,
+and pass it to the `bindings` method of the given bindings factory.
+If the factory also has a `createEncodedBindingsCreator` method (see `IEncodedBindingsFactory`),
+the store instead passes it the encoded quads of the results,
+so that the bindings can keep the terms encoded until they are read,
+and compare two encodings of the store's dictionary without decoding them.
+The [Comunica bindings factory](https://www.npmjs.com/package/@comunica/utils-bindings-factory) does this.
+
+```typescript
+// A factory that decodes the terms right away, which is what the store would do without it
+const factory: IEncodedBindingsFactory<number> = {
+  bindings: entries => BF.bindings(entries),
+  fromBindings: bindings => BF.fromBindings(bindings),
+  createEncodedBindingsCreator: (dictionary, variables, indexes) => ({
+    create: encodedQuad => BF.bindings(variables.map((variable, i) =>
+      [ variable, dictionary.decode(encodedQuad[indexes[i]]) ])),
+  }),
+};
+const bindings = store.getBindings(factory, DF.variable('s'), DF.namedNode('ex:p1'), DF.variable('o'), DF.defaultGraph());
+```
+
+`createEncodedBindingsCreator` may return `undefined`, after which the store decodes the terms itself.
+It does so too for patterns with quoted triple patterns or variables that occur more than once.
+
 ### `resultOrder` and `seekTo`
 
 When a pattern is served by an [ordered index](#createdefault-vs-createordered),

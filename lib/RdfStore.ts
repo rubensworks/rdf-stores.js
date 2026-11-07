@@ -14,6 +14,7 @@ import { DatasetCoreWrapper } from './dataset/DatasetCoreWrapper';
 import type { ITermDictionary } from './dictionary/ITermDictionary';
 import { TermDictionaryNumberRecordFullTerms } from './dictionary/TermDictionaryNumberRecordFullTerms';
 import { TermDictionaryQuotedIndexed } from './dictionary/TermDictionaryQuotedIndexed';
+import type { IEncodedBindingsFactory } from './IEncodedBindingsFactory';
 import type { IRdfStoreIndex } from './index/IRdfStoreIndex';
 import { RdfStoreIndexNestedMapQuoted } from './index/RdfStoreIndexNestedMapQuoted';
 import { RdfStoreIndexSortedBlocks } from './index/RdfStoreIndexSortedBlocks';
@@ -738,8 +739,20 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     // Patterns without quoted triple patterns and without overlapping variables
     // never need post-filtering, and get a producer without any of that bookkeeping.
     if (!hasQuadVariables && filterIndexes === undefined) {
+      const encodedCreator = (<IEncodedBindingsFactory<TE>> bindingsFactory).createEncodedBindingsCreator?.(
+        this.dictionary,
+        variableIndexes.map(i => <RDF.Variable> terms[i]),
+        variableIndexes,
+      );
       return {
-        producer: new BindingsProducer<TE>(bindingsFactory, source, this.dictionary, terms, variableIndexes),
+        producer: new BindingsProducer<TE>(
+          bindingsFactory,
+          source,
+          this.dictionary,
+          terms,
+          variableIndexes,
+          encodedCreator,
+        ),
         componentOrder: indexWrapped.componentOrder,
         index: indexWrapped.index,
       };
