@@ -738,6 +738,76 @@ describe('TermOrder', () => {
   });
 });
 
+describe('RdfStore with sorted-blocks indexes adding batches', () => {
+  function quads(count: number, offset = 0): RDF.Quad[] {
+    return Array.from({ length: count }, (value, i) => DF.quad(
+      DF.namedNode(`ex:s${(i + offset) % 37}`),
+      DF.namedNode(`ex:p${(i + offset) % 5}`),
+      DF.literal(`${i + offset}`),
+      (i + offset) % 3 === 0 ? DF.namedNode('ex:g') : DF.defaultGraph(),
+    ));
+  }
+
+  function store(
+    indexCombinations: QuadTermName[][],
+    indexConstructor: (options: any) => RdfStoreIndexSortedBlocks = options => new RdfStoreIndexSortedBlocks(options),
+  ): RdfStore<number> {
+    return new RdfStore<number>({
+      indexCombinations,
+      indexConstructor,
+      dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms()),
+      dataFactory: DF,
+    });
+  }
+
+  function expectQuads(rdfStore: RdfStore<number>, expected: RDF.Quad[]): void {
+    expect(rdfStore.size).toBe(expected.length);
+    for (const componentOrder of rdfStore.indexesWrapped.map(wrapped => wrapped.componentOrder)) {
+      const pattern: Record<string, RDF.Term | undefined> = {};
+      // Bind the first component, so that the index with that order is used.
+      const first = expected[0][componentOrder[0]];
+      pattern[componentOrder[0]] = first;
+      expect(rdfStore.getQuads(pattern.subject, pattern.predicate, pattern.object, pattern.graph))
+        .toBeRdfIsomorphic(expected.filter(quad => quad[componentOrder[0]].equals(first)));
+    }
+    expect(rdfStore.getQuads()).toBeRdfIsomorphic(expected);
+  }
+
+  it('sorts a batch once for indexes whose orders can be derived', () => {
+    const rdfStore = store(RdfStore.ORDERED_INDEX_COMBINATIONS);
+    const batch = quads(300);
+    expect(rdfStore.addQuads([ ...batch, ...batch ])).toBe(300);
+    expectQuads(rdfStore, batch);
+    expect(rdfStore.addQuads(quads(300, 200))).toBe(200);
+    expectQuads(rdfStore, quads(500));
+  });
+
+  it('sorts a batch for each index whose order can not be derived', () => {
+    const rdfStore = store([
+      [ 'graph', 'subject', 'predicate', 'object' ],
+      [ 'graph', 'predicate', 'object', 'subject' ],
+    ]);
+    expect(rdfStore.addQuads(quads(300))).toBe(300);
+    expectQuads(rdfStore, quads(300));
+  });
+
+  it('adds a small batch to a large store quad by quad', () => {
+    const rdfStore = store(RdfStore.ORDERED_INDEX_COMBINATIONS);
+    rdfStore.addQuads(quads(300));
+    expect(rdfStore.addQuads(quads(2, 300))).toBe(2);
+    expectQuads(rdfStore, quads(302));
+  });
+
+  it('sorts a batch for each index if they do not share a term order', () => {
+    const rdfStore = store(
+      RdfStore.ORDERED_INDEX_COMBINATIONS,
+      options => new RdfStoreIndexSortedBlocks({ ...options, termOrder: new TermOrder(options.dictionary) }),
+    );
+    expect(rdfStore.addQuads(quads(300))).toBe(300);
+    expectQuads(rdfStore, quads(300));
+  });
+});
+
 describe('RdfStore with ordered indexes', () => {
   it('imports a stream as one batch per index', async() => {
     const store = RdfStore.createOrdered({ nodes: true });
