@@ -55,6 +55,38 @@ describe('TermDictionaryNumberRecordFullTerms', () => {
       expect(dict.encode(DF.literal('abc', { language: 'en_us', direction: 'rtl' }))).toBe(4);
     });
 
+    it('should encode literals with equal values but different datatypes, languages or directions apart', () => {
+      const int = DF.namedNode('http://www.w3.org/2001/XMLSchema#int');
+      const long = DF.namedNode('http://www.w3.org/2001/XMLSchema#long');
+      expect(dict.encode(DF.literal('1', int))).toBe(0);
+      expect(dict.encode(DF.literal('1', long))).toBe(1);
+      expect(dict.encode(DF.literal('2', int))).toBe(2);
+      expect(dict.encode(DF.literal('1', 'en'))).toBe(3);
+      expect(dict.encode(DF.literal('1', { language: 'en', direction: 'ltr' }))).toBe(4);
+      expect(dict.encode(DF.literal('1'))).toBe(5);
+
+      expect(dict.encode(DF.literal('1', long))).toBe(1);
+      expect(dict.encode(DF.literal('1', int))).toBe(0);
+      expect(dict.encode(DF.literal('1', 'en'))).toBe(3);
+      expect(dict.encode(DF.literal('2', int))).toBe(2);
+      expect(dict.encode(DF.literal('1', { language: 'en', direction: 'ltr' }))).toBe(4);
+      expect(dict.encode(DF.literal('1', DF.namedNode('http://www.w3.org/2001/XMLSchema#string')))).toBe(5);
+    });
+
+    it('should encode a literal without direction as one with an empty direction', () => {
+      const literal = DF.literal('abc', 'en');
+      expect(dict.encode(literal)).toBe(0);
+      const withoutDirection = <any> {
+        termType: 'Literal',
+        value: 'abc',
+        language: 'en',
+        datatype: literal.datatype,
+        equals: () => false,
+      };
+      expect(dict.encode(DF.namedNode('ex:other'))).toBe(1);
+      expect(dict.encode(withoutDirection)).toBe(0);
+    });
+
     it('should encode variables', () => {
       expect(dict.encode(DF.variable('v1'))).toBe(0);
       expect(dict.encode(DF.variable('v2'))).toBe(1);
@@ -131,6 +163,21 @@ describe('TermDictionaryNumberRecordFullTerms', () => {
       expect(dict.encodeOptional(DF.namedNode('ex:s2'))).toBe(1);
       expect(dict.encodeOptional(DF.namedNode('ex:s3'))).toBe(2);
       expect(dict.encodeOptional(DF.namedNode('ex:s4'))).toBeUndefined();
+    });
+
+    it('should return undefined for non-encoded literals and blank nodes', () => {
+      const int = DF.namedNode('http://www.w3.org/2001/XMLSchema#int');
+      expect(dict.encode(DF.literal('1', int))).toBe(0);
+      expect(dict.encode(DF.blankNode('b'))).toBe(1);
+      expect(dict.encode(DF.literal('1', 'en'))).toBe(2);
+
+      expect(dict.encodeOptional(DF.literal('1', int))).toBe(0);
+      expect(dict.encodeOptional(DF.literal('2', int))).toBeUndefined();
+      expect(dict.encodeOptional(DF.literal('1', DF.namedNode('ex:unknown')))).toBeUndefined();
+      expect(dict.encodeOptional(DF.literal('1', 'en'))).toBe(2);
+      expect(dict.encodeOptional(DF.blankNode('b'))).toBe(1);
+      expect(dict.encodeOptional(DF.blankNode('c'))).toBeUndefined();
+      expect(dict.encode(DF.literal('1', 'en'))).toBe(2);
     });
   });
 
