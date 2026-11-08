@@ -622,48 +622,72 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
   protected sortUnique(keys: Int32Array, count: number): [ Int32Array, number ] {
     const termOrder = this.termOrder;
     termOrder.makeUniform();
-    const ranks = new Int32Array(count * 4);
-    for (let i = 0; i < count * 4; i++) {
-      ranks[i] = termOrder.rank(keys[i]);
-    }
-    const digitsPerComponent = termOrder.size > 0x10000 ? 2 : 1;
 
-    let permutation = new Uint32Array(count);
-    let buffer = new Uint32Array(count);
+    // Each record holds the ranks of a quad's four terms and the quad's position in `keys`.
+    // Records are moved as a whole in every pass, so that passes read them sequentially.
+    const stride = 5;
+    let records = new Int32Array(count * stride);
     for (let i = 0; i < count; i++) {
-      permutation[i] = i;
+      const offset = i * 4;
+      const record = i * stride;
+      records[record] = termOrder.rank(keys[offset]);
+      records[record + 1] = termOrder.rank(keys[offset + 1]);
+      records[record + 2] = termOrder.rank(keys[offset + 2]);
+      records[record + 3] = termOrder.rank(keys[offset + 3]);
+      records[record + 4] = i;
     }
-    const histogram = new Uint32Array(0x10000);
-    for (let component = 3; component >= 0; component--) {
-      for (let digit = 0; digit < digitsPerComponent; digit++) {
-        const shift = digit * 16;
-        histogram.fill(0);
-        for (let i = 0; i < count; i++) {
-          histogram[(ranks[(permutation[i] * 4) + component] >>> shift) & 0xFFFF]++;
+
+    // Digits of eleven bits keep the histograms small enough for the processor cache.
+    const digitBits = 11;
+    const radix = 1 << digitBits;
+    const mask = radix - 1;
+    const rankBits = 32 - Math.clz32(Math.max(termOrder.size - 1, 1));
+    const digits = Math.ceil(rankBits / digitBits);
+
+    // Count the digits of all passes in a single read of the records.
+    const histograms = new Uint32Array(4 * digits * radix);
+    for (let record = 0; record < count * stride; record += stride) {
+      for (let component = 0; component < 4; component++) {
+        const rank = records[record + component];
+        for (let digit = 0; digit < digits; digit++) {
+          histograms[(((component * digits) + digit) * radix) + ((rank >>> (digit * digitBits)) & mask)]++;
         }
-        if (count === 0 || histogram[(ranks[(permutation[0] * 4) + component] >>> shift) & 0xFFFF] === count) {
+      }
+    }
+
+    let buffer = new Int32Array(count * stride);
+    for (let component = 3; component >= 0; component--) {
+      for (let digit = 0; digit < digits; digit++) {
+        const shift = digit * digitBits;
+        const base = ((component * digits) + digit) * radix;
+        // Skip passes in which all quads share the same digit.
+        if (count === 0 || histograms[base + ((records[component] >>> shift) & mask)] === count) {
           continue;
         }
         let total = 0;
-        for (let bucket = 0; bucket < 0x10000; bucket++) {
-          const bucketCount = histogram[bucket];
-          histogram[bucket] = total;
+        for (let bucket = base; bucket < base + radix; bucket++) {
+          const bucketCount = histograms[bucket];
+          histograms[bucket] = total;
           total += bucketCount;
         }
-        for (let i = 0; i < count; i++) {
-          const index = permutation[i];
-          buffer[histogram[(ranks[(index * 4) + component] >>> shift) & 0xFFFF]++] = index;
+        for (let record = 0; record < count * stride; record += stride) {
+          const target = histograms[base + ((records[record + component] >>> shift) & mask)]++ * stride;
+          buffer[target] = records[record];
+          buffer[target + 1] = records[record + 1];
+          buffer[target + 2] = records[record + 2];
+          buffer[target + 3] = records[record + 3];
+          buffer[target + 4] = records[record + 4];
         }
-        const swap = permutation;
-        permutation = buffer;
+        const swap = records;
+        records = buffer;
         buffer = swap;
       }
     }
 
     const sorted = new Int32Array(count * 4);
     let sortedCount = 0;
-    for (let i = 0; i < count; i++) {
-      const offset = permutation[i] * 4;
+    for (let record = 0; record < count * stride; record += stride) {
+      const offset = records[record + 4] * 4;
       if (sortedCount > 0) {
         const last = (sortedCount - 1) * 4;
         if (sorted[last] === keys[offset] && sorted[last + 1] === keys[offset + 1] &&
