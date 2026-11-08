@@ -1,7 +1,9 @@
 import { sortIndicesByStrings } from '../lib/sortStrings';
 
+let joinFrom: number;
+
 function sorted(strings: string[], indices = Int32Array.from(strings.keys())): string[] {
-  const equalToPrevious = sortIndicesByStrings(indices, strings);
+  const equalToPrevious = sortIndicesByStrings(indices, strings, joinFrom);
   const result = [ ...indices ].map(index => strings[index]);
   expect([ ...equalToPrevious ]).toEqual(result.map((string, i) => i > 0 && string === result[i - 1] ? 1 : 0));
   return result;
@@ -14,7 +16,14 @@ function random(seed: number): () => number {
   };
 }
 
-describe('sortIndicesByStrings', () => {
+describe.each([
+  [ 'in place', Number.POSITIVE_INFINITY ],
+  [ 'joined', 0 ],
+])('sortIndicesByStrings, sorting %s', (name, from) => {
+  beforeEach(() => {
+    joinFrom = from;
+  });
+
   it('sorts nothing', () => {
     expect(sorted([])).toEqual([]);
   });
@@ -56,5 +65,14 @@ describe('sortIndicesByStrings', () => {
   it('sorts many equal strings', () => {
     const strings = Array.from({ length: 1000 }, (value, i) => i % 3 === 0 ? 'b' : 'a');
     expect(sorted(strings)).toEqual([ ...strings ].sort());
+  });
+});
+
+describe('sortIndicesByStrings', () => {
+  it('sorts in place by default', () => {
+    const strings = [ 'b', 'a' ];
+    const indices = Int32Array.from([ 0, 1 ]);
+    expect([ ...sortIndicesByStrings(indices, strings) ]).toEqual([ 0, 0 ]);
+    expect([ ...indices ]).toEqual([ 1, 0 ]);
   });
 });
