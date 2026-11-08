@@ -311,6 +311,20 @@ describe('RdfStoreIndexSortedBlocks', () => {
     }
   });
 
+  it('stays empty and usable after adding an empty batch to an empty index', () => {
+    expect(index.setAll(new Int32Array(0), 0)).toBe(0);
+    expect(index.size).toBe(0);
+    expect([ ...index.findEncoded([ undefined, undefined, undefined, undefined ], <any> []) ]).toHaveLength(0);
+    const key = [
+      dictionary.encode(DF.namedNode('ex:s')),
+      dictionary.encode(DF.namedNode('ex:p')),
+      dictionary.encode(DF.namedNode('ex:o')),
+      dictionary.encode(DF.defaultGraph()),
+    ];
+    expect(index.set(<any> key, true)).toBe(true);
+    expect(index.size).toBe(1);
+  });
+
   it('starts from the beginning when the index changes before the first result is read', () => {
     for (let i = 0; i < 100; i++) {
       index.set(randomQuad(), true);
