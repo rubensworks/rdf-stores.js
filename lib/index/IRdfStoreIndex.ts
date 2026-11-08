@@ -90,6 +90,21 @@ export interface IRdfStoreIndex<TE, TV> {
    */
   setAll?: (keys: Int32Array, count: number) => number;
   /**
+   * If a batch of the given size is merged with the quads in this index, rather than inserted one by one.
+   * Indexes that implement this also implement sortBatch and setAllSorted.
+   */
+  mergesBatch?: (count: number) => boolean;
+  /**
+   * Sort a batch of encoded quads in the order of this index, and drop duplicates,
+   * after adding their terms to the term order.
+   */
+  sortBatch?: (keys: Int32Array, count: number) => [ Int32Array, number ];
+  /**
+   * Add a batch of encoded quads that is already sorted in the order of this index, without duplicates,
+   * and whose terms are all in the term order.
+   */
+  setAllSorted?: (sorted: Int32Array, count: number) => number;
+  /**
    * Count the terms that exist in the index.
    * Each returned array corresponds to the terms specified by given quad term names.
    * This corresponds to the semantics of {@link #findTerms}, and returns counts instead of terms.

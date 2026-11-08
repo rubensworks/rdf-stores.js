@@ -1,5 +1,6 @@
 import type * as RDF from '@rdfjs/types';
 import type { ITermDictionary } from './dictionary/ITermDictionary';
+import { sortIndicesByStrings } from './sortStrings';
 
 /**
  * The distance between the labels of neighbouring terms right after a relabel.
@@ -245,21 +246,42 @@ export class TermOrder {
    * @param length The number of entries of `encodings` to consider.
    */
   public addAll(encodings: ArrayLike<number>, length: number): void {
-    // Mark new encodings with a negative label while collecting them, to skip duplicates.
+    // Collect the new encodings, skipping duplicates with a bitmap of plain encodings, which is much smaller than
+    // the labels. Quoted triple encodings are instead marked with a negative label while collecting them.
+    let maxEncoding = -1;
+    for (let i = 0; i < length; i++) {
+      if (encodings[i] > maxEncoding) {
+        maxEncoding = encodings[i];
+      }
+    }
+    const seen = new Uint8Array(maxEncoding + 1);
     const added: number[] = [];
+    let quoted = false;
     for (let i = 0; i < length; i++) {
       const encoding = encodings[i];
-      if (this.label(encoding) === 0) {
+      if (encoding >= 0) {
+        if (seen[encoding] === 0) {
+          seen[encoding] = 1;
+          if (this.label(encoding) === 0) {
+            added.push(encoding);
+          }
+        }
+      } else if (this.label(encoding) === 0) {
         this.setLabel(encoding, -1);
         added.push(encoding);
+        quoted = true;
       }
     }
     if (added.length === 0) {
       return;
     }
     this.rankTablesCache = undefined;
-    for (const encoding of added) {
-      this.setLabel(encoding, 0);
+    if (quoted) {
+      for (const encoding of added) {
+        if (encoding < 0) {
+          this.setLabel(encoding, 0);
+        }
+      }
     }
 
     // A handful of new terms is cheaper to insert one by one than to merge with all known terms.
@@ -270,7 +292,7 @@ export class TermOrder {
       return;
     }
 
-    added.sort((left, right) => this.compareEncodings(left, right));
+    this.sortEncodings(added);
     const merged: number[] = [];
     let addedIndex = 0;
     for (const chunk of this.chunks) {
@@ -291,6 +313,65 @@ export class TermOrder {
     }
     this.termCount = merged.length;
     this.relabel();
+  }
+
+  /**
+   * Sort distinct encodings in this order.
+   *
+   * For the default comparator, terms are grouped by term type, and the values within a group are sorted as
+   * strings, which is much cheaper than comparing whole terms. Literals with equal values are then ordered on
+   * the remainder of the comparator.
+   * @param encodings Distinct encodings, sorted in place.
+   */
+  private sortEncodings(encodings: number[]): void {
+    if (this.comparator !== defaultTermComparator) {
+      encodings.sort((left, right) => this.compareEncodings(left, right));
+      return;
+    }
+    const groupEncodings: number[][] = [ [], [], [], [], [], [] ];
+    const groupValues: string[][] = [ [], [], [], [], [], [] ];
+    for (const encoding of encodings) {
+      const term = this.dictionary.decode(encoding);
+      const group = TERM_TYPE_ORDER[term.termType];
+      groupEncodings[group].push(encoding);
+      groupValues[group].push(term.value);
+    }
+    let position = 0;
+    for (const [ group, encodingsOfGroup ] of groupEncodings.entries()) {
+      if (group === TERM_TYPE_ORDER.Quad || group === TERM_TYPE_ORDER.Variable) {
+        encodingsOfGroup.sort((left, right) => this.compareEncodings(left, right));
+        for (const encoding of encodingsOfGroup) {
+          encodings[position++] = encoding;
+        }
+        continue;
+      }
+      const values = groupValues[group];
+      const indices = new Int32Array(encodingsOfGroup.length);
+      for (let i = 0; i < indices.length; i++) {
+        indices[i] = i;
+      }
+      sortIndicesByStrings(indices, values);
+      const start = position;
+      for (const index of indices) {
+        encodings[position++] = encodingsOfGroup[index];
+      }
+      if (group === TERM_TYPE_ORDER.Literal) {
+        // Order runs of literals with equal values on their datatype, language and direction.
+        let runStart = 0;
+        for (let i = 1; i <= indices.length; i++) {
+          if (i === indices.length || values[indices[i]] !== values[indices[runStart]]) {
+            if (i - runStart > 1) {
+              const run = encodings.slice(start + runStart, start + i)
+                .sort((left, right) => this.compareEncodings(left, right));
+              for (const [ offset, encoding ] of run.entries()) {
+                encodings[start + runStart + offset] = encoding;
+              }
+            }
+            runStart = i;
+          }
+        }
+      }
+    }
   }
 
   /**
