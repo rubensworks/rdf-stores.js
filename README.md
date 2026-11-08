@@ -1179,6 +1179,12 @@ The measurements below were taken on a single machine with Node.js 22:
 - Counting the 1024 distinct predicate-object pairs of one graph 1024 times: 11.733ms
 ```
 
+Store sizes are tracked in CI for all approaches of `perf/tests.ts`, using `node perf/sizes.js measure`.
+It measures the heap and off-heap memory that a store retains after ingesting the `triples`, `quads`, `quoted` and `entities` datasets of `perf/run.ts` at dimension 64,
+each in a fresh process.
+Pull requests get a comment that compares their store sizes with those of the base commit,
+and the history of the master branch is shown at https://comunica.github.io/comunica-performance-results/rdf-stores/master/store-sizes/.
+
 ## License
 This software is written by [Ruben Taelman](http://rubensworks.net/).
 

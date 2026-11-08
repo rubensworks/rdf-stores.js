@@ -69,6 +69,93 @@ jobs:
           github-token: ${{ secrets.github_token }}
           parallel-finished: true
 
+  sizes:
+    name: Store sizes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      # Pull requests are compared against their base commit, while pushes are stored.
+      STORE_SIZE_BASE: ${{ github.event_name == 'pull_request' }}
+      STORE_SIZE_STORE: ${{ github.event_name == 'push' }}
+    steps:
+      - name: Ensure line endings are consistent
+        run: git config --global core.autocrlf input
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          path: head
+      - name: Check out the base commit of the pull request
+        if: env.STORE_SIZE_BASE == 'true'
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26.x
+      - name: Install dependencies and build
+        run: yarn install
+        working-directory: head
+      - name: Measure store sizes
+        run: node head/perf/sizes.js measure head > store-sizes.json
+      - name: Install dependencies and build the base commit
+        if: env.STORE_SIZE_BASE == 'true'
+        run: yarn install
+        working-directory: base
+      - name: Measure store sizes of the base commit
+        # The script of the pull request is used, as the base commit may not have it yet.
+        if: env.STORE_SIZE_BASE == 'true'
+        run: node head/perf/sizes.js measure base > store-sizes-base.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: store-sizes
+          path: store-sizes*.json
+      - name: Assemble the comparison comment
+        # Posted by the store-sizes-comment workflow, as this job
+        # receives a read-only GITHUB_TOKEN on pull requests from forks.
+        if: env.STORE_SIZE_BASE == 'true'
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -eu
+          node head/perf/sizes.js compare \
+            store-sizes.json store-sizes-base.json "$HEAD_SHA" "$BASE_SHA" \
+            "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            "https://comunica.github.io/comunica-performance-results/rdf-stores/$BASE_REF/store-sizes/" > comparison-comment.md
+          echo "$PULL_REQUEST_NUMBER" > comparison-pull-request.txt
+          cat comparison-comment.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        if: env.STORE_SIZE_BASE == 'true'
+        with:
+          name: store-size-comparison
+          path: |
+            comparison-comment.md
+            comparison-pull-request.txt
+      - name: Determine store sizes target directory name
+        if: env.STORE_SIZE_STORE == 'true'
+        run: echo "STORE_SIZE_DATA_DIR_PATH=rdf-stores/${GITHUB_REF#refs/heads/}/store-sizes" >> $GITHUB_ENV
+      - name: Store store sizes
+        if: env.STORE_SIZE_STORE == 'true'
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Store sizes
+          tool: customSmallerIsBetter
+          output-file-path: store-sizes.json
+          github-token: ${{ secrets.PAT }}
+          auto-push: true
+          # Most sizes are identical across runs, and the others vary by less than 1%.
+          alert-threshold: '105%'
+          comment-on-alert: true
+          alert-comment-cc-users: '@rubensworks'
+          summary-always: true
+          gh-repository: github.com/comunica/comunica-performance-results
+          gh-pages-branch: master
+          benchmark-data-dir-path: ${{ env.STORE_SIZE_DATA_DIR_PATH }}
+
   benchmarks:
     runs-on: ubuntu-latest
     steps:
