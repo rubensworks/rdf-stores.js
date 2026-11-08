@@ -1,6 +1,8 @@
 import type * as RDF from '@rdfjs/types';
 import { DataFactory } from 'rdf-data-factory';
 import { termToString } from 'rdf-string';
+import type { ICompactLiterals } from './CompactLiterals';
+import { COMPACT_KINDS, NumberMap } from './CompactLiterals';
 import type { ITermDictionary } from './ITermDictionary';
 
 /**
@@ -49,7 +51,13 @@ export class TermDictionaryNumberRecordFullTerms implements ITermDictionary<numb
   private lastLanguage = '';
   private lastDirection = '';
   private lastLiterals: ILiterals | undefined;
-  private readonly reverseDictionary: Record<number, RDF.Term> = {};
+  // A number instead of a term for literals that are stored as numbers.
+  private readonly reverseDictionary: Record<number, RDF.Term | number> = {};
+  // Literals stored as numbers, by datatype, and the table of each encoding (0 if none).
+  private readonly compactByDatatype = new Map<string, ICompactLiterals | null>();
+  private readonly compactTables: ICompactLiterals[] = [];
+  private compactTableOf = new Uint8Array(1024);
+  public static compact = process.env.RDF_STORES_LITERALS === '1';
   private readonly dataFactory: RDF.DataFactory;
   public readonly features = { quotedTriples: false };
 
@@ -60,6 +68,25 @@ export class TermDictionaryNumberRecordFullTerms implements ITermDictionary<numb
   public encode(term: RDF.Term): number {
     switch (term.termType) {
       case 'Literal': {
+        if (TermDictionaryNumberRecordFullTerms.compact && !term.language) {
+          const table = this.compactTable(term.datatype.value, true);
+          const number = table?.kind.parse(term.value);
+          if (number !== undefined) {
+            let encoded = table!.encodings.get(number);
+            if (encoded === undefined) {
+              encoded = this.lastId++;
+              table!.encodings.set(number, encoded);
+              this.reverseDictionary[encoded] = number;
+              if (encoded >= this.compactTableOf.length) {
+                const grown = new Uint8Array(Math.max(encoded + 1, this.compactTableOf.length * 2));
+                grown.set(this.compactTableOf);
+                this.compactTableOf = grown;
+              }
+              this.compactTableOf[encoded] = table!.id;
+            }
+            return encoded;
+          }
+        }
         const literals = this.literalsOf(term, true)!;
         let encoded = literals.encodings.get(term.value);
         if (encoded === undefined) {
@@ -95,13 +122,43 @@ export class TermDictionaryNumberRecordFullTerms implements ITermDictionary<numb
 
   public encodeOptional(term: RDF.Term): number | undefined {
     switch (term.termType) {
-      case 'Literal':
+      case 'Literal': {
+        if (TermDictionaryNumberRecordFullTerms.compact && !term.language) {
+          const table = this.compactTable(term.datatype.value, false);
+          const number = table?.kind.parse(term.value);
+          if (number !== undefined) {
+            return table!.encodings.get(number);
+          }
+        }
         return this.literalsOf(term, false)?.encodings.get(term.value);
+      }
       case 'BlankNode':
         return this.blankNodes.get(term.value);
       default:
         return this.dictionary[term.termType === 'NamedNode' ? term.value : termToString(term)];
     }
+  }
+
+  /**
+   * The table of literals of a datatype that are stored as numbers, if that datatype has one.
+   */
+  private compactTable(datatype: string, create: boolean): ICompactLiterals | undefined {
+    let table = this.compactByDatatype.get(datatype);
+    if (table === undefined) {
+      const kind = COMPACT_KINDS[datatype];
+      if (!kind || !create) {
+        return undefined;
+      }
+      table = {
+        kind,
+        datatype: this.dataFactory.namedNode(copyString(datatype)),
+        encodings: new NumberMap(),
+        id: this.compactTables.length + 1,
+      };
+      this.compactTables.push(table);
+      this.compactByDatatype.set(datatype, table);
+    }
+    return table ?? undefined;
   }
 
   /**
@@ -150,11 +207,15 @@ export class TermDictionaryNumberRecordFullTerms implements ITermDictionary<numb
   }
 
   public decode(encoding: number): RDF.Term {
-    const string = this.reverseDictionary[encoding];
-    if (string === undefined) {
+    const term = this.reverseDictionary[encoding];
+    if (term === undefined) {
       throw new Error(`The value ${encoding} is not present in this dictionary`);
     }
-    return string;
+    if (typeof term === 'number') {
+      const table = this.compactTables[this.compactTableOf[encoding] - 1];
+      return this.dataFactory.literal(table.kind.format(term), table.datatype);
+    }
+    return term;
   }
 
   public* encodings(): IterableIterator<number> {

@@ -254,6 +254,18 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
   /**
    * The number of quads in this store.
    */
+  /**
+   * Store the quads of sorted-blocks indexes in a more compact form, for a store that is no longer changed.
+   * Changing the store afterwards decodes them again.
+   * @param codec How the quads are stored, see {@link RdfStoreIndexSortedBlocks#compact}.
+   */
+  public compact(codec: 'shared' | 'delta'): void {
+    for (const wrapped of this.indexesWrapped) {
+      const index = <{ compact?: (codec: 'shared' | 'delta') => void }> <unknown> wrapped.index;
+      index.compact?.(codec);
+    }
+  }
+
   public get size(): number {
     return this._size;
   }

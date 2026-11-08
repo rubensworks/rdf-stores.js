@@ -105,6 +105,28 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
   public leaves: Int32Array[];
   public sizes: number[] = [ 0 ];
   /**
+   * When compacted, the leaves in encoded form, and the last quad of each leaf, for searching over leaves
+   * without decoding them. The leaves themselves are then empty, and are decoded on access by `leafAt`.
+   */
+  private encodedLeaves: (Int32Array | Uint8Array)[] | undefined;
+  // The encoded leaves of the delta codec, concatenated, with the offset of each leaf (and the end).
+  private encodedBytes: Uint8Array | undefined;
+  private encodedOffsets: Int32Array | undefined;
+  private sharedFirst: Int32Array | undefined;
+  private fences: Int32Array | undefined;
+  private codec: 'shared' | 'delta' | undefined;
+  private lastLeafIndex = -1;
+  private lastLeaf: Int32Array = new Int32Array(0);
+  private readonly decodedLeaves = new Map<number, Int32Array>();
+  public static decodedLeafCacheSize = Number(process.env.RDF_STORES_COMPACT_CACHE ?? 64);
+  public static compactChunk = Number(process.env.RDF_STORES_COMPACT_CHUNK ?? 512);
+  /**
+   * For testing only: compact after every change, so that all reads go through decoding.
+   */
+  public static autoCompact: 'shared' | 'delta' | undefined = <any> process.env.RDF_STORES_AUTO_COMPACT || undefined;
+
+
+  /**
    * Incremented on every change, so that iterators can notice that their position is stale.
    */
   public version = 0;
@@ -130,6 +152,21 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
     // Quoted triple patterns are matched against the quoted triples that the dictionary finds for them.
     this.features = { quotedTripleFiltering: Boolean(options.dictionary.features.quotedTriples) };
     this.termOrder = options.termOrder ?? new TermOrder(options.dictionary, options.termComparator);
+    const autoCompact = RdfStoreIndexSortedBlocks.autoCompact;
+    if (autoCompact) {
+      const self = <Record<string, (...args: any[]) => any>> <unknown> this;
+      for (const name of [ 'set', 'remove', 'setAll', 'setAllSorted' ]) {
+        const original = self[name].bind(this);
+        self[name] = (...args: any[]): any => {
+          const result = original(...args);
+          // Small indexes only, as compacting after every single insert into a large one takes quadratic time.
+          if (this.quadCount < 2000) {
+            this.compact(autoCompact);
+          }
+          return result;
+        };
+      }
+    }
   }
 
   /**
@@ -137,6 +174,217 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
    */
   public get size(): number {
     return this.quadCount;
+  }
+
+  /**
+   * The quads of a leaf, decoding it if this index is compacted.
+   * The returned array must not be modified.
+   * @param leaf A leaf index.
+   */
+  public leafAt(leaf: number): Int32Array {
+    if (this.encodedLeaves === undefined) {
+      return this.leaves[leaf];
+    }
+    if (leaf === this.lastLeafIndex) {
+      return this.lastLeaf;
+    }
+    let data = this.decodedLeaves.get(leaf);
+    if (data === undefined) {
+      data = this.decodeLeaf(leaf);
+      if (this.decodedLeaves.size >= RdfStoreIndexSortedBlocks.decodedLeafCacheSize) {
+        this.decodedLeaves.delete(this.decodedLeaves.keys().next().value!);
+      }
+      this.decodedLeaves.set(leaf, data);
+    }
+    this.lastLeafIndex = leaf;
+    this.lastLeaf = data;
+    return data;
+  }
+
+  /**
+   * Store the leaves in a more compact form, which is decoded on access.
+   * Any change to the index decodes all leaves again.
+   * @param codec 'shared' stores a first component that all quads of a leaf share once,
+   *              'delta' stores each quad as the components that differ from the previous quad, as varints.
+   */
+  public compact(codec: 'shared' | 'delta', chunk = RdfStoreIndexSortedBlocks.compactChunk): void {
+    this.decompress();
+    if (chunk < this.leafCapacity) {
+      // Smaller leaves, so that a lookup decodes fewer quads.
+      const leaves: Int32Array[] = [];
+      const sizes: number[] = [];
+      for (let leaf = 0; leaf < this.leaves.length; leaf++) {
+        const data = this.leaves[leaf];
+        for (let start = 0; start < this.sizes[leaf]; start += chunk) {
+          const size = Math.min(chunk, this.sizes[leaf] - start);
+          leaves.push(data.slice(start * 4, (start + size) * 4));
+          sizes.push(size);
+        }
+      }
+      if (leaves.length > 0) {
+        this.leaves = leaves;
+        this.sizes = sizes;
+      }
+    }
+    const leafCount = this.leaves.length;
+    const encoded: (Int32Array | Uint8Array)[] = [];
+    const sharedFirst = new Int32Array(leafCount).fill(-1);
+    const fences = new Int32Array(leafCount * 4);
+    for (let leaf = 0; leaf < leafCount; leaf++) {
+      const data = this.leaves[leaf];
+      const size = this.sizes[leaf];
+      if (size > 0) {
+        fences.set(data.subarray((size - 1) * 4, size * 4), leaf * 4);
+      }
+      if (codec === 'shared') {
+        let shared = size > 0;
+        for (let i = 1; i < size && shared; i++) {
+          shared = data[i * 4] === data[0];
+        }
+        if (shared) {
+          const out = new Int32Array(size * 3);
+          for (let i = 0; i < size; i++) {
+            out[i * 3] = data[(i * 4) + 1];
+            out[(i * 3) + 1] = data[(i * 4) + 2];
+            out[(i * 3) + 2] = data[(i * 4) + 3];
+          }
+          sharedFirst[leaf] = data[0];
+          encoded.push(out);
+        } else {
+          encoded.push(data.slice(0, size * 4));
+        }
+      } else {
+        encoded.push(RdfStoreIndexSortedBlocks.encodeDelta(data, size));
+      }
+    }
+    if (codec === 'delta') {
+      const offsets = new Int32Array(leafCount + 1);
+      for (let leaf = 0; leaf < leafCount; leaf++) {
+        offsets[leaf + 1] = offsets[leaf] + encoded[leaf].length;
+      }
+      const bytes = new Uint8Array(offsets[leafCount]);
+      for (let leaf = 0; leaf < leafCount; leaf++) {
+        bytes.set(encoded[leaf], offsets[leaf]);
+      }
+      this.encodedBytes = bytes;
+      this.encodedOffsets = offsets;
+      encoded.length = 0;
+    }
+    this.encodedLeaves = encoded;
+    this.sharedFirst = sharedFirst;
+    this.fences = fences;
+    this.codec = codec;
+    const empty = new Int32Array(0);
+    this.leaves = this.leaves.map(() => empty);
+    this.lastLeafIndex = -1;
+    this.decodedLeaves.clear();
+  }
+
+  /**
+   * Decode all leaves of a compacted index, so that it can be changed.
+   */
+  private decompress(): void {
+    if (this.encodedLeaves === undefined) {
+      return;
+    }
+    const leaves: Int32Array[] = [];
+    for (let leaf = 0; leaf < this.sizes.length; leaf++) {
+      const data = new Int32Array(Math.max(this.leafCapacity, this.sizes[leaf]) * 4);
+      data.set(this.decodeLeaf(leaf));
+      leaves.push(data);
+    }
+    this.leaves = leaves;
+    this.encodedLeaves = undefined;
+    this.encodedBytes = undefined;
+    this.encodedOffsets = undefined;
+    this.sharedFirst = undefined;
+    this.fences = undefined;
+    this.codec = undefined;
+    this.lastLeafIndex = -1;
+    this.decodedLeaves.clear();
+  }
+
+  private decodeLeaf(leaf: number): Int32Array {
+    const size = this.sizes[leaf];
+    if (this.codec === 'delta') {
+      return RdfStoreIndexSortedBlocks.decodeDelta(this.encodedBytes!, this.encodedOffsets![leaf], size);
+    }
+    const encoded = this.encodedLeaves![leaf];
+    const first = this.sharedFirst![leaf];
+    if (first === -1) {
+      return <Int32Array> encoded;
+    }
+    const data = new Int32Array(size * 4);
+    for (let i = 0; i < size; i++) {
+      data[i * 4] = first;
+      data[(i * 4) + 1] = encoded[i * 3];
+      data[(i * 4) + 2] = encoded[(i * 3) + 1];
+      data[(i * 4) + 3] = encoded[(i * 3) + 2];
+    }
+    return data;
+  }
+
+  /**
+   * Encode sorted quads as, per quad, the number of leading components it shares with the previous quad,
+   * followed by its other components as unsigned varints.
+   */
+  public static encodeDelta(data: Int32Array, size: number): Uint8Array {
+    const out = new Uint8Array((size * 21) + 1);
+    let position = 0;
+    for (let i = 0; i < size; i++) {
+      const offset = i * 4;
+      let same = 0;
+      if (i > 0) {
+        while (same < 3 && data[offset + same] === data[offset - 4 + same]) {
+          same++;
+        }
+      }
+      out[position++] = same;
+      for (let c = same; c < 4; c++) {
+        let value = data[offset + c] >>> 0;
+        while (value >= 0x80) {
+          out[position++] = (value & 0x7F) | 0x80;
+          value >>>= 7;
+        }
+        out[position++] = value;
+      }
+    }
+    return out.slice(0, position);
+  }
+
+  public static decodeDelta(encoded: Uint8Array, start: number, size: number): Int32Array {
+    const data = new Int32Array(size * 4);
+    let position = start;
+    for (let i = 0; i < size; i++) {
+      const offset = i * 4;
+      const same = encoded[position++];
+      for (let c = 0; c < same; c++) {
+        data[offset + c] = data[offset - 4 + c];
+      }
+      for (let c = same; c < 4; c++) {
+        let value = 0;
+        let shift = 0;
+        let byte: number;
+        do {
+          byte = encoded[position++];
+          value |= (byte & 0x7F) << shift;
+          shift += 7;
+        } while (byte >= 0x80);
+        data[offset + c] = value;
+      }
+    }
+    return data;
+  }
+
+  /**
+   * The memory of the leaves in bytes, as stored.
+   */
+  public get leafBytes(): number {
+    if (this.encodedLeaves) {
+      return this.encodedLeaves.reduce((sum, leaf) => sum + leaf.byteLength, 0) + this.fences!.byteLength +
+        (this.encodedBytes?.byteLength ?? 0) + (this.encodedOffsets?.byteLength ?? 0);
+    }
+    return this.leaves.reduce((sum, leaf) => sum + leaf.byteLength, 0);
   }
 
   /**
@@ -214,19 +462,24 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
   public advance(cursor: ISortedBlocksCursor, skip: (data: Int32Array, offset: number) => boolean): void {
     const leaves = this.leaves;
     const sizes = this.sizes;
+    const fences = this.fences;
     const leafCount = leaves.length;
+    // Whether the last quad of a leaf is skipped, read from the fences if the leaves are compacted.
+    const lastSkipped = (index: number): boolean => fences ?
+      skip(fences, index * 4) :
+      skip(leaves[index], (sizes[index] - 1) * 4);
     let leaf = cursor.leaf;
-    if (leaf >= leafCount || !skip(leaves[leaf], cursor.offset * 4)) {
+    if (leaf >= leafCount || !skip(this.leafAt(leaf), cursor.offset * 4)) {
       return;
     }
 
     // The target lies in the current leaf if its last quad is not skipped.
-    if (skip(leaves[leaf], (sizes[leaf] - 1) * 4)) {
+    if (lastSkipped(leaf)) {
       // Gallop over the leaves on their last quad, then narrow down with a binary search.
       let low = leaf;
       let step = 1;
       let high = leaf + 1;
-      while (high < leafCount && skip(leaves[high], (sizes[high] - 1) * 4)) {
+      while (high < leafCount && lastSkipped(high)) {
         low = high;
         step *= 2;
         high = low + step;
@@ -237,7 +490,7 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
       let start = low + 1;
       while (start < high) {
         const middle = (start + high) >>> 1;
-        if (skip(leaves[middle], (sizes[middle] - 1) * 4)) {
+        if (lastSkipped(middle)) {
           start = middle + 1;
         } else {
           high = middle;
@@ -252,7 +505,7 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
       cursor.offset = 0;
     }
 
-    const data = leaves[leaf];
+    const data = this.leafAt(leaf);
     let low = cursor.offset;
     let high = sizes[leaf] - 1;
     while (low < high) {
@@ -286,7 +539,10 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
     let high = leaves.length;
     while (low < high) {
       const middle = (low + high) >>> 1;
-      if (this.compare(leaves[middle], (sizes[middle] - 1) * 4, key, length) < threshold) {
+      const fences = this.fences;
+      if ((fences ?
+        this.compare(fences, middle * 4, key, length) :
+        this.compare(leaves[middle], (sizes[middle] - 1) * 4, key, length)) < threshold) {
         low = middle + 1;
       } else {
         high = middle;
@@ -297,7 +553,7 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
     }
     // The first quad in that leaf that is not skipped
     const leaf = low;
-    const data = leaves[leaf];
+    const data = this.leafAt(leaf);
     low = 0;
     high = sizes[leaf] - 1;
     while (low < high) {
@@ -363,14 +619,14 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
    * @param length The number of components that define the group.
    */
   public skipGroup(cursor: ISortedBlocksCursor, length: number): void {
-    const start = this.leaves[cursor.leaf];
+    const start = this.leafAt(cursor.leaf);
     const startOffset = cursor.offset * 4;
     for (let probe = 0; probe < this.linearProbes; probe++) {
       this.step(cursor);
       if (cursor.leaf >= this.leaves.length) {
         return;
       }
-      const data = this.leaves[cursor.leaf];
+      const data = this.leafAt(cursor.leaf);
       const offset = cursor.offset * 4;
       for (let i = 0; i < length; i++) {
         if (data[offset + i] !== start[startOffset + i]) {
@@ -405,7 +661,7 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
       if (cursor.leaf >= leafCount) {
         return false;
       }
-      const data = this.leaves[cursor.leaf];
+      const data = this.leafAt(cursor.leaf);
       const offset = cursor.offset * 4;
       let mismatch = -1;
       for (const level of levels) {
@@ -506,6 +762,7 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
   public set(key: EncodedQuadTerms<number>, value: boolean): boolean {
     // Only membership is stored, so the value is always true.
     void value;
+    this.decompress();
     const termOrder = this.termOrder;
     termOrder.add(key[0]);
     termOrder.add(key[1]);
@@ -557,6 +814,7 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
   }
 
   public remove(key: EncodedQuadTerms<number>): boolean {
+    this.decompress();
     if (this.termOrder.label(key[0]) === 0 || this.termOrder.label(key[1]) === 0 ||
       this.termOrder.label(key[2]) === 0 || this.termOrder.label(key[3]) === 0) {
       return false;
@@ -591,6 +849,7 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
    * @return number The number of quads that were not yet present.
    */
   public setAll(keys: Int32Array, count: number): number {
+    this.decompress();
     const termOrder = this.termOrder;
     termOrder.addAll(keys, count * 4);
     if (count * this.mergeThreshold < this.quadCount) {
@@ -635,6 +894,7 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
    * @return The number of quads that were not yet present.
    */
   public setAllSorted(sorted: Int32Array, count: number): number {
+    this.decompress();
     return this.mergeSorted(sorted, count);
   }
 
@@ -849,7 +1109,7 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
       return undefined;
     }
     const cursor = this.seekKey(key, 4, false);
-    return cursor.leaf < this.leaves.length && this.compare(this.leaves[cursor.leaf], cursor.offset * 4, key, 4) === 0 ?
+    return cursor.leaf < this.leaves.length && this.compare(this.leafAt(cursor.leaf), cursor.offset * 4, key, 4) === 0 ?
       true :
       undefined;
   }
@@ -995,7 +1255,7 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
     const ids = filterTerms ?? [];
     let cursor = this.startMatch(ids, leading);
     while (this.nextMatch(cursor, ids, levels, leading)) {
-      const data = this.leaves[cursor.leaf];
+      const data = this.leafAt(cursor.leaf);
       const offset = cursor.offset * 4;
       const result: number[] = [];
       for (let i = 0; i < length; i++) {
@@ -1068,7 +1328,7 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
       const end = this.seekKey(prefix, leading, true);
       let previous: number | undefined;
       for (let leaf = start.leaf; leaf < this.leaves.length && leaf <= end.leaf; leaf++) {
-        const data = this.leaves[leaf];
+        const data = this.leafAt(leaf);
         const to = (leaf === end.leaf ? end.offset : this.sizes[leaf]) * 4;
         for (let offset = (leaf === start.leaf ? start.offset : 0) * 4 + level; offset < to; offset += 4) {
           const encoding = data[offset];
@@ -1084,7 +1344,7 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
     } else {
       const cursor = this.startMatch(ids, leading);
       while (this.nextMatch(cursor, ids, levels, leading)) {
-        const encoding = this.leaves[cursor.leaf][cursor.offset * 4 + level];
+        const encoding = this.leafAt(cursor.leaf)[cursor.offset * 4 + level];
         if (seen.add(encoding)) {
           encodings.push(encoding);
         }
