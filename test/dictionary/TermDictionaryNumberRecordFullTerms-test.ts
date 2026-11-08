@@ -179,6 +179,14 @@ describe('TermDictionaryNumberRecordFullTerms', () => {
       expect(dict.encodeOptional(DF.blankNode('c'))).toBeUndefined();
       expect(dict.encode(DF.literal('1', 'en'))).toBe(2);
     });
+
+    it('should return undefined for non-encoded variables and the default graph', () => {
+      expect(dict.encode(DF.variable('v'))).toBe(0);
+
+      expect(dict.encodeOptional(DF.variable('v'))).toBe(0);
+      expect(dict.encodeOptional(DF.variable('w'))).toBeUndefined();
+      expect(dict.encodeOptional(DF.defaultGraph())).toBeUndefined();
+    });
   });
 
   describe('decode', () => {

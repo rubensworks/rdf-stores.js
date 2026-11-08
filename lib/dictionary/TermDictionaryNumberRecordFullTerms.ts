@@ -28,30 +28,33 @@ export class TermDictionaryNumberRecordFullTerms implements ITermDictionary<numb
   }
 
   public encode(term: RDF.Term): number {
-    if (term.termType === 'Literal') {
-      return this.encodeIn(this.literalsOf(term, true)!, term);
+    switch (term.termType) {
+      case 'Literal':
+        return this.encodeIn(this.literalsOf(term, true)!, term);
+      case 'BlankNode':
+        return this.encodeIn(this.blankNodes, term);
+      default: {
+        const key = term.termType === 'NamedNode' ? term.value : termToString(term);
+        let encoded = this.dictionary[key];
+        if (encoded === undefined) {
+          encoded = this.lastId++;
+          this.dictionary[key] = encoded;
+          this.reverseDictionary[encoded] = term;
+        }
+        return encoded;
+      }
     }
-    if (term.termType === 'BlankNode') {
-      return this.encodeIn(this.blankNodes, term);
-    }
-    const key = termToString(term);
-    let encoded = this.dictionary[key];
-    if (encoded === undefined) {
-      encoded = this.lastId++;
-      this.dictionary[key] = encoded;
-      this.reverseDictionary[encoded] = term;
-    }
-    return encoded;
   }
 
   public encodeOptional(term: RDF.Term): number | undefined {
-    if (term.termType === 'Literal') {
-      return this.literalsOf(term, false)?.get(term.value);
+    switch (term.termType) {
+      case 'Literal':
+        return this.literalsOf(term, false)?.get(term.value);
+      case 'BlankNode':
+        return this.blankNodes.get(term.value);
+      default:
+        return this.dictionary[term.termType === 'NamedNode' ? term.value : termToString(term)];
     }
-    if (term.termType === 'BlankNode') {
-      return this.blankNodes.get(term.value);
-    }
-    return this.dictionary[termToString(term)];
   }
 
   private encodeIn(encodings: Map<string, number>, term: RDF.Term): number {
