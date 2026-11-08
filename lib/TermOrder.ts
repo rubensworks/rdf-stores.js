@@ -350,7 +350,7 @@ export class TermOrder {
       for (let i = 0; i < indices.length; i++) {
         indices[i] = i;
       }
-      sortIndicesByStrings(indices, values);
+      const equalToPrevious = sortIndicesByStrings(indices, values);
       const start = position;
       for (const index of indices) {
         encodings[position++] = encodingsOfGroup[index];
@@ -359,7 +359,7 @@ export class TermOrder {
         // Order runs of literals with equal values on their datatype, language and direction.
         let runStart = 0;
         for (let i = 1; i <= indices.length; i++) {
-          if (i === indices.length || values[indices[i]] !== values[indices[runStart]]) {
+          if (i === indices.length || equalToPrevious[i] === 0) {
             if (i - runStart > 1) {
               const run = encodings.slice(start + runStart, start + i)
                 .sort((left, right) => this.compareEncodings(left, right));

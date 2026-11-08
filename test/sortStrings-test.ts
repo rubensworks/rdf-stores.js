@@ -1,12 +1,10 @@
 import { sortIndicesByStrings } from '../lib/sortStrings';
 
-function sorted(strings: string[]): string[] {
-  const indices = new Int32Array(strings.length);
-  for (let i = 0; i < indices.length; i++) {
-    indices[i] = i;
-  }
-  sortIndicesByStrings(indices, strings);
-  return [ ...indices ].map(index => strings[index]);
+function sorted(strings: string[], indices = Int32Array.from(strings.keys())): string[] {
+  const equalToPrevious = sortIndicesByStrings(indices, strings);
+  const result = [ ...indices ].map(index => strings[index]);
+  expect([ ...equalToPrevious ]).toEqual(result.map((string, i) => i > 0 && string === result[i - 1] ? 1 : 0));
+  return result;
 }
 
 function random(seed: number): () => number {
@@ -43,6 +41,15 @@ describe('sortIndicesByStrings', () => {
       }
       strings.push(string);
     }
+    expect(sorted(strings)).toEqual([ ...strings ].sort());
+  });
+
+  it('sorts a subset of the strings', () => {
+    expect(sorted([ 'c', 'a', 'b', 'a' ], Int32Array.from([ 3, 0, 2 ]))).toEqual([ 'a', 'b', 'c' ]);
+  });
+
+  it('marks equal strings that end in a large range', () => {
+    const strings = Array.from({ length: 100 }, (value, i) => [ 'ab', 'a', 'abc' ][i % 3]);
     expect(sorted(strings)).toEqual([ ...strings ].sort());
   });
 
