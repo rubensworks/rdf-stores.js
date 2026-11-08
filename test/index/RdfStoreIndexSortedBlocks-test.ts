@@ -279,6 +279,11 @@ describe('RdfStoreIndexSortedBlocks', () => {
     expect(actual).toEqual(expected);
   });
 
+  it('adds nothing for an empty batch', () => {
+    expect(index.setAll(new Int32Array(0), 0)).toBe(0);
+    expect([ ...index.findEncoded([ undefined, undefined, undefined, undefined ], <any> []) ]).toHaveLength(0);
+  });
+
   it('sorts a batch over more terms than one radix digit covers', () => {
     const count = 70000;
     const batch = new Int32Array(count * 4);
@@ -294,7 +299,11 @@ describe('RdfStoreIndexSortedBlocks', () => {
         graph,
       ], i * 4);
     }
-    expect(index.setAll(batch, count)).toBe(count);
+    // Each quad twice
+    const doubled = new Int32Array(count * 8);
+    doubled.set(batch);
+    doubled.set(batch, count * 4);
+    expect(index.setAll(doubled, count * 2)).toBe(count);
     const all = [ ...index.findEncoded([ undefined, undefined, undefined, undefined ], <any> []) ];
     expect(all).toHaveLength(count);
     for (let i = 1; i < all.length; i++) {

@@ -16,6 +16,10 @@ import type { IRdfStoreIndex } from './IRdfStoreIndex';
 import { EMPTY_QUAD_ITERATOR, RdfStoreIndexSingleQuadIterator } from './RdfStoreIndexNestedMapIterator';
 import { RdfStoreIndexSortedBlocksIterator } from './RdfStoreIndexSortedBlocksIterator';
 
+// Packed integers are written as two 32-bit halves, whose positions depend on the platform's byte order.
+const LOW = 1 - new Uint8Array(new Uint32Array([ 1 ]).buffer)[0];
+const HIGH = 1 - LOW;
+
 /**
  * Tuning options for {@link RdfStoreIndexSortedBlocks}.
  * The defaults come from a parameter sweep over WatDiv (1.1M triples), and should rarely need changing.
@@ -661,7 +665,9 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
   /**
    * Sort encoded quads on the term order, and drop duplicates.
    *
-   * This is a least-significant-digit radix sort on term ranks, sixteen bits per pass,
+   * If the term ranks of a quad fit in 64 bits, possibly leaving out a first component that all quads share,
+   * the quads are packed into 64-bit integers that are sorted natively.
+   * Otherwise, this is a least-significant-digit radix sort on term ranks, sixteen bits per pass,
    * which skips the passes in which all quads share the same digit.
    * @param keys Encoded quads, four entries per quad.
    * @param count The number of quads.
@@ -669,73 +675,66 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
    */
   protected sortUnique(keys: Int32Array, count: number): [ Int32Array, number ] {
     const termOrder = this.termOrder;
-    termOrder.makeUniform();
-
-    // Each record holds the ranks of a quad's four terms and the quad's position in `keys`.
-    // Records are moved as a whole in every pass, so that passes read them sequentially.
-    const stride = 5;
-    let records = new Int32Array(count * stride);
-    for (let i = 0; i < count; i++) {
-      const offset = i * 4;
-      const record = i * stride;
-      records[record] = termOrder.rank(keys[offset]);
-      records[record + 1] = termOrder.rank(keys[offset + 1]);
-      records[record + 2] = termOrder.rank(keys[offset + 2]);
-      records[record + 3] = termOrder.rank(keys[offset + 3]);
-      records[record + 4] = i;
-    }
-
-    // Digits of eleven bits keep the histograms small enough for the processor cache.
-    const digitBits = 11;
-    const radix = 1 << digitBits;
-    const mask = radix - 1;
-    const rankBits = 32 - Math.clz32(Math.max(termOrder.size - 1, 1));
-    const digits = Math.ceil(rankBits / digitBits);
-
-    // Count the digits of all passes in a single read of the records.
-    const histograms = new Uint32Array(4 * digits * radix);
-    for (let record = 0; record < count * stride; record += stride) {
-      for (let component = 0; component < 4; component++) {
-        const rank = records[record + component];
-        for (let digit = 0; digit < digits; digit++) {
-          histograms[(((component * digits) + digit) * radix) + ((rank >>> (digit * digitBits)) & mask)]++;
+    const bits = 32 - Math.clz32(Math.max(termOrder.size - 1, 1));
+    if (count > 0) {
+      let sharedFirst = true;
+      const first = keys[0];
+      for (let offset = 4; offset < count * 4; offset += 4) {
+        if (keys[offset] !== first) {
+          sharedFirst = false;
+          break;
         }
+      }
+      const skip = sharedFirst ? 1 : 0;
+      if ((4 - skip) * bits <= 64) {
+        return this.sortUniquePacked(keys, count, skip, bits);
       }
     }
 
-    let buffer = new Int32Array(count * stride);
+    termOrder.makeUniform();
+    const ranks = new Int32Array(count * 4);
+    for (let i = 0; i < count * 4; i++) {
+      ranks[i] = termOrder.rank(keys[i]);
+    }
+    // Ranks have more than sixteen bits here, as they would fit in packed integers otherwise.
+    const digitsPerComponent = 2;
+
+    let permutation = new Uint32Array(count);
+    let buffer = new Uint32Array(count);
+    for (let i = 0; i < count; i++) {
+      permutation[i] = i;
+    }
+    const histogram = new Uint32Array(0x10000);
     for (let component = 3; component >= 0; component--) {
-      for (let digit = 0; digit < digits; digit++) {
-        const shift = digit * digitBits;
-        const base = ((component * digits) + digit) * radix;
-        // Skip passes in which all quads share the same digit.
-        if (count === 0 || histograms[base + ((records[component] >>> shift) & mask)] === count) {
+      for (let digit = 0; digit < digitsPerComponent; digit++) {
+        const shift = digit * 16;
+        histogram.fill(0);
+        for (let i = 0; i < count; i++) {
+          histogram[(ranks[(permutation[i] * 4) + component] >>> shift) & 0xFFFF]++;
+        }
+        if (count === 0 || histogram[(ranks[(permutation[0] * 4) + component] >>> shift) & 0xFFFF] === count) {
           continue;
         }
         let total = 0;
-        for (let bucket = base; bucket < base + radix; bucket++) {
-          const bucketCount = histograms[bucket];
-          histograms[bucket] = total;
+        for (let bucket = 0; bucket < 0x10000; bucket++) {
+          const bucketCount = histogram[bucket];
+          histogram[bucket] = total;
           total += bucketCount;
         }
-        for (let record = 0; record < count * stride; record += stride) {
-          const target = histograms[base + ((records[record + component] >>> shift) & mask)]++ * stride;
-          buffer[target] = records[record];
-          buffer[target + 1] = records[record + 1];
-          buffer[target + 2] = records[record + 2];
-          buffer[target + 3] = records[record + 3];
-          buffer[target + 4] = records[record + 4];
+        for (let i = 0; i < count; i++) {
+          const index = permutation[i];
+          buffer[histogram[(ranks[(index * 4) + component] >>> shift) & 0xFFFF]++] = index;
         }
-        const swap = records;
-        records = buffer;
+        const swap = permutation;
+        permutation = buffer;
         buffer = swap;
       }
     }
 
     const sorted = new Int32Array(count * 4);
     let sortedCount = 0;
-    for (let record = 0; record < count * stride; record += stride) {
-      const offset = records[record + 4] * 4;
+    for (let i = 0; i < count; i++) {
+      const offset = permutation[i] * 4;
       if (sortedCount > 0) {
         const last = (sortedCount - 1) * 4;
         if (sorted[last] === keys[offset] && sorted[last + 1] === keys[offset + 1] &&
@@ -748,6 +747,55 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
       sorted[target + 1] = keys[offset + 1];
       sorted[target + 2] = keys[offset + 2];
       sorted[target + 3] = keys[offset + 3];
+      sortedCount++;
+    }
+    return [ sorted, sortedCount ];
+  }
+
+  /**
+   * Sort encoded quads by packing the ranks of their components into 64-bit integers.
+   * @param keys Encoded quads, four entries per quad.
+   * @param count The number of quads.
+   * @param skip The number of leading components that all quads share, and that are left out of the packed integers.
+   * @param bits The number of bits of a rank.
+   */
+  protected sortUniquePacked(keys: Int32Array, count: number, skip: number, bits: number): [ Int32Array, number ] {
+    const { plainRanks, quotedRanks, encodings } = this.termOrder.rankTables();
+    const packed = new BigUint64Array(count);
+    // The 32-bit halves of the packed integers
+    const halves = new Uint32Array(packed.buffer);
+    const carry = 32 - bits;
+    for (let i = 0; i < count; i++) {
+      let high = 0;
+      let low = 0;
+      for (let offset = (i * 4) + skip; offset < (i * 4) + 4; offset++) {
+        const encoding = keys[offset];
+        high = (high << bits) | (low >>> carry);
+        low = (low << bits) | (encoding >= 0 ? plainRanks[encoding] : quotedRanks[encoding & 0x7FFFFFFF]);
+      }
+      halves[(i * 2) + LOW] = low;
+      halves[(i * 2) + HIGH] = high;
+    }
+    packed.sort();
+
+    const sorted = new Int32Array(count * 4);
+    let sortedCount = 0;
+    const mask = (1 << bits) - 1;
+    for (let i = 0; i < count; i++) {
+      let low = halves[(i * 2) + LOW];
+      let high = halves[(i * 2) + HIGH];
+      if (i > 0 && low === halves[(i * 2) - 2 + LOW] && high === halves[(i * 2) - 2 + HIGH]) {
+        continue;
+      }
+      const target = sortedCount * 4;
+      for (let component = 3; component >= skip; component--) {
+        sorted[target + component] = encodings[low & mask];
+        low = (low >>> bits) | (high << carry);
+        high >>>= bits;
+      }
+      if (skip === 1) {
+        sorted[target] = keys[0];
+      }
       sortedCount++;
     }
     return [ sorted, sortedCount ];
