@@ -38,9 +38,9 @@ const MEASURE_NODE_FLAGS = [ '--expose-gc', '--predictable' ];
 const WARMUP_DIMENSION = 4;
 
 /**
- * Changes below this fraction are not highlighted, as some sizes vary by up to that much between runs.
+ * Changes below this fraction are not highlighted, as some sizes vary by up to 1.5% between runs.
  */
-const NOTABLE_CHANGE = 0.01;
+const NOTABLE_CHANGE = 0.02;
 
 const MIB = 1_024 * 1_024;
 
@@ -271,8 +271,9 @@ function renderTable(rows: { name: string; head?: IStoreSizeEntry; base?: IStore
     ...rows.map(({ name, head, base }) => {
       const separator = name.lastIndexOf(' | ');
       const perQuad = /Per quad: (\d+) bytes/u.exec(head?.extra ?? '')?.[1];
+      // Code spans, so that GitHub does not take `<number>` in a name for an HTML tag
       return `| ${[
-        name.slice(0, separator),
+        `\`${name.slice(0, separator)}\``,
         name.slice(separator + 3),
         head ? `\`${formatMebibytes(head.value)}\`` : 'removed',
         head ? base ? formatChange(head.value, base.value) : 'new' : '',
@@ -305,7 +306,7 @@ function renderComparison(
     'Sizes are the heap and off-heap memory that a store retains after ingesting a dataset, ',
     `measured for ${options.headSha ?? 'the head commit'}, `,
     `and changes are relative to the base commit${options.baseSha ? ` ${options.baseSha}` : ''}. `,
-    `Changes below ${percentage}% are not highlighted, as some sizes vary by up to that much between runs.\n`,
+    `Changes below ${percentage}% are not highlighted, as some sizes vary by up to 1.5% between runs.\n`,
   ];
   if (options.historyUrl ?? options.runUrl) {
     lines.push('\n');
