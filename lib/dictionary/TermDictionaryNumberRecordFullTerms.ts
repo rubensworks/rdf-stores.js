@@ -7,15 +7,18 @@ import type { ITermDictionary } from './ITermDictionary';
  * The encodings of literals with the same datatype, language and direction, by value.
  */
 interface ILiterals {
-  datatype: string;
-  language: string;
-  direction: string;
   /**
    * What new literals are created with, which they share.
    */
   languageOrDatatype: string | RDF.NamedNode | RDF.DirectionalLanguage;
   encodings: Map<string, number>;
 }
+
+/**
+ * V8 copies strings shorter than this instead of slicing or concatenating them,
+ * so those never keep a larger string alive.
+ */
+const MIN_SHARED_STRING_LENGTH = 13;
 
 /**
  * Copy a string, so the copy does not keep a larger string alive.
@@ -25,7 +28,7 @@ interface ILiterals {
  * @param value A string.
  */
 function copyString(value: string): string {
-  return value.length > 1 ? [ value.slice(0, 1), value.slice(1) ].join('') : value;
+  return value.length < MIN_SHARED_STRING_LENGTH ? value : [ value.slice(0, 1), value.slice(1) ].join('');
 }
 
 /**
@@ -42,6 +45,9 @@ export class TermDictionaryNumberRecordFullTerms implements ITermDictionary<numb
   private readonly blankNodes = new Map<string, number>();
   private readonly literals = new Map<string, ILiterals>();
   // The literals of the last datatype, language and direction, which consecutive literals often share.
+  private lastDatatype: string | undefined;
+  private lastLanguage = '';
+  private lastDirection = '';
   private lastLiterals: ILiterals | undefined;
   private readonly reverseDictionary: Record<number, RDF.Term> = {};
   private readonly dataFactory: RDF.DataFactory;
@@ -108,8 +114,7 @@ export class TermDictionaryNumberRecordFullTerms implements ITermDictionary<numb
     const direction = literal.direction ?? '';
     // The datatype of a literal with a language follows from its language and direction.
     const datatype = language ? '' : literal.datatype.value;
-    const last = this.lastLiterals;
-    if (!last || datatype !== last.datatype || language !== last.language || direction !== last.direction) {
+    if (datatype !== this.lastDatatype || language !== this.lastLanguage || direction !== this.lastDirection) {
       const key = `${datatype}@${language}--${direction}`;
       let literals = this.literals.get(key);
       if (!literals) {
@@ -117,14 +122,14 @@ export class TermDictionaryNumberRecordFullTerms implements ITermDictionary<numb
           return undefined;
         }
         literals = {
-          datatype: copyString(datatype),
-          language: copyString(language),
-          direction,
           languageOrDatatype: this.getLanguageOrDatatype(datatype, language, direction),
           encodings: new Map(),
         };
         this.literals.set(key, literals);
       }
+      this.lastDatatype = datatype;
+      this.lastLanguage = language;
+      this.lastDirection = direction;
       this.lastLiterals = literals;
     }
     return this.lastLiterals;

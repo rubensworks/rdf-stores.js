@@ -245,7 +245,7 @@ describe('TermDictionaryNumberRecordFullTerms', () => {
       expect(dict.decode(2)).toEqualRdfTerm(DF.literal('3', DF.namedNode('ex:type')));
     });
 
-    it('should decode empty literals and one-character blank nodes', () => {
+    it('should decode literals and blank nodes with short values', () => {
       dict.encode(DF.literal(''));
       dict.encode(DF.blankNode('b'));
 
