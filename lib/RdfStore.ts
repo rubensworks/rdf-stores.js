@@ -82,6 +82,12 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
   private _size = 0;
   // eslint-disable-next-line ts/naming-convention
   private _hasBlankNodes = false;
+  // Consecutive quads often share their subject and graph, and have few distinct predicates.
+  private lastSubject: RDF.Term | undefined;
+  private lastSubjectEncoded: TE | undefined;
+  private lastGraph: RDF.Term | undefined;
+  private lastGraphEncoded: TE | undefined;
+  private readonly predicatesEncoded = new Map<string, TE>();
 
   public constructor(options: IRdfStoreOptions<TE, TQ>) {
     this.options = options;
@@ -456,10 +462,33 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
 
   private encodeInto(quad: TQ, buffer: Int32Array, offset: number): void {
     this.checkBlankNodes(quad);
-    buffer[offset] = <number> <unknown> this.dictionary.encode(quad.subject);
-    buffer[offset + 1] = <number> <unknown> this.dictionary.encode(quad.predicate);
+    const subject = quad.subject;
+    if (this.lastSubject === undefined || !subject.equals(this.lastSubject)) {
+      this.lastSubject = subject;
+      this.lastSubjectEncoded = this.dictionary.encode(subject);
+    }
+    buffer[offset] = <number> <unknown> this.lastSubjectEncoded;
+    const predicate = quad.predicate;
+    let predicateEncoded: TE | undefined;
+    if (predicate.termType === 'NamedNode') {
+      predicateEncoded = this.predicatesEncoded.get(predicate.value);
+      if (predicateEncoded === undefined) {
+        predicateEncoded = this.dictionary.encode(predicate);
+        if (this.predicatesEncoded.size < 1024) {
+          this.predicatesEncoded.set(predicate.value, predicateEncoded);
+        }
+      }
+    } else {
+      predicateEncoded = this.dictionary.encode(predicate);
+    }
+    buffer[offset + 1] = <number> <unknown> predicateEncoded;
     buffer[offset + 2] = <number> <unknown> this.dictionary.encode(quad.object);
-    buffer[offset + 3] = <number> <unknown> this.dictionary.encode(quad.graph);
+    const graph = quad.graph;
+    if (this.lastGraph === undefined || !graph.equals(this.lastGraph)) {
+      this.lastGraph = graph;
+      this.lastGraphEncoded = this.dictionary.encode(graph);
+    }
+    buffer[offset + 3] = <number> <unknown> this.lastGraphEncoded;
   }
 
   /**
