@@ -14,6 +14,7 @@ import { DatasetCoreWrapper } from './dataset/DatasetCoreWrapper';
 import type { ITermDictionary } from './dictionary/ITermDictionary';
 import { TermDictionaryNumberRecordFullTerms } from './dictionary/TermDictionaryNumberRecordFullTerms';
 import { TermDictionaryQuotedIndexed } from './dictionary/TermDictionaryQuotedIndexed';
+import { deriveSortedOrder } from './index/deriveSortedOrder';
 import type { IRdfStoreIndex } from './index/IRdfStoreIndex';
 import { RdfStoreIndexNestedMapQuoted } from './index/RdfStoreIndexNestedMapQuoted';
 import { RdfStoreIndexSortedBlocks } from './index/RdfStoreIndexSortedBlocks';
@@ -479,20 +480,9 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * @return number The number of quads that were not yet present.
    */
   private addEncodedQuads(buffer: Int32Array, count: number): number {
-    let added = 0;
-    const permuted = new Int32Array(count * 4);
-    for (const [ i, indexWrapped ] of this.indexesWrapped.entries()) {
-      const permutation = indexWrapped.componentOrderPermutation;
-      for (let offset = 0; offset < count * 4; offset += 4) {
-        permuted[offset] = buffer[offset + permutation[0]];
-        permuted[offset + 1] = buffer[offset + permutation[1]];
-        permuted[offset + 2] = buffer[offset + permutation[2]];
-        permuted[offset + 3] = buffer[offset + permutation[3]];
-      }
-      const indexAdded = indexWrapped.index.setAll!(permuted, count);
-      if (i === 0) {
-        added = indexAdded;
-      }
+    let added = this.addEncodedQuadsSortedOnce(buffer, count);
+    if (added < 0) {
+      added = this.addEncodedQuadsPerIndex(buffer, count);
     }
     this._size += added;
 
@@ -506,6 +496,73 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
         }
         graphIndex.add(<TE> <unknown> buffer[offset]);
         graphIndex.add(<TE> <unknown> buffer[offset + 2]);
+      }
+    }
+    return added;
+  }
+
+  /**
+   * Insert a batch that every index merges with its quads by sorting it once, for the first index,
+   * and deriving the order of every next index from the previous one where possible.
+   * @return The number of quads that were not yet present, or -1 if the indexes can not take this path.
+   */
+  private addEncodedQuadsSortedOnce(buffer: Int32Array, count: number): number {
+    const first = this.indexesWrapped[0];
+    const termOrder = first.index.termOrder;
+    if (!termOrder || !this.indexesWrapped.every(wrapped => wrapped.index.termOrder === termOrder &&
+      wrapped.index.mergesBatch?.(count))) {
+      return -1;
+    }
+    const [ sorted, sortedCount ] = first.index.sortBatch!(this.permuteEncodedQuads(buffer, count, first), count);
+    const added = first.index.setAllSorted!(sorted, sortedCount);
+    let previous = sorted;
+    let previousOrder = first.componentOrder;
+    for (const wrapped of this.indexesWrapped.slice(1)) {
+      const derived = deriveSortedOrder(
+        previous,
+        sortedCount,
+        previousOrder,
+        wrapped.componentOrder,
+        termOrder.rankTables(),
+        termOrder.size,
+      );
+      if (derived) {
+        wrapped.index.setAllSorted!(derived, sortedCount);
+        previous = derived;
+        previousOrder = wrapped.componentOrder;
+      } else {
+        wrapped.index.setAll!(this.permuteEncodedQuads(buffer, count, wrapped), count);
+      }
+    }
+    return added;
+  }
+
+  private permuteEncodedQuads(buffer: Int32Array, count: number, indexWrapped: IRdfStoreIndexWrapped<TE>): Int32Array {
+    const permutation = indexWrapped.componentOrderPermutation;
+    const permuted = new Int32Array(count * 4);
+    for (let offset = 0; offset < count * 4; offset += 4) {
+      permuted[offset] = buffer[offset + permutation[0]];
+      permuted[offset + 1] = buffer[offset + permutation[1]];
+      permuted[offset + 2] = buffer[offset + permutation[2]];
+      permuted[offset + 3] = buffer[offset + permutation[3]];
+    }
+    return permuted;
+  }
+
+  private addEncodedQuadsPerIndex(buffer: Int32Array, count: number): number {
+    let added = 0;
+    const permuted = new Int32Array(count * 4);
+    for (const [ i, indexWrapped ] of this.indexesWrapped.entries()) {
+      const permutation = indexWrapped.componentOrderPermutation;
+      for (let offset = 0; offset < count * 4; offset += 4) {
+        permuted[offset] = buffer[offset + permutation[0]];
+        permuted[offset + 1] = buffer[offset + permutation[1]];
+        permuted[offset + 2] = buffer[offset + permutation[2]];
+        permuted[offset + 3] = buffer[offset + permutation[3]];
+      }
+      const indexAdded = indexWrapped.index.setAll!(permuted, count);
+      if (i === 0) {
+        added = indexAdded;
       }
     }
     return added;

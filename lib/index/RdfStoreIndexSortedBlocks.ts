@@ -605,6 +605,40 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
     }
 
     const [ sorted, sortedCount ] = this.sortUnique(keys, count);
+    return this.mergeSorted(sorted, sortedCount);
+  }
+
+  /**
+   * If a batch of the given size is merged with the quads in this index, rather than inserted one by one.
+   * @param count The number of quads in the batch.
+   */
+  public mergesBatch(count: number): boolean {
+    return count * this.mergeThreshold >= this.quadCount;
+  }
+
+  /**
+   * Sort a batch of quads in the order of this index, and drop duplicates, after adding their terms to the term order.
+   * @param keys Encoded quads in the component order of this index, four entries per quad.
+   * @param count The number of quads.
+   * @return A new array with the sorted unique quads, and the number of quads in it.
+   */
+  public sortBatch(keys: Int32Array, count: number): [ Int32Array, number ] {
+    this.termOrder.addAll(keys, count * 4);
+    return this.sortUnique(keys, count);
+  }
+
+  /**
+   * Add a batch of quads that is already sorted in the order of this index, without duplicates,
+   * and whose terms are all in the term order.
+   * @param sorted Encoded quads in the component order of this index, four entries per quad.
+   * @param count The number of quads.
+   * @return The number of quads that were not yet present.
+   */
+  public setAllSorted(sorted: Int32Array, count: number): number {
+    return this.mergeSorted(sorted, count);
+  }
+
+  private mergeSorted(sorted: Int32Array, sortedCount: number): number {
     if (this.quadCount === 0) {
       return this.setSorted(sorted, sortedCount);
     }
