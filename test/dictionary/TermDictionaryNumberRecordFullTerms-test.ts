@@ -1,3 +1,4 @@
+import type * as RDF from '@rdfjs/types';
 import { DataFactory } from 'rdf-data-factory';
 import type { ITermDictionary } from '../../lib/dictionary/ITermDictionary';
 import { TermDictionaryNumberRecordFullTerms } from '../../lib/dictionary/TermDictionaryNumberRecordFullTerms';
@@ -11,6 +12,10 @@ describe('TermDictionaryNumberRecordFullTerms', () => {
   beforeEach(() => {
     dict = new TermDictionaryNumberRecordFullTerms();
   });
+
+  function decodeLiteral(encoding: number): RDF.Literal {
+    return <RDF.Literal> dict.decode(encoding);
+  }
 
   describe('features', () => {
     it('contains the expected entries', () => {
@@ -206,6 +211,46 @@ describe('TermDictionaryNumberRecordFullTerms', () => {
       expect(dict.decode(2)).toEqualRdfTerm(DF.literal('s'));
       expect(dict.decode(3)).toEqualRdfTerm(DF.literal('abc', { language: 'en_us', direction: 'ltr' }));
       expect(dict.decode(4)).toEqualRdfTerm(DF.literal('abc', { language: 'en_us', direction: 'rtl' }));
+    });
+
+    it('should decode to copies of literals and blank nodes, and the given named nodes', () => {
+      const namedNode = DF.namedNode('ex:s');
+      const blankNode = DF.blankNode('b1');
+      const typed = DF.literal('a long literal value', DF.namedNode('ex:type'));
+      const language = DF.literal('a long literal value', 'en');
+      const directional = DF.literal('a long literal value', { language: 'en', direction: 'ltr' });
+      const terms = [ namedNode, blankNode, typed, language, directional ];
+      for (const term of terms) {
+        dict.encode(term);
+      }
+
+      for (const [ encoding, term ] of terms.entries()) {
+        expect(dict.decode(encoding)).toEqualRdfTerm(term);
+        expect(dict.decode(encoding) === term).toBe(term === namedNode);
+      }
+      expect(decodeLiteral(3).datatype)
+        .toEqualRdfTerm(DF.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#langString'));
+      expect(decodeLiteral(4).datatype)
+        .toEqualRdfTerm(DF.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString'));
+      expect(decodeLiteral(4).direction).toBe('ltr');
+    });
+
+    it('should decode literals of the same datatype to literals that share their datatype', () => {
+      dict.encode(DF.literal('1', DF.namedNode('ex:type')));
+      dict.encode(DF.literal('2', DF.namedNode('ex:other')));
+      dict.encode(DF.literal('3', DF.namedNode('ex:type')));
+
+      expect(decodeLiteral(0).datatype).toBe(decodeLiteral(2).datatype);
+      expect(decodeLiteral(0).datatype).not.toBe(decodeLiteral(1).datatype);
+      expect(dict.decode(2)).toEqualRdfTerm(DF.literal('3', DF.namedNode('ex:type')));
+    });
+
+    it('should decode empty literals and one-character blank nodes', () => {
+      dict.encode(DF.literal(''));
+      dict.encode(DF.blankNode('b'));
+
+      expect(dict.decode(0)).toEqualRdfTerm(DF.literal(''));
+      expect(dict.decode(1)).toEqualRdfTerm(DF.blankNode('b'));
     });
   });
 
