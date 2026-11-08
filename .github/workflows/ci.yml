@@ -75,9 +75,8 @@ jobs:
     permissions:
       contents: read
     env:
-      # Pull requests are compared against their base commit, while pushes are stored.
+      # Pull requests are compared against their base commit, while pushes are stored by sizes-store.
       STORE_SIZE_BASE: ${{ github.event_name == 'pull_request' }}
-      STORE_SIZE_STORE: ${{ github.event_name == 'push' }}
     steps:
       - name: Ensure line endings are consistent
         run: git config --global core.autocrlf input
@@ -125,7 +124,7 @@ jobs:
           node head/perf/sizes.js compare \
             store-sizes.json store-sizes-base.json "$HEAD_SHA" "$BASE_SHA" \
             "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
-            "https://comunica.github.io/comunica-performance-results/rdf-stores/$BASE_REF/store-sizes/" > comparison-comment.md
+            "https://rubensworks.github.io/rdf-stores.js/$BASE_REF/store-sizes/" > comparison-comment.md
           echo "$PULL_REQUEST_NUMBER" > comparison-pull-request.txt
           cat comparison-comment.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7
@@ -135,26 +134,48 @@ jobs:
           path: |
             comparison-comment.md
             comparison-pull-request.txt
-      - name: Determine store sizes target directory name
-        if: env.STORE_SIZE_STORE == 'true'
-        run: echo "STORE_SIZE_DATA_DIR_PATH=rdf-stores/${GITHUB_REF#refs/heads/}/store-sizes" >> $GITHUB_ENV
+
+  sizes-store:
+    name: Store sizes history
+    # A separate job, so that the job running the code of pull requests never gets write access.
+    if: github.event_name == 'push'
+    needs: sizes
+    runs-on: ubuntu-latest
+    permissions:
+      # To push to the gh-pages branch, and to comment on commits with alerts
+      contents: write
+      # To deploy GitHub Pages
+      deployments: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: store-sizes
+          path: ${{ runner.temp }}/store-sizes
+      - name: Create the gh-pages branch if it does not exist yet
+        # github-action-benchmark requires the branch to exist, and expects the checkout to be left as is.
+        run: |
+          set -eu
+          if ! git ls-remote --exit-code --heads origin gh-pages > /dev/null; then
+            commit=$(git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit-tree "$(git hash-object -w -t tree /dev/null)" -m 'Create gh-pages branch')
+            git push origin "$commit:refs/heads/gh-pages"
+          fi
       - name: Store store sizes
-        if: env.STORE_SIZE_STORE == 'true'
         uses: benchmark-action/github-action-benchmark@v1
         with:
           name: Store sizes
           tool: customSmallerIsBetter
-          output-file-path: store-sizes.json
-          github-token: ${{ secrets.PAT }}
+          output-file-path: ${{ runner.temp }}/store-sizes/store-sizes.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
           # Most sizes are identical across runs, and the others vary by up to 1.5%.
           alert-threshold: '105%'
           comment-on-alert: true
           alert-comment-cc-users: '@rubensworks'
           summary-always: true
-          gh-repository: github.com/comunica/comunica-performance-results
-          gh-pages-branch: master
-          benchmark-data-dir-path: ${{ env.STORE_SIZE_DATA_DIR_PATH }}
+          benchmark-data-dir-path: ${{ github.ref_name }}/store-sizes
 
   benchmarks:
     runs-on: ubuntu-latest
