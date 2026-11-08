@@ -534,6 +534,55 @@ describe('TermOrder', () => {
     expect(byLabel).toEqual(byTerm);
   }
 
+  describe('adding many terms at once', () => {
+    const terms: RDF.Term[] = [
+      DF.defaultGraph(),
+      DF.blankNode('b'),
+      DF.blankNode('a'),
+      DF.namedNode('http://example.org/b'),
+      DF.namedNode('http://example.org/a'),
+      DF.namedNode('http://example.org/'),
+      DF.namedNode('http://example.org/\u{1F600}'),
+      DF.namedNode('http://example.org/\uFFFF'),
+      DF.literal(''),
+      DF.literal('a'),
+      DF.literal('a', 'en'),
+      DF.literal('a', 'nl'),
+      DF.literal('a', { language: 'en', direction: 'rtl' }),
+      DF.literal('a', { language: 'en', direction: 'ltr' }),
+      DF.literal('a', DF.namedNode('http://example.org/datatype')),
+      DF.literal('b'),
+      DF.quad(DF.namedNode('ex:s'), DF.namedNode('ex:p'), DF.namedNode('ex:o')),
+      DF.quad(DF.namedNode('ex:s'), DF.namedNode('ex:p'), DF.literal('o')),
+      DF.variable('v'),
+    ];
+
+    it('orders terms of all types like the comparator', () => {
+      const encodings = terms.map(term => dictionary.encode(term));
+      order.addAll(encodings, encodings.length);
+      checkOrder();
+      expect(order.size).toBe(terms.length);
+    });
+
+    it('skips duplicates and terms that are already known', () => {
+      order.add(dictionary.encode(DF.namedNode('http://example.org/a')));
+      order.add(dictionary.encode(DF.quad(DF.namedNode('ex:s'), DF.namedNode('ex:p'), DF.namedNode('ex:o'))));
+      const encodings = [ ...terms, ...terms ].map(term => dictionary.encode(term));
+      order.addAll(encodings, encodings.length);
+      checkOrder();
+      expect(order.size).toBe(terms.length);
+      order.addAll(encodings, encodings.length);
+      expect(order.size).toBe(terms.length);
+    });
+
+    it('orders terms with a custom comparator', () => {
+      order = new TermOrder(dictionary, (left, right) => -defaultTermComparator(left, right));
+      const encodings = terms.map(term => dictionary.encode(term));
+      order.addAll(encodings, encodings.length);
+      checkOrder();
+    });
+  });
+
   it('keeps labels ordered under inserts at the same spot', () => {
     order.add(dictionary.encode(DF.namedNode('ex:a')));
     order.add(dictionary.encode(DF.namedNode('ex:z')));
