@@ -18,6 +18,8 @@ import type { IRdfStoreIndex } from './index/IRdfStoreIndex';
 import { RdfStoreIndexNestedMapQuoted } from './index/RdfStoreIndexNestedMapQuoted';
 import { RdfStoreIndexSortedBlocks } from './index/RdfStoreIndexSortedBlocks';
 import type { IRdfStoreOptions } from './IRdfStoreOptions';
+import type { INTriplesEncoderOptions } from './NTriplesEncoder';
+import { NTriplesEncoder } from './NTriplesEncoder';
 import {
   COMPONENT_INDEXES_BY_MASK,
   countDistinctEncodedTerms,
@@ -432,6 +434,49 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
       this.addEncodedQuads(buffer, count);
     });
     return stream;
+  }
+
+  /**
+   * Import an N-Triples or N-Quads document into the store.
+   *
+   * This parses the bytes straight into dictionary encodings, so an RDF term is only created the first time
+   * its bytes occur, which makes this much faster than parsing quads and importing those.
+   * This requires a dictionary that encodes terms to numbers.
+   * @param chunks The bytes of an N-Triples or N-Quads document.
+   * @param options Options for parsing.
+   * @return number The number of quads that were not yet present.
+   */
+  public async importNTriples(
+    chunks: AsyncIterable<Uint8Array> | Iterable<Uint8Array>,
+    options: INTriplesEncoderOptions = {},
+  ): Promise<number> {
+    const encoder = new NTriplesEncoder(
+      <ITermDictionary<number>> <unknown> this.dictionary,
+      <RDF.DataFactory> <unknown> this.dataFactory,
+      options,
+    );
+    for await (const chunk of chunks) {
+      encoder.push(chunk);
+    }
+    encoder.end();
+    if (encoder.hasBlankNodes) {
+      this._hasBlankNodes = true;
+    }
+    if (this.batchable) {
+      return this.addEncodedQuads(encoder.quads, encoder.count);
+    }
+    let added = 0;
+    for (let offset = 0; offset < encoder.count * 4; offset += 4) {
+      if (this.addQuad(this.dataFactory.quad(
+        <RDF.Quad_Subject> this.dictionary.decode(<TE> <unknown> encoder.quads[offset]),
+        <RDF.Quad_Predicate> this.dictionary.decode(<TE> <unknown> encoder.quads[offset + 1]),
+        <RDF.Quad_Object> this.dictionary.decode(<TE> <unknown> encoder.quads[offset + 2]),
+        <RDF.Quad_Graph> this.dictionary.decode(<TE> <unknown> encoder.quads[offset + 3]),
+      ))) {
+        added++;
+      }
+    }
+    return added;
   }
 
   /**
