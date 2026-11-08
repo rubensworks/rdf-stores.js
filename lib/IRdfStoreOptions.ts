@@ -43,6 +43,11 @@ export interface IRdfStoreOptions<TE, TQ extends RDF.BaseQuad = RDF.Quad> {
    */
   termComparator?: (left: RDF.Term, right: RDF.Term) => number;
   /**
+   * Strings per term whose order is that of `termComparator`, which the term order uses to sort many new terms at once.
+   * Defaults to {@link defaultTermSortKey} when `termComparator` is not set.
+   */
+  termSortKey?: (term: RDF.Term) => string | undefined;
+  /**
    * The term order that ordered indexes share. The store creates it from `termComparator`,
    * so that all of its indexes agree on it.
    */
