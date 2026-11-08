@@ -90,7 +90,11 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     this.indexesWrapped = RdfStore.constructIndexesWrapped({
       ...options,
       termOrder: options.termOrder ??
-        new TermOrder(<ITermDictionary<number>> <unknown> options.dictionary, options.termComparator),
+        new TermOrder(
+          <ITermDictionary<number>> <unknown> options.dictionary,
+          options.termComparator,
+          options.termSortKey,
+        ),
     });
     this.indexesWrappedComponentOrders = this.indexesWrapped.map(indexThis => indexThis.componentOrder);
     this.indexNodes = options.indexNodes ? new Map() : undefined;
@@ -107,11 +111,13 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * see {@link RdfStore#ORDERED_INDEX_COMBINATIONS}.
    * @param options Optional settings.
    * @param options.termComparator The order to keep terms in, which defaults to {@link defaultTermComparator}.
+   * @param options.termSortKey Strings per term in the order of `termComparator`, see {@link TermOrder}.
    * @param options.indexCombinations The component orders of the indexes to create.
    * @param options.nodes If an index of nodes (subjects or objects) must be maintained.
    */
   public static createOrdered(options: {
     termComparator?: (left: RDF.Term, right: RDF.Term) => number;
+    termSortKey?: (term: RDF.Term) => string | undefined;
     indexCombinations?: QuadTermName[][];
     nodes?: true;
   } = {}): RdfStore<number> {
@@ -122,6 +128,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
       dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms()),
       dataFactory: new DataFactory(),
       termComparator: options.termComparator,
+      termSortKey: options.termSortKey,
     });
   }
 

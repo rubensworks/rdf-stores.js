@@ -13,7 +13,7 @@ import { RdfStoreIndexNestedMapQuoted } from '../../lib/index/RdfStoreIndexNeste
 import { RdfStoreIndexSortedBlocks } from '../../lib/index/RdfStoreIndexSortedBlocks';
 import type { EncodedQuadTerms, QuadPatternTerms } from '../../lib/PatternTerm';
 import { RdfStore } from '../../lib/RdfStore';
-import { defaultTermComparator, TermOrder } from '../../lib/TermOrder';
+import { defaultTermComparator, defaultTermSortKey, TermOrder } from '../../lib/TermOrder';
 
 const DF = new DataFactory();
 const BF = new BindingsFactory(DF);
@@ -524,6 +524,82 @@ describe('TermOrder', () => {
     const byTerm = [ ...encodings ].sort((left, right) => order.compareEncodings(left, right));
     expect(byLabel).toEqual(byTerm);
   }
+
+  describe('sort keys', () => {
+    const terms: RDF.Term[] = [
+      DF.defaultGraph(),
+      DF.blankNode('b'),
+      DF.blankNode('ba'),
+      DF.namedNode('ex:a'),
+      DF.namedNode('ex:a/b'),
+      DF.namedNode('ex:ab'),
+      DF.literal('a'),
+      DF.literal('a', 'en'),
+      DF.literal('a', 'en-us'),
+      DF.literal('a', { language: 'en', direction: 'ltr' }),
+      DF.literal('a', { language: 'en', direction: 'rtl' }),
+      DF.literal('a', DF.namedNode('ex:dt')),
+      DF.literal('a', DF.namedNode('ex:dt2')),
+      DF.literal('a\u0001'),
+      DF.literal('ab'),
+      DF.literal('b'),
+      DF.literal(''),
+    ];
+
+    it('order terms like the default comparator', () => {
+      for (const left of terms) {
+        for (const right of terms) {
+          const leftKey = defaultTermSortKey(left)!;
+          const rightKey = defaultTermSortKey(right)!;
+          const keyOrder = leftKey < rightKey ? -1 : (leftKey > rightKey ? 1 : 0);
+          expect([ termToString(left), termToString(right), keyOrder ])
+            .toEqual([ termToString(left), termToString(right), Math.sign(defaultTermComparator(left, right)) ]);
+        }
+      }
+    });
+
+    it('are not available for quoted triples, variables and literals with NUL characters', () => {
+      expect(defaultTermSortKey(DF.quad(DF.namedNode('ex:s'), DF.namedNode('ex:p'), DF.namedNode('ex:o'))))
+        .toBeUndefined();
+      expect(defaultTermSortKey(DF.variable('v'))).toBeUndefined();
+      expect(defaultTermSortKey(DF.literal('a\u0000b'))).toBeUndefined();
+    });
+
+    it('treat literals without direction as having no direction', () => {
+      const literal = DF.literal('a', DF.namedNode('ex:dt'));
+      expect(defaultTermSortKey(<RDF.Literal> { ...literal, direction: undefined }))
+        .toBe(defaultTermSortKey(literal));
+    });
+
+    it('are used when adding many terms at once', () => {
+      const encodings = terms.map(term => dictionary.encode(term)).reverse();
+      order.addAll(encodings, encodings.length);
+      checkOrder();
+    });
+
+    it('fall back to the comparator if a term has no key', () => {
+      const encodings = [ ...terms, DF.literal('a\u0000b'), DF.literal('a\u0000') ]
+        .map(term => dictionary.encode(term)).reverse();
+      order.addAll(encodings, encodings.length);
+      checkOrder();
+    });
+
+    it('are not used for a custom comparator without keys', () => {
+      order = new TermOrder(dictionary, (left, right) => -defaultTermComparator(left, right));
+      expect(order.sortKey).toBeUndefined();
+      const encodings = terms.map(term => dictionary.encode(term));
+      order.addAll(encodings, encodings.length);
+      checkOrder();
+    });
+
+    it('order terms with equal custom keys on their encoding', () => {
+      order = new TermOrder(dictionary, () => 0, () => 'key');
+      const encodings = terms.map(term => dictionary.encode(term)).reverse();
+      order.addAll(encodings, encodings.length);
+      const sorted = [ ...encodings ].sort((left, right) => order.label(left) - order.label(right));
+      expect(sorted).toEqual([ ...encodings ].sort((left, right) => left - right));
+    });
+  });
 
   it('keeps labels ordered under inserts at the same spot', () => {
     order.add(dictionary.encode(DF.namedNode('ex:a')));

@@ -81,9 +81,35 @@ export function defaultTermComparator(left: RDF.Term, right: RDF.Term): number {
  * Only dictionaries that encode to non-negative integers, optionally with the high bit set for
  * quoted triples, are supported. All bundled number dictionaries do.
  */
+/**
+ * A string per term whose code unit order is the order of {@link defaultTermComparator},
+ * or undefined for terms that this can not express: quoted triples, variables, and literals containing NUL characters.
+ * Comparing such keys is cheaper than comparing the terms.
+ * @param term A term.
+ */
+export function defaultTermSortKey(term: RDF.Term): string | undefined {
+  switch (term.termType) {
+    case 'DefaultGraph':
+      return '0';
+    case 'BlankNode':
+      return `1${term.value}`;
+    case 'NamedNode':
+      return `2${term.value}`;
+    case 'Literal':
+      // NUL separates the parts, so a value must not contain it to keep shorter values first.
+      if (term.value.includes('\u0000')) {
+        return undefined;
+      }
+      return `3${term.value}\u0000${term.datatype.value}\u0000${term.language}\u0000${term.direction ?? ''}`;
+    default:
+      return undefined;
+  }
+}
+
 export class TermOrder {
   public readonly dictionary: ITermDictionary<number>;
   public readonly comparator: (left: RDF.Term, right: RDF.Term) => number;
+  public readonly sortKey: ((term: RDF.Term) => string | undefined) | undefined;
   // Allocated on first use, since every store creates a term order, also when none of its indexes use one.
   private plainLabels: Float64Array = new Float64Array(0);
   private quotedLabels: Float64Array = new Float64Array(0);
@@ -97,12 +123,20 @@ export class TermOrder {
    */
   private uniform = true;
 
+  /**
+   * @param dictionary The dictionary of the encoded terms.
+   * @param comparator The order of terms.
+   * @param sortKey Strings per term in the same order as `comparator`, used to sort many new terms at once.
+   *                Defaults to {@link defaultTermSortKey} for the default comparator, and to none otherwise.
+   */
   public constructor(
     dictionary: ITermDictionary<number>,
     comparator: (left: RDF.Term, right: RDF.Term) => number = defaultTermComparator,
+    sortKey?: (term: RDF.Term) => string | undefined,
   ) {
     this.dictionary = dictionary;
     this.comparator = comparator;
+    this.sortKey = sortKey ?? (comparator === defaultTermComparator ? defaultTermSortKey : undefined);
   }
 
   /**
@@ -267,7 +301,7 @@ export class TermOrder {
       return;
     }
 
-    added.sort((left, right) => this.compareEncodings(left, right));
+    this.sortEncodings(added);
     const merged: number[] = [];
     let addedIndex = 0;
     for (const chunk of this.chunks) {
@@ -288,6 +322,41 @@ export class TermOrder {
     }
     this.termCount = merged.length;
     this.relabel();
+  }
+
+  /**
+   * Sort distinct encodings in this order, comparing their sort keys if every one has one.
+   * @param encodings Distinct encodings.
+   */
+  private sortEncodings(encodings: number[]): void {
+    const sortKey = this.sortKey;
+    if (sortKey) {
+      const keys: string[] = [];
+      for (const encoding of encodings) {
+        const key = sortKey(this.dictionary.decode(encoding));
+        if (key === undefined) {
+          break;
+        }
+        keys.push(key);
+      }
+      if (keys.length === encodings.length) {
+        const positions = encodings.map((encoding, position) => position);
+        positions.sort((left, right) => {
+          const leftKey = keys[left];
+          const rightKey = keys[right];
+          if (leftKey !== rightKey) {
+            return leftKey < rightKey ? -1 : 1;
+          }
+          return encodings[left] - encodings[right];
+        });
+        const sorted = positions.map(position => encodings[position]);
+        for (const [ position, encoding ] of sorted.entries()) {
+          encodings[position] = encoding;
+        }
+        return;
+      }
+    }
+    encodings.sort((left, right) => this.compareEncodings(left, right));
   }
 
   /**
