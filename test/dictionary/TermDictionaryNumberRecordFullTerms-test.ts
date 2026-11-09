@@ -268,6 +268,111 @@ describe('TermDictionaryNumberRecordFullTerms', () => {
     });
   });
 
+  describe('with compactLiterals', () => {
+    const XSD = 'http://www.w3.org/2001/XMLSchema#';
+    const integer = DF.namedNode(`${XSD}integer`);
+    const int = DF.namedNode(`${XSD}int`);
+    const dateTime = DF.namedNode(`${XSD}dateTime`);
+    const date = DF.namedNode(`${XSD}date`);
+    const boolean = DF.namedNode(`${XSD}boolean`);
+    const decimal = DF.namedNode(`${XSD}decimal`);
+
+    beforeEach(() => {
+      dict = new TermDictionaryNumberRecordFullTerms(undefined, { compactLiterals: true });
+    });
+
+    it('should encode and decode literals that are stored as numbers', () => {
+      const literals = [
+        DF.literal('5', integer),
+        DF.literal('-12', integer),
+        DF.literal('5', int),
+        DF.literal('9007199254740991', integer),
+        DF.literal('2010-01-03T10:00:00.000Z', dateTime),
+        DF.literal('1969-12-31T23:59:59.999Z', dateTime),
+        DF.literal('2010-01-03', date),
+        DF.literal('true', boolean),
+        DF.literal('false', boolean),
+      ];
+      for (const [ i, literal ] of literals.entries()) {
+        expect(dict.encode(literal)).toBe(i);
+      }
+      for (const [ i, literal ] of literals.entries()) {
+        expect(dict.encode(literal)).toBe(i);
+        expect(dict.encodeOptional(literal)).toBe(i);
+        expect(dict.decode(i)).toEqualRdfTerm(literal);
+      }
+      expect(decodeLiteral(0).datatype).toBe(decodeLiteral(1).datatype);
+      expect([ ...dict.encodings() ]).toEqual(literals.map((literal, i) => i));
+    });
+
+    it('should encode and decode literals in other lexical forms as usual', () => {
+      const literals = [
+        DF.literal('05', integer),
+        DF.literal('+5', integer),
+        DF.literal('-0', integer),
+        DF.literal('5.0', integer),
+        DF.literal('1e3', integer),
+        DF.literal(' 5', integer),
+        DF.literal('', integer),
+        DF.literal('9007199254740993', integer),
+        DF.literal('2010-01-03T10:00:00Z', dateTime),
+        DF.literal('2010-01-03T10:00:00.000+01:00', dateTime),
+        DF.literal('2010-01-03T10:00:00.000z', dateTime),
+        DF.literal('2010-02-30T10:00:00.000Z', dateTime),
+        DF.literal('not a date with 24 chars', dateTime),
+        DF.literal('2010-01-03Z', date),
+        DF.literal('2010-02-30', date),
+        DF.literal('not a date', date),
+        DF.literal('1', boolean),
+        DF.literal('TRUE', boolean),
+        DF.literal('5', decimal),
+        DF.literal('5', 'en'),
+        DF.literal('5'),
+      ];
+      for (const [ i, literal ] of literals.entries()) {
+        expect(dict.encode(literal)).toBe(i);
+      }
+      for (const [ i, literal ] of literals.entries()) {
+        expect(dict.encodeOptional(literal)).toBe(i);
+        expect(dict.decode(i)).toEqualRdfTerm(literal);
+      }
+    });
+
+    it('should encode equal numbers of different datatypes apart', () => {
+      expect(dict.encode(DF.literal('1', integer))).toBe(0);
+      expect(dict.encode(DF.literal('1', int))).toBe(1);
+      expect(dict.encode(DF.literal('true', boolean))).toBe(2);
+      expect(dict.encode(DF.literal('1', integer))).toBe(0);
+      expect(dict.encode(DF.literal('1', int))).toBe(1);
+
+      expect(dict.decode(1)).toEqualRdfTerm(DF.literal('1', int));
+      expect(dict.decode(2)).toEqualRdfTerm(DF.literal('true', boolean));
+    });
+
+    it('should return undefined for literals that are not encoded', () => {
+      expect(dict.encodeOptional(DF.literal('1', integer))).toBeUndefined();
+      expect(dict.encodeOptional(DF.literal('01', integer))).toBeUndefined();
+      expect(dict.encode(DF.literal('01', integer))).toBe(0);
+      expect(dict.encodeOptional(DF.literal('1', integer))).toBeUndefined();
+      expect(dict.encode(DF.literal('1', integer))).toBe(1);
+      expect(dict.encodeOptional(DF.literal('2', integer))).toBeUndefined();
+      expect(dict.encodeOptional(DF.literal('01', integer))).toBe(0);
+      expect(dict.encodeOptional(DF.literal('1', decimal))).toBeUndefined();
+      expect(dict.encode(DF.literal('1', decimal))).toBe(2);
+      expect(dict.encodeOptional(DF.literal('1', decimal))).toBe(2);
+    });
+
+    it('should encode and decode many literals stored as numbers among other terms', () => {
+      for (let i = 0; i < 3000; i++) {
+        expect(dict.encode(i % 2 === 0 ? DF.literal(String(i), integer) : DF.namedNode(`ex:${i}`))).toBe(i);
+      }
+      for (let i = 0; i < 3000; i++) {
+        expect(dict.decode(i))
+          .toEqualRdfTerm(i % 2 === 0 ? DF.literal(String(i), integer) : DF.namedNode(`ex:${i}`));
+      }
+    });
+  });
+
   describe('findQuotedTriples', () => {
     it('throws an error', () => {
       expect(() => dict.findQuotedTriples(DF.quad(DF.namedNode(''), DF.namedNode(''), DF.namedNode(''))))
