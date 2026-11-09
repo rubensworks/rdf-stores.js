@@ -252,6 +252,17 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
   }
 
   /**
+   * Store the quads of the indexes that support it in less memory, for a store that is no longer changed,
+   * at the cost of slower lookups. Changing the store afterwards decompresses them again.
+   * See {@link RdfStoreIndexSortedBlocks#compress}.
+   */
+  public compress(): void {
+    for (const indexWrapped of this.indexesWrapped) {
+      indexWrapped.index.compress?.();
+    }
+  }
+
+  /**
    * The number of quads in this store.
    */
   public get size(): number {

@@ -209,6 +209,126 @@ describe('RdfStoreIndexSortedBlocks', () => {
     checkAgainstReference();
   });
 
+  describe('compressed', () => {
+    function fill(count: number): EncodedQuadTerms<number>[] {
+      const quads = Array.from({ length: count }, () => randomQuad());
+      for (const quad of quads) {
+        index.set(quad, true);
+        reference.set(quad, true);
+      }
+      return quads;
+    }
+
+    it('matches a nested-map index', () => {
+      fill(3000);
+      index.compress();
+      expect(index.compressed).toBe(true);
+      expect(index.sizes.every(size => size <= 128)).toBe(true);
+      checkAgainstReference();
+    });
+
+    it('matches a nested-map index with leaves of other sizes', () => {
+      for (const compressedLeafCapacity of [ 1, 3, 1024 ]) {
+        index = new RdfStoreIndexSortedBlocks(options(), { compressedLeafCapacity });
+        reference = new RdfStoreIndexNestedMap(options());
+        fill(1500);
+        index.compress();
+        checkAgainstReference();
+      }
+    });
+
+    it('evicts decoded leaves when its cache is full', () => {
+      // A cache of a single leaf.
+      index = new RdfStoreIndexSortedBlocks(options(), { leafCapacity: 4, compressedLeafCapacity: 1 << 16 });
+      fill(500);
+      index.compress();
+      checkAgainstReference();
+    });
+
+    it('stays empty', () => {
+      index.compress();
+      expect(index.compressed).toBe(true);
+      expect(index.size).toBe(0);
+      expect([ ...index.findEncoded([ undefined, undefined, undefined, undefined ], <any> []) ]).toEqual([]);
+      expect(index.set(randomQuad(), true)).toBe(true);
+      expect(index.compressed).toBe(false);
+      expect(index.size).toBe(1);
+    });
+
+    it('does nothing when compressed twice', () => {
+      fill(300);
+      index.compress();
+      const version = index.version;
+      index.compress();
+      expect(index.version).toBe(version);
+      checkAgainstReference();
+    });
+
+    it('decompresses when a quad is added or removed', () => {
+      const quads = fill(1000);
+      index.compress();
+      // Quads that are already there, or not there, do not change the index.
+      expect(index.set(quads[0], true)).toBe(false);
+      expect(index.remove([ quads[0][0], quads[0][1], quads[0][2], dictionary.encode(DF.namedNode('ex:none')) ]))
+        .toBe(false);
+      const absent = quads
+        .map((quad, i): EncodedQuadTerms<number> => [ quad[0], quad[1], quads[(i + 1) % quads.length][2], quad[3] ])
+        .find(quad => !index.getEncoded(quad));
+      expect(index.remove(absent!)).toBe(false);
+      expect(index.compressed).toBe(true);
+
+      const quad = randomQuad();
+      expect(index.set(quad, true)).toBe(reference.set(quad, true));
+      index.compress();
+      expect(index.remove(quads[1])).toBe(reference.remove(quads[1]));
+      expect(index.compressed).toBe(false);
+      checkAgainstReference();
+
+      index.compress();
+      const batch = new Int32Array(200 * 4);
+      for (let i = 0; i < 200; i++) {
+        const added = randomQuad();
+        batch.set(added, i * 4);
+        reference.set(added, true);
+      }
+      index.setAll(batch, 200);
+      expect(index.compressed).toBe(false);
+      expect(Math.max(...index.sizes)).toBeLessThanOrEqual(512);
+      checkAgainstReference();
+    });
+
+    it('lets an iterator continue where it was', () => {
+      fill(2000);
+      const expected = [ ...index.findEncoded([ undefined, undefined, undefined, undefined ], <any> []) ];
+      const iterator = index.findEncoded([ undefined, undefined, undefined, undefined ], <any> []);
+      const actual = [];
+      for (let i = 0; i < 700; i++) {
+        actual.push(iterator.next().value);
+      }
+      index.compress();
+      for (const quad of iterator) {
+        actual.push(quad);
+      }
+      expect(actual).toEqual(expected);
+    });
+
+    it('encodes and decodes quads with large and negative encodings', () => {
+      const quads = Int32Array.from([
+        [ 0, 0, 0, 0 ],
+        [ 0, 0, 0, 127 ],
+        [ 0, 0, 128, 1 << 14 ],
+        [ 0, 1 << 21, 1 << 28, 0x7FFFFFFF ],
+        [ -1, -5, 0x7FFFFFFF, -0x80000000 ],
+        [ -1, -5, 0x7FFFFFFF, -0x80000000 ],
+      ].flat());
+      const encoded = RdfStoreIndexSortedBlocks.encodeQuads(quads, 6);
+      expect(RdfStoreIndexSortedBlocks.decodeQuads(encoded, 0, 6)).toEqual(quads);
+      const prefixed = new Uint8Array(encoded.length + 3);
+      prefixed.set(encoded, 3);
+      expect(RdfStoreIndexSortedBlocks.decodeQuads(prefixed, 3, 6)).toEqual(quads);
+    });
+  });
+
   it('removes down to empty and inserts again', () => {
     const quads = Array.from({ length: 2000 }, () => randomQuad());
     for (const quad of quads) {
