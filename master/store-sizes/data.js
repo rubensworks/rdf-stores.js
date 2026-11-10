@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794165128895,
+  "lastUpdate": 1794326875026,
   "repoUrl": "https://github.com/rubensworks/rdf-stores.js",
   "entries": {
     "Store sizes": [
@@ -642,6 +642,654 @@ window.BENCHMARK_DATA = {
             "value": 3.02,
             "unit": "MiB",
             "extra": "Quads: 32768; Per quad: 97 bytes; Heap: 1.09 MiB; External: 1.92 MiB; Runs: [3.02,3.02,3.02]"
+          },
+          {
+            "name": "3 sorted-blocks indexes with indexed quoted dict (number), added one by one | entities",
+            "value": 160.14,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 320 bytes; Heap: 106.8 MiB; External: 53.34 MiB; Runs: [160.14,160.14,160.14]"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "rubensworks@users.noreply.github.com",
+            "name": "Ruben Taelman",
+            "username": "rubensworks"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8ab00d0773a94355285949e7315f8d6615549036",
+          "message": "Sort quads ranks that fit in 64 bits natively with Uint8Array (#52)\n\nThis makes insertions 26%~360% faster in ordered stores.",
+          "timestamp": "2026-11-10T17:03:52+01:00",
+          "tree_id": "92d707c628fc50f0f036aa50d7ab820fee4965e7",
+          "url": "https://github.com/rubensworks/rdf-stores.js/commit/8ab00d0773a94355285949e7315f8d6615549036"
+        },
+        "date": 1794326874360,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "1 Record index (Map<number>) | triples",
+            "value": 2.93,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 12 bytes; Heap: 2.93 MiB; External: 0 MiB; Runs: [2.93,2.93,2.93]"
+          },
+          {
+            "name": "1 Record index (Map<number>) | quads",
+            "value": 0.89,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 14 bytes; Heap: 0.89 MiB; External: 0 MiB; Runs: [0.89,0.89,0.89]"
+          },
+          {
+            "name": "1 Record index (Map<number>) | quoted",
+            "value": 0.59,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 19 bytes; Heap: 0.59 MiB; External: 0 MiB; Runs: [0.59,0.59,0.59]"
+          },
+          {
+            "name": "1 Record index (Map<number>) | entities",
+            "value": 197.41,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 395 bytes; Heap: 197.41 MiB; External: 0 MiB; Runs: [197.41,197.41,197.41]"
+          },
+          {
+            "name": "3 Record indexes (Map<number>) | triples",
+            "value": 8.7,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 35 bytes; Heap: 8.7 MiB; External: 0 MiB; Runs: [8.7,8.7,8.7]"
+          },
+          {
+            "name": "3 Record indexes (Map<number>) | quads",
+            "value": 2.62,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 42 bytes; Heap: 2.62 MiB; External: 0 MiB; Runs: [2.62,2.62,2.62]"
+          },
+          {
+            "name": "3 Record indexes (Map<number>) | quoted",
+            "value": 13.42,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 430 bytes; Heap: 13.42 MiB; External: 0 MiB; Runs: [13.42,13.42,13.42]"
+          },
+          {
+            "name": "3 Record indexes (Map<number>) | entities",
+            "value": 689.32,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 1379 bytes; Heap: 689.32 MiB; External: 0 MiB; Runs: [689.32,689.32,689.32]"
+          },
+          {
+            "name": "1 Record index (Record<number>) | triples",
+            "value": 2.92,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 12 bytes; Heap: 2.92 MiB; External: 0 MiB; Runs: [2.92,2.92,2.92]"
+          },
+          {
+            "name": "1 Record index (Record<number>) | quads",
+            "value": 0.89,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 14 bytes; Heap: 0.89 MiB; External: 0 MiB; Runs: [0.89,0.89,0.89]"
+          },
+          {
+            "name": "1 Record index (Record<number>) | quoted",
+            "value": 0.53,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 17 bytes; Heap: 0.53 MiB; External: 0 MiB; Runs: [0.53,0.53,0.53]"
+          },
+          {
+            "name": "1 Record index (Record<number>) | entities",
+            "value": 169.84,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 340 bytes; Heap: 169.84 MiB; External: 0 MiB; Runs: [169.84,169.84,169.84]"
+          },
+          {
+            "name": "3 Record indexes (Record<number>) | triples",
+            "value": 8.7,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 35 bytes; Heap: 8.7 MiB; External: 0 MiB; Runs: [8.7,8.7,8.7]"
+          },
+          {
+            "name": "3 Record indexes (Record<number>) | quads",
+            "value": 2.62,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 42 bytes; Heap: 2.62 MiB; External: 0 MiB; Runs: [2.62,2.62,2.62]"
+          },
+          {
+            "name": "3 Record indexes (Record<number>) | quoted",
+            "value": 13.43,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 430 bytes; Heap: 13.43 MiB; External: 0 MiB; Runs: [13.43,13.43,13.43]"
+          },
+          {
+            "name": "3 Record indexes (Record<number>) | entities",
+            "value": 662.21,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 1324 bytes; Heap: 662.21 MiB; External: 0 MiB; Runs: [662.21,662.21,662.21]"
+          },
+          {
+            "name": "1 Record index (Record<number> FT) | triples",
+            "value": 2.93,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 12 bytes; Heap: 2.93 MiB; External: 0 MiB; Runs: [2.93,2.93,2.93]"
+          },
+          {
+            "name": "1 Record index (Record<number> FT) | quads",
+            "value": 0.89,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 14 bytes; Heap: 0.89 MiB; External: 0 MiB; Runs: [0.89,0.89,0.89]"
+          },
+          {
+            "name": "1 Record index (Record<number> FT) | quoted",
+            "value": 0.91,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 29 bytes; Heap: 0.91 MiB; External: 0 MiB; Runs: [0.91,0.91,0.91]"
+          },
+          {
+            "name": "1 Record index (Record<number> FT) | entities",
+            "value": 220.52,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 441 bytes; Heap: 220.52 MiB; External: 0 MiB; Runs: [220.52,220.52,220.52]"
+          },
+          {
+            "name": "3 Record indexes (Record<number> FT) | triples",
+            "value": 8.7,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 35 bytes; Heap: 8.7 MiB; External: 0 MiB; Runs: [8.7,8.7,8.7]"
+          },
+          {
+            "name": "3 Record indexes (Record<number> FT) | quads",
+            "value": 2.62,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 42 bytes; Heap: 2.62 MiB; External: 0 MiB; Runs: [2.62,2.62,2.62]"
+          },
+          {
+            "name": "3 Record indexes (Record<number> FT) | quoted",
+            "value": 13.54,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 433 bytes; Heap: 13.54 MiB; External: 0 MiB; Runs: [13.54,13.54,13.54]"
+          },
+          {
+            "name": "3 Record indexes (Record<number> FT) | entities",
+            "value": 710.61,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 1421 bytes; Heap: 710.61 MiB; External: 0 MiB; Runs: [710.61,710.61,710.61]"
+          },
+          {
+            "name": "1 Map index (Map<number>) | triples",
+            "value": 7.44,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 30 bytes; Heap: 7.44 MiB; External: 0 MiB; Runs: [7.44,7.44,7.44]"
+          },
+          {
+            "name": "1 Map index (Map<number>) | quads",
+            "value": 2.19,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 35 bytes; Heap: 2.19 MiB; External: 0 MiB; Runs: [2.19,2.19,2.19]"
+          },
+          {
+            "name": "1 Map index (Map<number>) | quoted",
+            "value": 1.12,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 36 bytes; Heap: 1.12 MiB; External: 0 MiB; Runs: [1.12,1.12,1.12]"
+          },
+          {
+            "name": "1 Map index (Map<number>) | entities",
+            "value": 182.64,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 365 bytes; Heap: 182.64 MiB; External: 0 MiB; Runs: [182.64,182.64,182.64]"
+          },
+          {
+            "name": "3 Map indexes (Map<number>) | triples",
+            "value": 22.23,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 89 bytes; Heap: 22.23 MiB; External: 0 MiB; Runs: [22.23,22.23,22.23]"
+          },
+          {
+            "name": "3 Map indexes (Map<number>) | quads",
+            "value": 6.52,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 104 bytes; Heap: 6.52 MiB; External: 0 MiB; Runs: [6.52,6.52,6.52]"
+          },
+          {
+            "name": "3 Map indexes (Map<number>) | quoted",
+            "value": 8.82,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 282 bytes; Heap: 8.82 MiB; External: 0 MiB; Runs: [8.82,8.82,8.82]"
+          },
+          {
+            "name": "3 Map indexes (Map<number>) | entities",
+            "value": 487.45,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 975 bytes; Heap: 487.45 MiB; External: 0 MiB; Runs: [487.45,487.46,487.45]"
+          },
+          {
+            "name": "1 Map index recursive (Map<number>) | triples",
+            "value": 7.44,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 30 bytes; Heap: 7.44 MiB; External: 0 MiB; Runs: [7.44,7.44,7.44]"
+          },
+          {
+            "name": "1 Map index recursive (Map<number>) | quads",
+            "value": 2.19,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 35 bytes; Heap: 2.19 MiB; External: 0 MiB; Runs: [2.19,2.19,2.19]"
+          },
+          {
+            "name": "1 Map index recursive (Map<number>) | quoted",
+            "value": 1.12,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 36 bytes; Heap: 1.12 MiB; External: 0 MiB; Runs: [1.12,1.12,1.12]"
+          },
+          {
+            "name": "1 Map index recursive (Map<number>) | entities",
+            "value": 182.65,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 365 bytes; Heap: 182.65 MiB; External: 0 MiB; Runs: [182.65,182.65,182.65]"
+          },
+          {
+            "name": "3 Map indexes recursive (Map<number>) | triples",
+            "value": 22.23,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 89 bytes; Heap: 22.23 MiB; External: 0 MiB; Runs: [22.23,22.23,22.23]"
+          },
+          {
+            "name": "3 Map indexes recursive (Map<number>) | quads",
+            "value": 6.52,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 104 bytes; Heap: 6.52 MiB; External: 0 MiB; Runs: [6.52,6.52,6.52]"
+          },
+          {
+            "name": "3 Map indexes recursive (Map<number>) | quoted",
+            "value": 8.82,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 282 bytes; Heap: 8.82 MiB; External: 0 MiB; Runs: [8.82,8.82,8.82]"
+          },
+          {
+            "name": "3 Map indexes recursive (Map<number>) | entities",
+            "value": 486.64,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 973 bytes; Heap: 486.64 MiB; External: 0 MiB; Runs: [486.64,486.64,486.64]"
+          },
+          {
+            "name": "1 Map index (symbol) | triples",
+            "value": 7.43,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 30 bytes; Heap: 7.43 MiB; External: 0 MiB; Runs: [7.43,7.43,7.43]"
+          },
+          {
+            "name": "1 Map index (symbol) | quads",
+            "value": 2.19,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 35 bytes; Heap: 2.19 MiB; External: 0 MiB; Runs: [2.19,2.19,2.19]"
+          },
+          {
+            "name": "1 Map index (symbol) | quoted",
+            "value": 1.06,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 34 bytes; Heap: 1.06 MiB; External: 0 MiB; Runs: [1.06,1.06,1.06]"
+          },
+          {
+            "name": "1 Map index (symbol) | entities",
+            "value": 159.44,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 319 bytes; Heap: 159.44 MiB; External: 0 MiB; Runs: [159.44,159.44,159.44]"
+          },
+          {
+            "name": "3 Map indexes (symbol) | triples",
+            "value": 22.22,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 89 bytes; Heap: 22.22 MiB; External: 0 MiB; Runs: [22.22,22.22,22.22]"
+          },
+          {
+            "name": "3 Map indexes (symbol) | quads",
+            "value": 6.52,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 104 bytes; Heap: 6.52 MiB; External: 0 MiB; Runs: [6.52,6.52,6.52]"
+          },
+          {
+            "name": "3 Map indexes (symbol) | quoted",
+            "value": 8.76,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 280 bytes; Heap: 8.76 MiB; External: 0 MiB; Runs: [8.76,8.76,8.76]"
+          },
+          {
+            "name": "3 Map indexes (symbol) | entities",
+            "value": 463.44,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 927 bytes; Heap: 463.44 MiB; External: 0 MiB; Runs: [463.44,463.44,463.44]"
+          },
+          {
+            "name": "3 Nested Map Recursive Quoted indexes with indexed quoted dict (number) | triples",
+            "value": 22.24,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 89 bytes; Heap: 22.24 MiB; External: 0 MiB; Runs: [22.24,22.24,22.24]"
+          },
+          {
+            "name": "3 Nested Map Recursive Quoted indexes with indexed quoted dict (number) | quads",
+            "value": 6.52,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 104 bytes; Heap: 6.52 MiB; External: 0 MiB; Runs: [6.52,6.52,6.52]"
+          },
+          {
+            "name": "3 Nested Map Recursive Quoted indexes with indexed quoted dict (number) | quoted",
+            "value": 9.55,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 306 bytes; Heap: 9.55 MiB; External: 0 MiB; Runs: [9.55,9.55,9.55]"
+          },
+          {
+            "name": "3 Nested Map Recursive Quoted indexes with indexed quoted dict (number) | entities",
+            "value": 509.76,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 1020 bytes; Heap: 509.76 MiB; External: 0 MiB; Runs: [509.76,509.76,509.76]"
+          },
+          {
+            "name": "3 Nested Map Quoted indexes with separated quoted dict (number) | triples",
+            "value": 22.23,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 89 bytes; Heap: 22.23 MiB; External: 0 MiB; Runs: [22.23,22.23,22.23]"
+          },
+          {
+            "name": "3 Nested Map Quoted indexes with separated quoted dict (number) | quads",
+            "value": 6.53,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 104 bytes; Heap: 6.53 MiB; External: 0 MiB; Runs: [6.53,6.53,6.53]"
+          },
+          {
+            "name": "3 Nested Map Quoted indexes with separated quoted dict (number) | quoted",
+            "value": 9.16,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 293 bytes; Heap: 9.16 MiB; External: 0 MiB; Runs: [9.16,9.16,9.16]"
+          },
+          {
+            "name": "3 Nested Map Quoted indexes with separated quoted dict (number) | entities",
+            "value": 509.82,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 1020 bytes; Heap: 509.82 MiB; External: 0 MiB; Runs: [509.82,509.82,509.82]"
+          },
+          {
+            "name": "3 Nested Record Quoted indexes with separated quoted dict (number) | triples",
+            "value": 8.7,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 35 bytes; Heap: 8.7 MiB; External: 0 MiB; Runs: [8.7,8.7,8.7]"
+          },
+          {
+            "name": "3 Nested Record Quoted indexes with separated quoted dict (number) | quads",
+            "value": 2.62,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 42 bytes; Heap: 2.62 MiB; External: 0 MiB; Runs: [2.62,2.62,2.62]"
+          },
+          {
+            "name": "3 Nested Record Quoted indexes with separated quoted dict (number) | quoted",
+            "value": 10.02,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 321 bytes; Heap: 10.02 MiB; External: 0 MiB; Runs: [10.02,10.02,10.02]"
+          },
+          {
+            "name": "3 Nested Record Quoted indexes with separated quoted dict (number) | entities",
+            "value": 710.62,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 1421 bytes; Heap: 710.62 MiB; External: 0 MiB; Runs: [710.62,710.62,710.62]"
+          },
+          {
+            "name": "3 Nested Map Quoted indexes with separated referential quoted dict (number) | triples",
+            "value": 22.23,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 89 bytes; Heap: 22.23 MiB; External: 0 MiB; Runs: [22.23,22.23,22.23]"
+          },
+          {
+            "name": "3 Nested Map Quoted indexes with separated referential quoted dict (number) | quads",
+            "value": 6.53,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 104 bytes; Heap: 6.53 MiB; External: 0 MiB; Runs: [6.53,6.53,6.53]"
+          },
+          {
+            "name": "3 Nested Map Quoted indexes with separated referential quoted dict (number) | quoted",
+            "value": 8.79,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 281 bytes; Heap: 8.79 MiB; External: 0 MiB; Runs: [8.79,8.79,8.79]"
+          },
+          {
+            "name": "3 Nested Map Quoted indexes with separated referential quoted dict (number) | entities",
+            "value": 509.82,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 1020 bytes; Heap: 509.82 MiB; External: 0 MiB; Runs: [509.82,509.82,509.82]"
+          },
+          {
+            "name": "3 Nested Record Quoted indexes with separated referential quoted dict (number) | triples",
+            "value": 8.7,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 35 bytes; Heap: 8.7 MiB; External: 0 MiB; Runs: [8.7,8.7,8.7]"
+          },
+          {
+            "name": "3 Nested Record Quoted indexes with separated referential quoted dict (number) | quads",
+            "value": 2.62,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 42 bytes; Heap: 2.62 MiB; External: 0 MiB; Runs: [2.62,2.62,2.62]"
+          },
+          {
+            "name": "3 Nested Record Quoted indexes with separated referential quoted dict (number) | quoted",
+            "value": 10.1,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 323 bytes; Heap: 10.1 MiB; External: 0 MiB; Runs: [10.1,10.1,10.1]"
+          },
+          {
+            "name": "3 Nested Record Quoted indexes with separated referential quoted dict (number) | entities",
+            "value": 710.62,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 1421 bytes; Heap: 710.62 MiB; External: 0 MiB; Runs: [710.62,710.62,710.62]"
+          },
+          {
+            "name": "3 Map indexes (number) OPT-QUERY | triples",
+            "value": 22.23,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 89 bytes; Heap: 22.23 MiB; External: 0 MiB; Runs: [22.23,22.23,22.23]"
+          },
+          {
+            "name": "3 Map indexes (number) OPT-QUERY | quads",
+            "value": 6.52,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 104 bytes; Heap: 6.52 MiB; External: 0 MiB; Runs: [6.52,6.52,6.52]"
+          },
+          {
+            "name": "3 Map indexes (number) OPT-QUERY | quoted",
+            "value": 9.15,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 293 bytes; Heap: 9.15 MiB; External: 0 MiB; Runs: [9.15,9.15,9.15]"
+          },
+          {
+            "name": "3 Map indexes (number) OPT-QUERY | entities",
+            "value": 509.82,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 1020 bytes; Heap: 509.82 MiB; External: 0 MiB; Runs: [509.82,509.82,509.82]"
+          },
+          {
+            "name": "3 Map indexes (number) OPT-QUERY-NODES | triples",
+            "value": 22.23,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 89 bytes; Heap: 22.23 MiB; External: 0 MiB; Runs: [22.23,22.23,22.23]"
+          },
+          {
+            "name": "3 Map indexes (number) OPT-QUERY-NODES | quads",
+            "value": 6.53,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 104 bytes; Heap: 6.53 MiB; External: 0 MiB; Runs: [6.53,6.53,6.53]"
+          },
+          {
+            "name": "3 Map indexes (number) OPT-QUERY-NODES | quoted",
+            "value": 9.19,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 294 bytes; Heap: 9.19 MiB; External: 0 MiB; Runs: [9.19,9.19,9.19]"
+          },
+          {
+            "name": "3 Map indexes (number) OPT-QUERY-NODES | entities",
+            "value": 529.82,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 1060 bytes; Heap: 529.82 MiB; External: 0 MiB; Runs: [529.82,529.82,529.82]"
+          },
+          {
+            "name": "3 Record indexes (number) OPT-INGEST | triples",
+            "value": 8.7,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 35 bytes; Heap: 8.7 MiB; External: 0 MiB; Runs: [8.7,8.7,8.7]"
+          },
+          {
+            "name": "3 Record indexes (number) OPT-INGEST | quads",
+            "value": 2.62,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 42 bytes; Heap: 2.62 MiB; External: 0 MiB; Runs: [2.62,2.62,2.62]"
+          },
+          {
+            "name": "3 Record indexes (number) OPT-INGEST | quoted",
+            "value": 13.54,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 433 bytes; Heap: 13.54 MiB; External: 0 MiB; Runs: [13.54,13.54,13.54]"
+          },
+          {
+            "name": "3 Record indexes (number) OPT-INGEST | entities",
+            "value": 710.61,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 1421 bytes; Heap: 710.61 MiB; External: 0 MiB; Runs: [710.61,710.61,710.61]"
+          },
+          {
+            "name": "1 Map indexes (number) OPT-QUERY | triples",
+            "value": 7.44,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 30 bytes; Heap: 7.44 MiB; External: 0 MiB; Runs: [7.44,7.44,7.44]"
+          },
+          {
+            "name": "1 Map indexes (number) OPT-QUERY | quads",
+            "value": 2.19,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 35 bytes; Heap: 2.19 MiB; External: 0 MiB; Runs: [2.19,2.19,2.19]"
+          },
+          {
+            "name": "1 Map indexes (number) OPT-QUERY | quoted",
+            "value": 1.44,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 46 bytes; Heap: 1.44 MiB; External: 0 MiB; Runs: [1.44,1.44,1.44]"
+          },
+          {
+            "name": "1 Map indexes (number) OPT-QUERY | entities",
+            "value": 205.75,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 412 bytes; Heap: 205.75 MiB; External: 0 MiB; Runs: [205.75,205.75,205.75]"
+          },
+          {
+            "name": "1 Record indexes (number) OPT-INGEST | triples",
+            "value": 2.93,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 12 bytes; Heap: 2.93 MiB; External: 0 MiB; Runs: [2.93,2.93,2.93]"
+          },
+          {
+            "name": "1 Record indexes (number) OPT-INGEST | quads",
+            "value": 0.89,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 14 bytes; Heap: 0.89 MiB; External: 0 MiB; Runs: [0.89,0.89,0.89]"
+          },
+          {
+            "name": "1 Record indexes (number) OPT-INGEST | quoted",
+            "value": 0.91,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 29 bytes; Heap: 0.91 MiB; External: 0 MiB; Runs: [0.91,0.91,0.91]"
+          },
+          {
+            "name": "1 Record indexes (number) OPT-INGEST | entities",
+            "value": 220.52,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 441 bytes; Heap: 220.52 MiB; External: 0 MiB; Runs: [220.52,220.52,220.52]"
+          },
+          {
+            "name": "3 Nested Map Quoted indexes with indexed quoted dict (number) OPT-QUERY | triples",
+            "value": 22.23,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 89 bytes; Heap: 22.23 MiB; External: 0 MiB; Runs: [22.23,22.23,22.23]"
+          },
+          {
+            "name": "3 Nested Map Quoted indexes with indexed quoted dict (number) OPT-QUERY | quads",
+            "value": 6.53,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 104 bytes; Heap: 6.53 MiB; External: 0 MiB; Runs: [6.53,6.53,6.53]"
+          },
+          {
+            "name": "3 Nested Map Quoted indexes with indexed quoted dict (number) OPT-QUERY | quoted",
+            "value": 9.55,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 306 bytes; Heap: 9.55 MiB; External: 0 MiB; Runs: [9.55,9.55,9.55]"
+          },
+          {
+            "name": "3 Nested Map Quoted indexes with indexed quoted dict (number) OPT-QUERY | entities",
+            "value": 509.83,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 1020 bytes; Heap: 509.83 MiB; External: 0 MiB; Runs: [509.83,509.83,509.83]"
+          },
+          {
+            "name": "3 Nested Record Quoted indexes with indexed quoted dict (number) OPT-INGEST | triples",
+            "value": 8.7,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 35 bytes; Heap: 8.7 MiB; External: 0 MiB; Runs: [8.7,8.7,8.7]"
+          },
+          {
+            "name": "3 Nested Record Quoted indexes with indexed quoted dict (number) OPT-INGEST | quads",
+            "value": 2.62,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 42 bytes; Heap: 2.62 MiB; External: 0 MiB; Runs: [2.62,2.62,2.62]"
+          },
+          {
+            "name": "3 Nested Record Quoted indexes with indexed quoted dict (number) OPT-INGEST | quoted",
+            "value": 10.86,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 347 bytes; Heap: 10.86 MiB; External: 0 MiB; Runs: [10.86,10.86,10.86]"
+          },
+          {
+            "name": "3 Nested Record Quoted indexes with indexed quoted dict (number) OPT-INGEST | entities",
+            "value": 710.62,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 1421 bytes; Heap: 710.62 MiB; External: 0 MiB; Runs: [710.62,710.62,710.62]"
+          },
+          {
+            "name": "3 sorted-blocks indexes with indexed quoted dict (number) OPT-BULK | triples",
+            "value": 12.43,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 50 bytes; Heap: 0.41 MiB; External: 12.01 MiB; Runs: [12.43,12.43,12.43]"
+          },
+          {
+            "name": "3 sorted-blocks indexes with indexed quoted dict (number) OPT-BULK | quads",
+            "value": 3.17,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 51 bytes; Heap: 0.16 MiB; External: 3.01 MiB; Runs: [3.17,3.17,3.17]"
+          },
+          {
+            "name": "3 sorted-blocks indexes with indexed quoted dict (number) OPT-BULK | quoted",
+            "value": 2.6,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 83 bytes; Heap: 1.06 MiB; External: 1.54 MiB; Runs: [2.6,2.6,2.6]"
+          },
+          {
+            "name": "3 sorted-blocks indexes with indexed quoted dict (number) OPT-BULK | entities",
+            "value": 151.83,
+            "unit": "MiB",
+            "extra": "Quads: 524288; Per quad: 304 bytes; Heap: 113.71 MiB; External: 38.13 MiB; Runs: [151.83,151.83,151.83]"
+          },
+          {
+            "name": "3 sorted-blocks indexes with indexed quoted dict (number), added one by one | triples",
+            "value": 18.99,
+            "unit": "MiB",
+            "extra": "Quads: 262144; Per quad: 76 bytes; Heap: 0.59 MiB; External: 18.4 MiB; Runs: [18.99,18.99,18.99]"
+          },
+          {
+            "name": "3 sorted-blocks indexes with indexed quoted dict (number), added one by one | quads",
+            "value": 4.36,
+            "unit": "MiB",
+            "extra": "Quads: 65536; Per quad: 70 bytes; Heap: 0.19 MiB; External: 4.17 MiB; Runs: [4.36,4.36,4.36]"
+          },
+          {
+            "name": "3 sorted-blocks indexes with indexed quoted dict (number), added one by one | quoted",
+            "value": 3.02,
+            "unit": "MiB",
+            "extra": "Quads: 32768; Per quad: 97 bytes; Heap: 1.1 MiB; External: 1.92 MiB; Runs: [3.02,3.02,3.02]"
           },
           {
             "name": "3 sorted-blocks indexes with indexed quoted dict (number), added one by one | entities",
