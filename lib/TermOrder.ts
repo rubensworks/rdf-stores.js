@@ -92,6 +92,7 @@ export class TermOrder {
    */
   private chunks: number[][] = [];
   private termCount = 0;
+  private rankTablesCache: ITermOrderRankTables | undefined;
   /**
    * If every label is exactly its rank plus one, times the spacing, which is what a relabel produces.
    */
@@ -177,6 +178,7 @@ export class TermOrder {
     if (this.label(encoding) !== 0) {
       return;
     }
+    this.rankTablesCache = undefined;
     const chunks = this.chunks;
     if (this.termCount === 0) {
       chunks.push([ encoding ]);
@@ -255,6 +257,7 @@ export class TermOrder {
     if (added.length === 0) {
       return;
     }
+    this.rankTablesCache = undefined;
     for (const encoding of added) {
       this.setLabel(encoding, 0);
     }
@@ -288,6 +291,31 @@ export class TermOrder {
     }
     this.termCount = merged.length;
     this.relabel();
+  }
+
+  /**
+   * Tables from encodings to their ranks in this order, and from ranks to encodings,
+   * which stay valid until terms are added.
+   */
+  public rankTables(): ITermOrderRankTables {
+    if (!this.rankTablesCache) {
+      const plainRanks = new Int32Array(this.plainLabels.length);
+      const quotedRanks = new Int32Array(this.quotedLabels.length);
+      const encodings = new Int32Array(this.termCount);
+      let rank = 0;
+      for (const chunk of this.chunks) {
+        for (const encoding of chunk) {
+          if (encoding >= 0) {
+            plainRanks[encoding] = rank;
+          } else {
+            quotedRanks[encoding & QUOTED_MASK] = rank;
+          }
+          encodings[rank++] = encoding;
+        }
+      }
+      this.rankTablesCache = { plainRanks, quotedRanks, encodings };
+    }
+    return this.rankTablesCache;
   }
 
   /**
@@ -389,4 +417,22 @@ export class TermOrder {
     }
     return low > 0 ? chunks[low - 1].at(-1) : undefined;
   }
+}
+
+/**
+ * Tables from encodings to ranks in a {@link TermOrder}, and back.
+ */
+export interface ITermOrderRankTables {
+  /**
+   * The rank of each plain encoding, i.e., a non-negative one.
+   */
+  plainRanks: Int32Array;
+  /**
+   * The rank of each quoted triple encoding, indexed without its high bit.
+   */
+  quotedRanks: Int32Array;
+  /**
+   * The encoding at each rank.
+   */
+  encodings: Int32Array;
 }
