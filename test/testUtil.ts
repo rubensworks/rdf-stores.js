@@ -16,6 +16,41 @@ import { RdfStoreIndexNestedRecord } from '../lib/index/RdfStoreIndexNestedRecor
 import { RdfStoreIndexNestedRecordQuoted } from '../lib/index/RdfStoreIndexNestedRecordQuoted';
 import { RdfStoreIndexSortedBlocks } from '../lib/index/RdfStoreIndexSortedBlocks';
 import type { IRdfStoreOptions } from '../lib/IRdfStoreOptions';
+import type { EncodedQuadTerms } from '../lib/PatternTerm';
+
+/**
+ * A sorted-blocks index that compresses its leaves after every change, into leaves of two quads,
+ * so that every read decodes leaves, and every change decompresses them first.
+ */
+export class RdfStoreIndexSortedBlocksCompressing extends RdfStoreIndexSortedBlocks {
+  public constructor(options: IRdfStoreOptions<number>) {
+    super(options, { compressedLeafCapacity: 2 });
+  }
+
+  public override set(key: EncodedQuadTerms<number>, value: boolean): boolean {
+    const result = super.set(key, value);
+    this.compress();
+    return result;
+  }
+
+  public override remove(key: EncodedQuadTerms<number>): boolean {
+    const result = super.remove(key);
+    this.compress();
+    return result;
+  }
+
+  public override setAll(keys: Int32Array, count: number): number {
+    const result = super.setAll(keys, count);
+    this.compress();
+    return result;
+  }
+
+  public override setAllSorted(sorted: Int32Array, count: number): number {
+    const result = super.setAllSorted(sorted, count);
+    this.compress();
+    return result;
+  }
+}
 
 export const indexClazzToInstance: Record<string, (subOptions: IRdfStoreOptions<number>) =>
 IRdfStoreIndex<number, boolean>> = {
@@ -33,6 +68,8 @@ IRdfStoreIndex<number, boolean>> = {
     (subOptions: IRdfStoreOptions<number>) => new RdfStoreIndexNestedRecordQuoted<number, boolean>(subOptions),
   RdfStoreIndexSortedBlocks:
     (subOptions: IRdfStoreOptions<number>) => new RdfStoreIndexSortedBlocks(subOptions),
+  RdfStoreIndexSortedBlocksCompressing:
+    (subOptions: IRdfStoreOptions<number>) => new RdfStoreIndexSortedBlocksCompressing(subOptions),
 };
 
 export const indexSupportsQuotedTriples: [ string, boolean ][] = [
@@ -43,6 +80,7 @@ export const indexSupportsQuotedTriples: [ string, boolean ][] = [
   [ 'RdfStoreIndexNestedRecord', false ],
   [ 'RdfStoreIndexNestedRecordQuoted', true ],
   [ 'RdfStoreIndexSortedBlocks', true ],
+  [ 'RdfStoreIndexSortedBlocksCompressing', true ],
 ];
 
 export const dictClazzToInstance: Record<string, () => ITermDictionary<number>> = {

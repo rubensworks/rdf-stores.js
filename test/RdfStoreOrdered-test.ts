@@ -100,6 +100,26 @@ describe('an ordered store', () => {
   });
 });
 
+describe('compress', () => {
+  it('keeps the results of a store from createOrdered', () => {
+    const store = RdfStore.createOrdered();
+    fill(store, [ 5, 3, 1, 4, 2 ]);
+    const before = subjectsOf(store);
+    store.compress();
+    expect(subjectsOf(store)).toEqual(before);
+    expect(store.countQuads(N('s003'))).toBe(1);
+    fill(store, [ 6 ]);
+    expect(subjectsOf(store)).toEqual([ ...before, 's006' ]);
+  });
+
+  it('does nothing for a store without indexes that compress', () => {
+    const store = createUnorderedStore();
+    fill(store, [ 2, 1 ]);
+    store.compress();
+    expect(subjectsOf(store)).toEqual([ 's002', 's001' ]);
+  });
+});
+
 describe('indexOrders', () => {
   it('is empty for a store without ordered indexes', () => {
     const store = createUnorderedStore();
