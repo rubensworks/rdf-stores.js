@@ -1034,6 +1034,29 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
   }
 
   /**
+   * If two quads have the same first `length` components.
+   * @param data The leaf of the first quad.
+   * @param offset The offset of the first quad.
+   * @param other The leaf or key of the second quad.
+   * @param otherOffset The offset of the second quad.
+   * @param length The number of components to compare.
+   */
+  private static equalPrefix(
+    data: ArrayLike<number>,
+    offset: number,
+    other: ArrayLike<number>,
+    otherOffset: number,
+    length: number,
+  ): boolean {
+    for (let i = 0; i < length; i++) {
+      if (data[offset + i] !== other[otherOffset + i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
    * The only level that the given match terms match, if they match exactly one.
    * @param matchTerms An array of booleans indicating which terms to match.
    */
@@ -1061,16 +1084,34 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
     const seen = new EncodingSet();
     const encodings: number[] = [];
     if (leading === levels.length) {
-      // The filters bind a prefix, so the matching quads form one range that can be read without comparing them.
+      // The filters bind a prefix, so the matching quads form one range.
       // The first `leading` filter terms are all defined.
       const prefix = <number[]> ids;
-      const start = this.seekKey(prefix, leading, false);
+      const cursor = this.seekKey(prefix, leading, false);
       const end = this.seekKey(prefix, leading, true);
+      const groupLength = level + 1;
       let previous: number | undefined;
-      for (let leaf = start.leaf; leaf < this.leaves.length && leaf <= end.leaf; leaf++) {
-        const data = this.leaves[leaf];
-        const to = (leaf === end.leaf ? end.offset : this.sizes[leaf]) * 4;
-        for (let offset = (leaf === start.leaf ? start.offset : 0) * 4 + level; offset < to; offset += 4) {
+      while (cursor.leaf < end.leaf || (cursor.leaf === end.leaf && cursor.offset < end.offset)) {
+        const data = this.leaves[cursor.leaf];
+        const from = cursor.offset * 4;
+        const to = (cursor.leaf === end.leaf ? end.offset : this.sizes[cursor.leaf]) * 4;
+        if (RdfStoreIndexSortedBlocks.equalPrefix(data, from, data, to - 4, groupLength)) {
+          // The rest of the leaf is one group of quads that share their components up to the level.
+          // Such a group can span many leaves, so it is searched past instead of read.
+          const encoding = data[from + level];
+          if (encoding !== previous) {
+            previous = encoding;
+            if (seen.add(encoding)) {
+              encodings.push(encoding);
+            }
+          }
+          this.advance(
+            cursor,
+            (leaf, offset) => RdfStoreIndexSortedBlocks.equalPrefix(leaf, offset, data, from, groupLength),
+          );
+          continue;
+        }
+        for (let offset = from + level; offset < to; offset += 4) {
           const encoding = data[offset];
           // Neighbouring quads often share the encoding, which is cheaper to check than the set.
           if (encoding !== previous) {
@@ -1080,6 +1121,8 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
             }
           }
         }
+        cursor.leaf++;
+        cursor.offset = 0;
       }
     } else {
       const cursor = this.startMatch(ids, leading);
