@@ -1061,25 +1061,18 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
     const seen = new EncodingSet();
     const encodings: number[] = [];
     if (leading === levels.length) {
-      // The filters bind a prefix, so the matching quads form one range that can be read without comparing them.
+      // The filters bind a prefix, so the matching quads form one range.
+      // Within it, the quads that share their components up to the level are skipped as one group.
       // The first `leading` filter terms are all defined.
       const prefix = <number[]> ids;
-      const start = this.seekKey(prefix, leading, false);
+      const cursor = this.seekKey(prefix, leading, false);
       const end = this.seekKey(prefix, leading, true);
-      let previous: number | undefined;
-      for (let leaf = start.leaf; leaf < this.leaves.length && leaf <= end.leaf; leaf++) {
-        const data = this.leaves[leaf];
-        const to = (leaf === end.leaf ? end.offset : this.sizes[leaf]) * 4;
-        for (let offset = (leaf === start.leaf ? start.offset : 0) * 4 + level; offset < to; offset += 4) {
-          const encoding = data[offset];
-          // Neighbouring quads often share the encoding, which is cheaper to check than the set.
-          if (encoding !== previous) {
-            previous = encoding;
-            if (seen.add(encoding)) {
-              encodings.push(encoding);
-            }
-          }
+      while (cursor.leaf < end.leaf || (cursor.leaf === end.leaf && cursor.offset < end.offset)) {
+        const encoding = this.leaves[cursor.leaf][cursor.offset * 4 + level];
+        if (seen.add(encoding)) {
+          encodings.push(encoding);
         }
+        this.skipGroup(cursor, level + 1);
       }
     } else {
       const cursor = this.startMatch(ids, leading);
