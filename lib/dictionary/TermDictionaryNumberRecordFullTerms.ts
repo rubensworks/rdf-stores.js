@@ -13,12 +13,9 @@ export class TermDictionaryNumberRecordFullTerms implements ITermDictionary<numb
   private readonly dictionary: Record<string, number> = {};
   // Blank nodes and literals are keyed by their value, so no key string has to be built for them.
   private readonly blankNodes = new Map<string, number>();
-  private readonly literals = new Map<string, Map<string, number>>();
-  // The literals of the last datatype, language and direction, which consecutive literals often share.
-  private lastDatatype: string | undefined;
-  private lastLanguage = '';
-  private lastDirection = '';
-  private lastLiterals: Map<string, number> | undefined;
+  // Literals without a language by datatype, and literals with a language by language and direction.
+  private readonly literalsByDatatype = new Map<string, Map<string, number>>();
+  private readonly literalsByLanguage = new Map<string, Map<string, number>>();
   private readonly reverseDictionary: Record<number, RDF.Term> = {};
   private readonly dataFactory: RDF.DataFactory;
   public readonly features = { quotedTriples: false };
@@ -70,26 +67,14 @@ export class TermDictionaryNumberRecordFullTerms implements ITermDictionary<numb
    * @param create If the encodings must be created if there are none yet.
    */
   private literalsOf(literal: RDF.Literal, create: boolean): Map<string, number> | undefined {
-    const language = literal.language;
-    const direction = literal.direction ?? '';
-    // The datatype of a literal with a language follows from its language and direction.
-    const datatype = language ? '' : literal.datatype.value;
-    if (datatype !== this.lastDatatype || language !== this.lastLanguage || direction !== this.lastDirection) {
-      const key = `${datatype}@${language}--${direction}`;
-      let literals = this.literals.get(key);
-      if (!literals) {
-        if (!create) {
-          return undefined;
-        }
-        literals = new Map();
-        this.literals.set(key, literals);
-      }
-      this.lastDatatype = datatype;
-      this.lastLanguage = language;
-      this.lastDirection = direction;
-      this.lastLiterals = literals;
+    const groups = literal.language ? this.literalsByLanguage : this.literalsByDatatype;
+    const key = literal.language ? `${literal.language}--${literal.direction ?? ''}` : literal.datatype.value;
+    let literals = groups.get(key);
+    if (!literals && create) {
+      literals = new Map();
+      groups.set(key, literals);
     }
-    return this.lastLiterals;
+    return literals;
   }
 
   public decode(encoding: number): RDF.Term {
