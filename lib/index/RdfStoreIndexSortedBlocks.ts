@@ -158,6 +158,52 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
   }
 
   /**
+   * Compare the quad at `offset` in `data` with the quad at `otherOffset` in `other`.
+   * @param data A leaf.
+   * @param offset The offset of a quad within the leaf.
+   * @param other Encoded quads.
+   * @param otherOffset The offset of a quad within `other`.
+   */
+  private compareQuads(data: Int32Array, offset: number, other: Int32Array, otherOffset: number): number {
+    for (let i = 0; i < 4; i++) {
+      const left = data[offset + i];
+      const right = other[otherOffset + i];
+      if (left !== right) {
+        return this.termOrder.label(left) < this.termOrder.label(right) ? -1 : 1;
+      }
+    }
+    return 0;
+  }
+
+  /**
+   * Fill this empty index with sorted unique quads, by copying them into leaves a leaf at a time.
+   * @param sorted Sorted unique encoded quads.
+   * @param count The number of quads in `sorted`.
+   * @return The number of quads added.
+   */
+  private setSorted(sorted: Int32Array, count: number): number {
+    const capacity = this.leafCapacity;
+    const leaves: Int32Array[] = [];
+    const sizes: number[] = [];
+    for (let start = 0; start < count; start += capacity) {
+      const size = Math.min(capacity, count - start);
+      const leaf = new Int32Array(capacity * 4);
+      leaf.set(sorted.subarray(start * 4, (start + size) * 4));
+      leaves.push(leaf);
+      sizes.push(size);
+    }
+    if (leaves.length === 0) {
+      leaves.push(new Int32Array(capacity * 4));
+      sizes.push(0);
+    }
+    this.leaves = leaves;
+    this.sizes = sizes;
+    this.quadCount = count;
+    this.version++;
+    return count;
+  }
+
+  /**
    * Move a cursor forward to the first quad for which `skip` is false.
    * `skip` must hold for a (possibly empty) run of quads starting at the cursor, and for none after it.
    * This gallops over the leaves and then searches within one, so it costs logarithmic time in the
@@ -559,6 +605,43 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
     }
 
     const [ sorted, sortedCount ] = this.sortUnique(keys, count);
+    return this.mergeSorted(sorted, sortedCount);
+  }
+
+  /**
+   * If a batch of the given size is merged with the quads in this index, rather than inserted one by one.
+   * @param count The number of quads in the batch.
+   */
+  public mergesBatch(count: number): boolean {
+    return count * this.mergeThreshold >= this.quadCount;
+  }
+
+  /**
+   * Sort a batch of quads in the order of this index, and drop duplicates, after adding their terms to the term order.
+   * @param keys Encoded quads in the component order of this index, four entries per quad.
+   * @param count The number of quads.
+   * @return A new array with the sorted unique quads, and the number of quads in it.
+   */
+  public sortBatch(keys: Int32Array, count: number): [ Int32Array, number ] {
+    this.termOrder.addAll(keys, count * 4);
+    return this.sortUnique(keys, count);
+  }
+
+  /**
+   * Add a batch of quads that is already sorted in the order of this index, without duplicates,
+   * and whose terms are all in the term order.
+   * @param sorted Encoded quads in the component order of this index, four entries per quad.
+   * @param count The number of quads.
+   * @return The number of quads that were not yet present.
+   */
+  public setAllSorted(sorted: Int32Array, count: number): number {
+    return this.mergeSorted(sorted, count);
+  }
+
+  private mergeSorted(sorted: Int32Array, sortedCount: number): number {
+    if (this.quadCount === 0) {
+      return this.setSorted(sorted, sortedCount);
+    }
     const merged: Int32Array[] = [];
     const mergedSizes: number[] = [];
     const capacity = this.leafCapacity;
@@ -584,10 +667,9 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
     let added = 0;
     for (let i = 0; i < sortedCount; i++) {
       const offset = i * 4;
-      const key = sorted.subarray(offset, offset + 4);
       let comparison = 1;
       while (cursor.leaf < this.leaves.length) {
-        comparison = this.compare(this.leaves[cursor.leaf], cursor.offset * 4, key, 4);
+        comparison = this.compareQuads(this.leaves[cursor.leaf], cursor.offset * 4, sorted, offset);
         if (comparison >= 0) {
           break;
         }
