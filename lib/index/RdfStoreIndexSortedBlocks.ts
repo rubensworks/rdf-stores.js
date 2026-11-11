@@ -50,12 +50,6 @@ export interface IRdfStoreIndexSortedBlocksOptions {
 }
 
 /**
- * When finding distinct values, a run of this many quads with the same value is searched past instead of read,
- * if they share their components up to the value.
- */
-const GROUP_LOOKAHEAD = 32;
-
-/**
  * A position within the leaves of an index.
  * A leaf index equal to the number of leaves means the end has been reached.
  */
@@ -1100,41 +1094,36 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
       let previous: number | undefined;
       while (cursor.leaf < end.leaf || (cursor.leaf === end.leaf && cursor.offset < end.offset)) {
         const data = this.leaves[cursor.leaf];
-        const size = cursor.leaf === end.leaf ? end.offset : this.sizes[cursor.leaf];
-        let offset = cursor.offset;
-        // Where the current run of quads with the same encoding started in this leaf.
-        let runStart = offset;
-        let longGroup = false;
-        for (; offset < size; offset++) {
-          const encoding = data[offset * 4 + level];
-          // Neighbouring quads often share the encoding, which is cheaper to check than the set.
+        const from = cursor.offset * 4;
+        const to = (cursor.leaf === end.leaf ? end.offset : this.sizes[cursor.leaf]) * 4;
+        if (RdfStoreIndexSortedBlocks.equalPrefix(data, from, data, to - 4, groupLength)) {
+          // The rest of the leaf shares its components up to the level, so it is searched past
+          // together with the leaves after it that do the same.
+          const encoding = data[from + level];
           if (encoding !== previous) {
             previous = encoding;
-            runStart = offset;
             if (seen.add(encoding)) {
               encodings.push(encoding);
             }
-          } else if (offset - runStart === GROUP_LOOKAHEAD) {
-            // A long run is searched past instead of read, if it is one group of quads that share their components
-            // up to the level.
-            if (RdfStoreIndexSortedBlocks.equalPrefix(data, runStart * 4, data, offset * 4, groupLength)) {
-              longGroup = true;
-              break;
-            }
-            runStart = offset;
           }
-        }
-        if (!longGroup) {
-          cursor.leaf++;
-          cursor.offset = 0;
+          this.advance(
+            cursor,
+            (leaf, offset) => RdfStoreIndexSortedBlocks.equalPrefix(leaf, offset, data, from, groupLength),
+          );
           continue;
         }
-        const keyOffset = offset * 4;
-        cursor.offset = offset;
-        this.advance(
-          cursor,
-          (leaf, leafOffset) => RdfStoreIndexSortedBlocks.equalPrefix(leaf, leafOffset, data, keyOffset, groupLength),
-        );
+        for (let offset = from + level; offset < to; offset += 4) {
+          const encoding = data[offset];
+          // Neighbouring quads often share the encoding, which is cheaper to check than the set.
+          if (encoding !== previous) {
+            previous = encoding;
+            if (seen.add(encoding)) {
+              encodings.push(encoding);
+            }
+          }
+        }
+        cursor.leaf++;
+        cursor.offset = 0;
       }
     } else {
       const cursor = this.startMatch(ids, leading);
