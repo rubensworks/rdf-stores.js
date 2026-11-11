@@ -733,8 +733,6 @@ Experimental results show the following:
 * On the data with few distinct terms, `RdfStoreIndexSortedBlocks` scans patterns with one or two variables about as fast as the nested indexes,
   but is 1.2 to 1.3 times slower on lookups without variables, and up to 2.7 times slower on ingestion in batches (up to 3.4 times when adding quads one by one).
   It counts the distinct terms of one to three components 9 to 90 times faster, as it caches counts until the store changes.
-  It finds the distinct values of a single component about as fast as the nested indexes, as it searches past the leaves that hold only one of them,
-  and those of two components about 2 times slower.
   It holds 2M triples in 109 MB, between `RdfStoreIndexNestedRecordQuoted` (67 MB) and `RdfStoreIndexNestedMapQuoted` (183 MB).
 * On the entities data, `RdfStoreIndexSortedBlocks` holds the 2M triples in 474 MB, against 1951 MB for `RdfStoreIndexNestedMapQuoted`
   and 2708 MB for `RdfStoreIndexNestedRecordQuoted`, and loads them in a batch in 9.0s, against 8.6s and 14.1s.
