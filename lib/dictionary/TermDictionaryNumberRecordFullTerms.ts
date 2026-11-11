@@ -24,7 +24,6 @@ const MIN_SHARED_STRING_LENGTH = 13;
  * This is necessary as parsers (such as N3.js) emit strings that are slices of
  * larger chunks, which V8 keeps in memory for as long as their slices are kept.
  * As such, we deeply copy long strings to avoid this problem.
- * Joining parts of a string creates a new flat string, unlike concatenating or slicing it.
  * @param value A string.
  */
 function copyString(value: string): string {
