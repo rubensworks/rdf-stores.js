@@ -1,6 +1,21 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+<a name="v2.10.0"></a>
+## [v2.10.0](https://github.com/rubensworks/rdf-stores.js/compare/v2.9.0...v2.10.0) - 2026-11-11
+
+### Changed
+* Improve performance of ordered store (loading is 10~25% faster, 33% less memory, and faster distinct terms)
+  * [Optimize distinct terms by skipping irrelevant leaves (#61)](https://github.com/rubensworks/rdf-stores.js/commit/e653f1597ecff8debae205b9cee714ac9dcfedc6)
+  * [Store deep copies of literals and blank nodes (#56)](https://github.com/rubensworks/rdf-stores.js/commit/07845ef5ca1f22f2617abfde57ad486ca2f481c2)
+  * [Encode literals and blank nodes without stringifying them](https://github.com/rubensworks/rdf-stores.js/commit/4bc418c1368cc6db75d991f9fb59b4ca70732f85)
+  * [Make bulk loads into sorted-blocks indexes cheaper (#53)](https://github.com/rubensworks/rdf-stores.js/commit/e45a5772228fda6d05700005c89d2b6e2428e856)
+  * [Sort a batch once for all sorted-blocks indexes](https://github.com/rubensworks/rdf-stores.js/commit/402e7da3989b1668d23a8e04d6b0f8b9df06e550)
+  * [Collect new terms with a bitmap, and sort them on their values](https://github.com/rubensworks/rdf-stores.js/commit/12516f0bed63b52be2a337ad72f78d84c11191a8)
+  * [Fill an empty sorted-blocks index by copying whole leaves](https://github.com/rubensworks/rdf-stores.js/commit/5908dc08224340fee1a9ff3f357c6ad45a49186c)
+  * [Sort quads ranks that fit in 64 bits natively with Uint8Array (#52)](https://github.com/rubensworks/rdf-stores.js/commit/8ab00d0773a94355285949e7315f8d6615549036)
+  * [Share the level and variable index arrays of lookups (#51)](https://github.com/rubensworks/rdf-stores.js/commit/9b37289f38310de7bc52944b5d8f0e3fcbc1fa6f)
+
 <a name="v2.9.1"></a>
 ## [v2.9.1](https://github.com/rubensworks/rdf-stores.js/compare/v2.8.0...v2.9.1) - 2026-11-07
 
