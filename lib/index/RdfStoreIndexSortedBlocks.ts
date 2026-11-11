@@ -1034,6 +1034,29 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
   }
 
   /**
+   * If two quads have the same first `length` components.
+   * @param data The leaf of the first quad.
+   * @param offset The offset of the first quad.
+   * @param other The leaf or key of the second quad.
+   * @param otherOffset The offset of the second quad.
+   * @param length The number of components to compare.
+   */
+  private static equalPrefix(
+    data: ArrayLike<number>,
+    offset: number,
+    other: ArrayLike<number>,
+    otherOffset: number,
+    length: number,
+  ): boolean {
+    for (let i = 0; i < length; i++) {
+      if (data[offset + i] !== other[otherOffset + i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
    * The only level that the given match terms match, if they match exactly one.
    * @param matchTerms An array of booleans indicating which terms to match.
    */
@@ -1067,12 +1090,40 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
       const prefix = <number[]> ids;
       const cursor = this.seekKey(prefix, leading, false);
       const end = this.seekKey(prefix, leading, true);
+      const groupLength = level + 1;
+      let previous: number | undefined;
       while (cursor.leaf < end.leaf || (cursor.leaf === end.leaf && cursor.offset < end.offset)) {
-        const encoding = this.leaves[cursor.leaf][cursor.offset * 4 + level];
-        if (seen.add(encoding)) {
-          encodings.push(encoding);
+        const data = this.leaves[cursor.leaf];
+        const size = cursor.leaf === end.leaf ? end.offset : this.sizes[cursor.leaf];
+        let offset = cursor.offset;
+        let groupStart = -1;
+        for (; offset < size; offset++) {
+          const encoding = data[offset * 4 + level];
+          // Neighbouring quads often share the encoding, which is cheaper to check than the set.
+          if (encoding !== previous) {
+            previous = encoding;
+            if (seen.add(encoding)) {
+              encodings.push(encoding);
+            }
+            // A group that still continues a few quads further is searched past instead of read.
+            const ahead = offset + this.linearProbes;
+            if (ahead < size && RdfStoreIndexSortedBlocks.equalPrefix(data, offset * 4, data, ahead * 4, groupLength)) {
+              groupStart = offset;
+              break;
+            }
+          }
         }
-        this.skipGroup(cursor, level + 1);
+        if (groupStart < 0) {
+          cursor.leaf++;
+          cursor.offset = 0;
+          continue;
+        }
+        const key = data.slice(groupStart * 4, groupStart * 4 + groupLength);
+        cursor.offset = groupStart + this.linearProbes;
+        this.advance(
+          cursor,
+          (leaf, leafOffset) => RdfStoreIndexSortedBlocks.equalPrefix(leaf, leafOffset, key, 0, groupLength),
+        );
       }
     } else {
       const cursor = this.startMatch(ids, leading);
