@@ -110,17 +110,23 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * @param options.termComparator The order to keep terms in, which defaults to {@link defaultTermComparator}.
    * @param options.indexCombinations The component orders of the indexes to create.
    * @param options.nodes If an index of nodes (subjects or objects) must be maintained.
+   * @param options.compactLiterals If literals of integer, date, dateTime and boolean datatypes are stored as numbers,
+   *                                which takes less memory, see {@link ITermDictionaryNumberRecordFullTermsOptions}.
    */
   public static createOrdered(options: {
     termComparator?: (left: RDF.Term, right: RDF.Term) => number;
     indexCombinations?: QuadTermName[][];
     nodes?: true;
+    compactLiterals?: boolean;
   } = {}): RdfStore<number> {
     return new RdfStore<number>({
       indexCombinations: options.indexCombinations ?? RdfStore.ORDERED_INDEX_COMBINATIONS,
       indexConstructor: subOptions => new RdfStoreIndexSortedBlocks(subOptions),
       indexNodes: options.nodes,
-      dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms()),
+      dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms(
+        undefined,
+        { compactLiterals: options.compactLiterals },
+      )),
       dataFactory: new DataFactory(),
       termComparator: options.termComparator,
     });

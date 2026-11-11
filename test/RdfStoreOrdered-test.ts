@@ -100,6 +100,30 @@ describe('an ordered store', () => {
   });
 });
 
+describe('an ordered store with compact literals', () => {
+  const XSD = 'http://www.w3.org/2001/XMLSchema#';
+  const integer = N(`${XSD}integer`);
+
+  it('matches, orders and seeks literals that are stored as numbers', () => {
+    const store = RdfStore.createOrdered({ compactLiterals: true });
+    for (const value of [ '30', '4', '05', '100' ]) {
+      store.addQuad(DF.quad(N('s'), N('p'), DF.literal(value, integer)));
+    }
+    store.addQuad(DF.quad(N('s'), N('q'), DF.literal('2010-01-03', N(`${XSD}date`))));
+
+    // Values are ordered as strings by the default comparator.
+    expect(store.getQuads(N('s'), N('p')).map(quad => quad.object.value)).toEqual([ '05', '100', '30', '4' ]);
+    expect(store.countQuads(undefined, undefined, DF.literal('4', integer))).toBe(1);
+    expect(store.countQuads(undefined, undefined, DF.literal('04', integer))).toBe(0);
+    expect(store.getQuads(undefined, undefined, DF.literal('2010-01-03', N(`${XSD}date`))))
+      .toEqualRdfQuadArray([ DF.quad(N('s'), N('q'), DF.literal('2010-01-03', N(`${XSD}date`))) ]);
+
+    const iterator: any = store.matchBindings(BF, N('s'), N('p'), V('o'), DG);
+    iterator.seekTo('object', DF.literal('2', integer));
+    expect(iterator.read().get(V('o'))).toEqualRdfTerm(DF.literal('30', integer));
+  });
+});
+
 describe('indexOrders', () => {
   it('is empty for a store without ordered indexes', () => {
     const store = createUnorderedStore();
