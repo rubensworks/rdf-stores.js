@@ -50,8 +50,8 @@ export interface IRdfStoreIndexSortedBlocksOptions {
 }
 
 /**
- * When finding distinct values, a group of quads that share their components up to the value is searched past
- * instead of read when it still continues this many quads further on.
+ * When finding distinct values, a run of this many quads with the same value is searched past instead of read,
+ * if they share their components up to the value.
  */
 const GROUP_LOOKAHEAD = 32;
 
@@ -1097,36 +1097,40 @@ export class RdfStoreIndexSortedBlocks implements IRdfStoreIndex<number, boolean
       const cursor = this.seekKey(prefix, leading, false);
       const end = this.seekKey(prefix, leading, true);
       const groupLength = level + 1;
+      let previous: number | undefined;
       while (cursor.leaf < end.leaf || (cursor.leaf === end.leaf && cursor.offset < end.offset)) {
         const data = this.leaves[cursor.leaf];
         const size = cursor.leaf === end.leaf ? end.offset : this.sizes[cursor.leaf];
         let offset = cursor.offset;
-        let groupStart = -1;
-        // Reset at every leaf, so that a group that continues from the previous leaf is checked for its length again.
-        let previous: number | undefined;
+        // Where the current run of quads with the same encoding started in this leaf.
+        let runStart = offset;
+        let longGroup = false;
         for (; offset < size; offset++) {
           const encoding = data[offset * 4 + level];
           // Neighbouring quads often share the encoding, which is cheaper to check than the set.
           if (encoding !== previous) {
             previous = encoding;
+            runStart = offset;
             if (seen.add(encoding)) {
               encodings.push(encoding);
             }
-            // A group that still continues further on is searched past instead of read.
-            const ahead = offset + GROUP_LOOKAHEAD;
-            if (ahead < size && RdfStoreIndexSortedBlocks.equalPrefix(data, offset * 4, data, ahead * 4, groupLength)) {
-              groupStart = offset;
+          } else if (offset - runStart === GROUP_LOOKAHEAD) {
+            // A long run is searched past instead of read, if it is one group of quads that share their components
+            // up to the level.
+            if (RdfStoreIndexSortedBlocks.equalPrefix(data, runStart * 4, data, offset * 4, groupLength)) {
+              longGroup = true;
               break;
             }
+            runStart = offset;
           }
         }
-        if (groupStart < 0) {
+        if (!longGroup) {
           cursor.leaf++;
           cursor.offset = 0;
           continue;
         }
-        const keyOffset = groupStart * 4;
-        cursor.offset = groupStart + GROUP_LOOKAHEAD;
+        const keyOffset = offset * 4;
+        cursor.offset = offset;
         this.advance(
           cursor,
           (leaf, leafOffset) => RdfStoreIndexSortedBlocks.equalPrefix(leaf, leafOffset, data, keyOffset, groupLength),
