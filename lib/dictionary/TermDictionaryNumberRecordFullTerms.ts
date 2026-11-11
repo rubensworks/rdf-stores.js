@@ -8,22 +8,22 @@ import type { ITermDictionary } from './ITermDictionary';
  */
 interface ILiterals {
   /**
-   * What new literals are created with, which they share.
+   * The language or data type of this set of encodings.
    */
   languageOrDatatype: string | RDF.NamedNode | RDF.DirectionalLanguage;
   encodings: Map<string, number>;
 }
 
 /**
- * V8 copies strings shorter than this instead of slicing or concatenating them,
- * so those never keep a larger string alive.
+ * V8 copies strings shorter than this instead of slicing or concatenating them.
  */
 const MIN_SHARED_STRING_LENGTH = 13;
 
 /**
- * Copy a string, so the copy does not keep a larger string alive.
- * Parsers usually produce strings that are slices of the chunks they parse,
- * which V8 keeps alive for as long as any of their slices.
+ * Deeply copy a string.
+ * This is necessary as parsers (such as N3.js) emit strings that are slices of
+ * larger chunks, which V8 keeps in memory for as long as their slices are kept.
+ * As such, we deeply copy long strings to avoid this problem.
  * Joining parts of a string creates a new flat string, unlike concatenating or slicing it.
  * @param value A string.
  */
@@ -35,8 +35,6 @@ function copyString(value: string): string {
  * A term dictionary that encodes to numbers, and stores the dictionary in memory in a Record.
  * The reverse dictionary will store full RDF term objects,
  * resulting in slightly better query performance at the cost of slightly higher memory usage.
- * It stores its own copies of literals and blank nodes, created with its data factory,
- * so they do not keep alive what the given terms were parsed from.
  */
 export class TermDictionaryNumberRecordFullTerms implements ITermDictionary<number> {
   private lastId = 0;
