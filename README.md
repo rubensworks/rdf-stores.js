@@ -327,6 +327,12 @@ store.countDistinctTerms([ 'subject' ], [ undefined, undefined, undefined, DF.de
 store.countDistinctTerms([ 'subject', 'predicate' ], [ undefined, DF.namedNode('ex:p1'), undefined, undefined ]);
 ```
 
+Counts are read off an index where possible, and otherwise counted by iterating over the matching quads.
+`store.features.indexDistinctObjectCounts` is true if the distinct objects of a predicate in a graph
+are read off an index, which is the case if an index orders objects directly after the graph and predicate,
+as the default store does.
+Query engines such as Comunica only count those to plan queries if this is true.
+
 ### `readDistinctTerms`
 
 Returns an iterable iterator producing distinct arrays of terms that exist in the store.
