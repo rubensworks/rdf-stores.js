@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+<a name="v2.10.1"></a>
+## [v2.10.1](https://github.com/rubensworks/rdf-stores.js/compare/v2.10.0...v2.10.1) - 2026-11-15
+
+### Added
+* [Declare if distinct objects of predicates can be counted cheaply (#62)](https://github.com/rubensworks/rdf-stores.js/commit/e66f198aa2764f0d77e47c755b44c1ec56171995)
+
 <a name="v2.10.0"></a>
 ## [v2.10.0](https://github.com/rubensworks/rdf-stores.js/compare/v2.9.0...v2.10.0) - 2026-11-11
 
