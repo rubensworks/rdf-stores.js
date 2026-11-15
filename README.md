@@ -293,6 +293,26 @@ stream.seekTo('subject', DF.namedNode('ex:s5'));
 The sought term does not have to occur in the store: the scan lands on the first term that is not before it.
 A seek is applied right away and only drops what is ahead, so it can never rewind a scan or re-emit a result that was already produced.
 
+### Variables that need not be bound
+
+[`readBindings`](#readbindings), [`getBindings`](#getbindings), and [`matchBindings`](#matchbindings)
+accept an optional last argument with `unusedVariables`:
+variables of the pattern of which the values are not needed, such as variables that a query does not use elsewhere.
+They are matched as any other variable, but are not bound, which saves creating their terms and bindings entries.
+Every match still produces its own bindings, so their number does not change.
+Variables that occur more than once in the pattern, also within quoted triple patterns, are bound anyway,
+since their occurrences are compared:
+
+```typescript
+const array = store.getBindings(BF, DF.variable('s'), DF.namedNode('ex:p1'), DF.variable('o'), DF.defaultGraph(), {
+  unusedVariables: [ DF.variable('o') ],
+});
+// Bindings of only ?s, one per quad with predicate ex:p1
+```
+
+Since the bindings are not ordered on an unused variable, a [`resultOrder`](#resultorder-and-seekto) stops before it.
+`store.features.unusedVariables` is `true`, so that query engines such as Comunica know they can pass these variables.
+
 ### `indexOrders`
 
 The orders a scan of this store can come back in, one entry per ordered index:

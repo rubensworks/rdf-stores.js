@@ -167,6 +167,16 @@ describe('resultOrder', () => {
     expect(indexOf(undefined, N('p'), N('o'))).toBe(2);
   });
 
+  it('stops at the first unused variable, which bindings are not ordered on', () => {
+    const store = createStore();
+    fill(store, [ 1 ]);
+    const orderOf = (unusedVariables: any[]): any =>
+      (<any> store.matchBindings(BF, V('s'), V('p'), V('o'), DG, { unusedVariables })).resultOrder;
+    expect(orderOf([ V('o') ])).toEqual([ 'subject', 'predicate' ]);
+    expect(orderOf([ V('p') ])).toEqual([ 'subject' ]);
+    expect(orderOf([ V('s') ])).toEqual([]);
+  });
+
   it('puts the object first when only an object-before-subject index is available', () => {
     const store = createStore([
       [ 'graph', 'subject', 'predicate', 'object' ],

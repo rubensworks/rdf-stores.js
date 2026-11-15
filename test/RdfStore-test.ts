@@ -1,4 +1,5 @@
 import { BindingsFactory } from '@comunica/utils-bindings-factory';
+import type * as RDF from '@rdfjs/types';
 import { arrayifyStream } from 'arrayify-stream';
 import each from 'jest-each';
 import { DataFactory } from 'rdf-data-factory';
@@ -2590,6 +2591,76 @@ describe('RdfStore', () => {
         BF.fromRecord({ o: DF.namedNode('o1') }),
         BF.fromRecord({ o: DF.namedNode('o2') }),
       ]);
+    });
+  });
+
+  describe('unused variables', () => {
+    const unusedVariables = [ DF.variable('o') ];
+    // The subject of every match, which is the only variable that is bound, in any order
+    function expectSubjects(bindings: RDF.Bindings[]): void {
+      expect(bindings.map(binding => [ ...binding.keys() ].map(key => key.value))).toEqual([[ 's' ], [ 's' ], [ 's' ]]);
+      expect(bindings.map(binding => binding.get('s')!.value).sort()).toEqual([ 's1', 's1', 's2' ]);
+    }
+
+    beforeEach(() => {
+      store = RdfStore.createDefault();
+      store.addQuad(DF.quad(DF.namedNode('s1'), DF.namedNode('p1'), DF.namedNode('o1')));
+      store.addQuad(DF.quad(DF.namedNode('s1'), DF.namedNode('p1'), DF.namedNode('o2')));
+      store.addQuad(DF.quad(DF.namedNode('s2'), DF.namedNode('p1'), DF.namedNode('o1')));
+      store.addQuad(DF.quad(DF.namedNode('s3'), DF.namedNode('p2'), DF.namedNode('o3')));
+    });
+
+    it('are declared as a feature', () => {
+      expect(store.features.unusedVariables).toBe(true);
+    });
+
+    it('are matched without being bound by getBindings, once per match', () => {
+      expectSubjects(store.getBindings(BF, DF.variable('s'), DF.namedNode('p1'), DF.variable('o'), DF.defaultGraph(), {
+        unusedVariables,
+      }));
+    });
+
+    it('are matched without being bound by readBindings', () => {
+      const subject = DF.variable('s');
+      expectSubjects([ ...store.readBindings(BF, subject, DF.namedNode('p1'), DF.variable('o'), DF.defaultGraph(), {
+        unusedVariables,
+      }) ]);
+    });
+
+    it('are matched without being bound by matchBindings', async() => {
+      const subject = DF.variable('s');
+      expectSubjects(await store.matchBindings(BF, subject, DF.namedNode('p1'), DF.variable('o'), DF.defaultGraph(), {
+        unusedVariables,
+      }).toArray());
+    });
+
+    it('can be all variables of a pattern', () => {
+      expect(store.getBindings(BF, DF.variable('s'), DF.variable('p'), DF.variable('o'), DF.defaultGraph(), {
+        unusedVariables: [ DF.variable('s'), DF.variable('p'), DF.variable('o') ],
+      })).toEqualBindingsArray(Array.from({ length: 4 }, () => BF.fromRecord({})));
+    });
+
+    it('are bound if they occur more than once in the pattern', () => {
+      store.addQuad(DF.quad(DF.namedNode('s1'), DF.namedNode('p1'), DF.namedNode('s1')));
+      expect(store.getBindings(BF, DF.variable('o'), DF.namedNode('p1'), DF.variable('o'), DF.defaultGraph(), {
+        unusedVariables,
+      })).toEqualBindingsArray([ BF.fromRecord({ o: DF.namedNode('s1') }) ]);
+    });
+
+    it('are bound if they also occur in a quoted triple pattern', () => {
+      const quoted = DF.quad(DF.namedNode('o1'), DF.namedNode('p3'), DF.namedNode('o4'));
+      store.addQuad(DF.quad(DF.namedNode('o1'), DF.namedNode('p4'), quoted));
+      store.addQuad(DF.quad(DF.namedNode('o2'), DF.namedNode('p4'), quoted));
+      const pattern = DF.quad(DF.variable('o'), DF.namedNode('p3'), DF.variable('x'));
+      expect(store.getBindings(BF, DF.variable('o'), DF.namedNode('p4'), pattern, DF.defaultGraph(), {
+        unusedVariables,
+      })).toEqualBindingsArray([ BF.fromRecord({ o: DF.namedNode('o1'), x: DF.namedNode('o4') }) ]);
+    });
+
+    it('do not affect other variables', () => {
+      expect(store.getBindings(BF, DF.variable('s'), DF.namedNode('p2'), DF.variable('o'), DF.defaultGraph(), {
+        unusedVariables: [ DF.variable('x') ],
+      })).toEqualBindingsArray([ BF.fromRecord({ s: DF.namedNode('s3'), o: DF.namedNode('o3') }) ]);
     });
   });
 
