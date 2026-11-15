@@ -7,6 +7,7 @@ export * from './lib/dictionary/TermDictionaryQuoted';
 export * from './lib/dictionary/TermDictionaryQuotedIndexed';
 export * from './lib/dictionary/TermDictionaryQuotedReferential';
 export * from './lib/dictionary/TermDictionarySymbol';
+export * from './lib/EncodedTermSet';
 export * from './lib/index/IRdfStoreIndex';
 export * from './lib/index/RdfStoreIndexSortedBlocks';
 export * from './lib/index/RdfStoreIndexSortedBlocksIterator';
