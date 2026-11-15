@@ -2758,6 +2758,34 @@ describe('RdfStore', () => {
     });
   });
 
+  describe('features', () => {
+    it('can count distinct objects of predicates for default stores', () => {
+      expect(RdfStore.createDefault().features.indexDistinctObjectCounts).toBe(true);
+    });
+
+    it('can not count distinct objects of predicates for ordered stores', () => {
+      expect(RdfStore.createOrdered().features.indexDistinctObjectCounts).toBe(false);
+    });
+
+    each([
+      [[ 'graph', 'predicate', 'object', 'subject' ], true ],
+      [[ 'predicate', 'graph', 'object', 'subject' ], true ],
+      [[ 'graph', 'predicate', 'subject', 'object' ], false ],
+      [[ 'graph', 'object', 'predicate', 'subject' ], false ],
+      [[ 'subject', 'predicate', 'object', 'graph' ], false ],
+    ]).describe('for an index ordered as %s', (order, expected) => {
+      it(`can count distinct objects of predicates: ${expected}`, () => {
+        const custom = new RdfStore<number>({
+          indexCombinations: [ order ],
+          indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
+          dictionary: new TermDictionaryNumberRecordFullTerms(),
+          dataFactory: new DataFactory(),
+        });
+        expect(custom.features.indexDistinctObjectCounts).toBe(expected);
+      });
+    });
+  });
+
   describe('constructed for invalid combinations should throw', () => {
     it('not no combinations', () => {
       expect(() => new RdfStore<number>({
