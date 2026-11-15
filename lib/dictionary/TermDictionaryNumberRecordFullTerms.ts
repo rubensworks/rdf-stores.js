@@ -1,6 +1,8 @@
 import type * as RDF from '@rdfjs/types';
 import { DataFactory } from 'rdf-data-factory';
 import { termToString } from 'rdf-string';
+import type { ICompactLiteralKind } from './CompactLiterals';
+import { COMPACT_LITERAL_KINDS, NumberMap } from './CompactLiterals';
 import type { ITermDictionary } from './ITermDictionary';
 
 /**
@@ -12,6 +14,32 @@ interface ILiterals {
    */
   languageOrDatatype: string | RDF.NamedNode | RDF.DirectionalLanguage;
   encodings: Map<string, number>;
+}
+
+/**
+ * The literals of a datatype that are stored as numbers, with the encodings of those numbers.
+ */
+interface ICompactLiterals {
+  kind: ICompactLiteralKind;
+  datatype: RDF.NamedNode;
+  encodings: NumberMap;
+  /**
+   * The position of this table in the list of tables, plus one.
+   */
+  id: number;
+}
+
+/**
+ * Options for {@link TermDictionaryNumberRecordFullTerms}.
+ */
+export interface ITermDictionaryNumberRecordFullTermsOptions {
+  /**
+   * If literals of integer, date, dateTime and boolean datatypes are stored as numbers rather than as term objects,
+   * which takes less memory. Only literals in the lexical form that their number formats to are stored this way,
+   * such as `5` but not `05`, so all literals are decoded exactly as they were encoded.
+   * Decoding such a literal creates a new term object each time.
+   */
+  compactLiterals?: boolean;
 }
 
 /**
@@ -43,17 +71,35 @@ export class TermDictionaryNumberRecordFullTerms implements ITermDictionary<numb
   // Literals without a language by datatype, and literals with a language by language and direction.
   private readonly literalsByDatatype = new Map<string, ILiterals>();
   private readonly literalsByLanguage = new Map<string, ILiterals>();
-  private readonly reverseDictionary: Record<number, RDF.Term> = {};
+  // Holds a number instead of a term for literals that are stored as numbers.
+  private readonly reverseDictionary: Record<number, RDF.Term | number> = {};
+  private readonly compactLiterals: boolean;
+  // The tables of literals that are stored as numbers by datatype, or null for datatypes without one.
+  private readonly compactTablesByDatatype = new Map<string, ICompactLiterals | null>();
+  private readonly compactTables: ICompactLiterals[] = [];
+  // The id of the table of each encoding that is stored as a number, 0 for other encodings.
+  private compactTableIds = new Uint8Array(0);
   private readonly dataFactory: RDF.DataFactory;
   public readonly features = { quotedTriples: false };
 
-  public constructor(dataFactory: RDF.DataFactory = new DataFactory()) {
+  public constructor(
+    dataFactory: RDF.DataFactory = new DataFactory(),
+    options: ITermDictionaryNumberRecordFullTermsOptions = {},
+  ) {
     this.dataFactory = dataFactory;
+    this.compactLiterals = Boolean(options.compactLiterals);
   }
 
   public encode(term: RDF.Term): number {
     switch (term.termType) {
       case 'Literal': {
+        if (this.compactLiterals && !term.language) {
+          const table = this.compactTableOf(term.datatype.value, true);
+          const number = table?.kind.parse(term.value);
+          if (number !== undefined) {
+            return this.encodeCompact(table!, number);
+          }
+        }
         const literals = this.literalsOf(term, true)!;
         let encoded = literals.encodings.get(term.value);
         if (encoded === undefined) {
@@ -87,15 +133,71 @@ export class TermDictionaryNumberRecordFullTerms implements ITermDictionary<numb
     }
   }
 
+  /**
+   * The encoding of a literal that is stored as a number.
+   * @param table The table of its datatype.
+   * @param number Its number.
+   */
+  private encodeCompact(table: ICompactLiterals, number: number): number {
+    let encoded = table.encodings.get(number);
+    if (encoded === undefined) {
+      encoded = this.lastId++;
+      table.encodings.set(number, encoded);
+      this.reverseDictionary[encoded] = number;
+      if (encoded >= this.compactTableIds.length) {
+        const grown = new Uint8Array(Math.max(1024, encoded + 1, this.compactTableIds.length * 2));
+        grown.set(this.compactTableIds);
+        this.compactTableIds = grown;
+      }
+      this.compactTableIds[encoded] = table.id;
+    }
+    return encoded;
+  }
+
   public encodeOptional(term: RDF.Term): number | undefined {
     switch (term.termType) {
       case 'Literal':
+        if (this.compactLiterals && !term.language) {
+          const table = this.compactTableOf(term.datatype.value, false);
+          const number = table?.kind.parse(term.value);
+          if (number !== undefined) {
+            return table!.encodings.get(number);
+          }
+        }
         return this.literalsOf(term, false)?.encodings.get(term.value);
       case 'BlankNode':
         return this.blankNodes.get(term.value);
       default:
         return this.dictionary[termToString(term)];
     }
+  }
+
+  /**
+   * The table of literals of a datatype that are stored as numbers, if literals of that datatype can be.
+   * @param datatype A datatype IRI.
+   * @param create If the table must be created if there is none yet.
+   */
+  private compactTableOf(datatype: string, create: boolean): ICompactLiterals | undefined {
+    let table = this.compactTablesByDatatype.get(datatype);
+    if (table === undefined) {
+      if (!create) {
+        return undefined;
+      }
+      const kind = COMPACT_LITERAL_KINDS.get(datatype);
+      table = kind ?
+          {
+            kind,
+            datatype: this.dataFactory.namedNode(copyString(datatype)),
+            encodings: new NumberMap(),
+            id: this.compactTables.length + 1,
+          } :
+        null;
+      if (table) {
+        this.compactTables.push(table);
+      }
+      this.compactTablesByDatatype.set(datatype, table);
+    }
+    return table ?? undefined;
   }
 
   /**
@@ -134,11 +236,15 @@ export class TermDictionaryNumberRecordFullTerms implements ITermDictionary<numb
   }
 
   public decode(encoding: number): RDF.Term {
-    const string = this.reverseDictionary[encoding];
-    if (string === undefined) {
+    const term = this.reverseDictionary[encoding];
+    if (term === undefined) {
       throw new Error(`The value ${encoding} is not present in this dictionary`);
     }
-    return string;
+    if (typeof term === 'number') {
+      const table = this.compactTables[this.compactTableIds[encoding] - 1];
+      return this.dataFactory.literal(table.kind.format(term), table.datatype);
+    }
+    return term;
   }
 
   public* encodings(): IterableIterator<number> {
