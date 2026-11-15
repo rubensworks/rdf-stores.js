@@ -81,6 +81,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     indexNodes: false,
     indexDistinctTerms: true,
     indexDistinctObjectCounts: false,
+    indexDistinctSubjectCounts: false,
     unusedVariables: true,
   };
 
@@ -115,8 +116,12 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
         new TermOrder(<ITermDictionary<number>> <unknown> options.dictionary, options.termComparator),
     });
     this.indexesWrappedComponentOrders = this.indexesWrapped.map(indexThis => indexThis.componentOrder);
-    this.features.indexDistinctObjectCounts = this.indexesWrappedComponentOrders.some(order => order[2] === 'object' &&
-      order.slice(0, 2).includes('graph') && order.slice(0, 2).includes('predicate'));
+    // Distinct subjects or objects of a predicate in a graph are the keys after a graph and predicate in an index
+    const countable = (position: QuadTermName): boolean => this.indexesWrappedComponentOrders
+      .some(order => order[2] === position && order.slice(0, 2).includes('graph') &&
+        order.slice(0, 2).includes('predicate'));
+    this.features.indexDistinctObjectCounts = countable('object');
+    this.features.indexDistinctSubjectCounts = countable('subject');
     this.indexNodes = options.indexNodes ? new Map() : undefined;
     this.features.indexNodes = Boolean(options.indexNodes);
     this.indexesSupportQuotedPatterns = Boolean(this.dictionary.features.quotedTriples) &&

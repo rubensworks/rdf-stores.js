@@ -2838,21 +2838,31 @@ describe('RdfStore', () => {
       expect(RdfStore.createOrdered().features.indexDistinctObjectCounts).toBe(false);
     });
 
+    it('can count distinct subjects of predicates for ordered stores', () => {
+      expect(RdfStore.createOrdered().features.indexDistinctSubjectCounts).toBe(true);
+    });
+
+    it('can not count distinct subjects of predicates for default stores', () => {
+      expect(RdfStore.createDefault().features.indexDistinctSubjectCounts).toBe(false);
+    });
+
     each([
-      [[ 'graph', 'predicate', 'object', 'subject' ], true ],
-      [[ 'predicate', 'graph', 'object', 'subject' ], true ],
-      [[ 'graph', 'predicate', 'subject', 'object' ], false ],
-      [[ 'graph', 'object', 'predicate', 'subject' ], false ],
-      [[ 'subject', 'predicate', 'object', 'graph' ], false ],
-    ]).describe('for an index ordered as %s', (order, expected) => {
-      it(`can count distinct objects of predicates: ${expected}`, () => {
+      [[ 'graph', 'predicate', 'object', 'subject' ], true, false ],
+      [[ 'predicate', 'graph', 'object', 'subject' ], true, false ],
+      [[ 'graph', 'predicate', 'subject', 'object' ], false, true ],
+      [[ 'predicate', 'graph', 'subject', 'object' ], false, true ],
+      [[ 'graph', 'object', 'predicate', 'subject' ], false, false ],
+      [[ 'subject', 'predicate', 'object', 'graph' ], false, false ],
+    ]).describe('for an index ordered as %s', (order, objects, subjects) => {
+      it(`can count distinct objects of predicates: ${objects}, and subjects: ${subjects}`, () => {
         const custom = new RdfStore<number>({
           indexCombinations: [ order ],
           indexConstructor: subOptions => new RdfStoreIndexNestedRecord(subOptions),
           dictionary: new TermDictionaryNumberRecordFullTerms(),
           dataFactory: new DataFactory(),
         });
-        expect(custom.features.indexDistinctObjectCounts).toBe(expected);
+        expect(custom.features.indexDistinctObjectCounts).toBe(objects);
+        expect(custom.features.indexDistinctSubjectCounts).toBe(subjects);
       });
     });
   });
