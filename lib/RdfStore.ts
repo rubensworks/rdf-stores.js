@@ -100,8 +100,6 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
         new TermOrder(<ITermDictionary<number>> <unknown> options.dictionary, options.termComparator),
     });
     this.indexesWrappedComponentOrders = this.indexesWrapped.map(indexThis => indexThis.componentOrder);
-    // The distinct objects of a predicate in a graph are counted without iterating over their quads
-    // if an index orders them directly after the graph and predicate
     this.features.indexDistinctObjectCounts = this.indexesWrappedComponentOrders.some(order => order[2] === 'object' &&
       order.slice(0, 2).includes('graph') && order.slice(0, 2).includes('predicate'));
     this.indexNodes = options.indexNodes ? new Map() : undefined;
