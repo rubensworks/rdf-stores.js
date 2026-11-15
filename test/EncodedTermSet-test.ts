@@ -55,7 +55,7 @@ describe('EncodedTermSet', () => {
       for (const term of range(0, 4095)) {
         set.add(term);
       }
-      expect((<any> set).bits).toBeUndefined();
+      expect((<any> set).bitset).toBeUndefined();
       expect(set.size).toBe(4095);
     });
 
@@ -63,7 +63,7 @@ describe('EncodedTermSet', () => {
       for (const term of range(0, 4096 * 100, 100)) {
         set.add(term);
       }
-      expect((<any> set).bits).toBeUndefined();
+      expect((<any> set).bitset).toBeUndefined();
       expect(set.size).toBe(4096);
     });
 
@@ -73,9 +73,9 @@ describe('EncodedTermSet', () => {
       }
       set.delete(0);
       set.add(5000);
-      expect((<any> set).bits).toBeUndefined();
+      expect((<any> set).bitset).toBeUndefined();
       set.add(5001);
-      expect((<any> set).bits).toBeDefined();
+      expect((<any> set).bitset).toBeDefined();
     });
   });
 
@@ -89,7 +89,7 @@ describe('EncodedTermSet', () => {
     });
 
     it('moves dense indexes to a bitset', () => {
-      expect((<any> set).bits).toHaveLength(128);
+      expect((<any> set).bitset.words).toHaveLength(128);
       expect(set.size).toBe(4098);
       expect([ ...set ]).toEqual([ ...range(0, 4096), 'a', -1 ]);
     });
@@ -120,16 +120,16 @@ describe('EncodedTermSet', () => {
 
     it('grows the bitset for nearby indexes', () => {
       set.add(5000);
-      expect((<any> set).bits).toHaveLength(192);
+      expect((<any> set).bitset.words).toHaveLength(192);
       set.add(10_000);
-      expect((<any> set).bits).toHaveLength(313);
+      expect((<any> set).bitset.words).toHaveLength(313);
       expect(set.size).toBe(4100);
       expect([ ...set ].slice(4095, 4099)).toEqual([ 4095, 5000, 10_000, 'a' ]);
     });
 
     it('keeps far indexes in a set', () => {
       set.add(10_000_000);
-      expect((<any> set).bits).toHaveLength(128);
+      expect((<any> set).bitset.words).toHaveLength(128);
       expect(set.size).toBe(4099);
       expect([ ...set ].slice(-3)).toEqual([ 'a', -1, 10_000_000 ]);
       expect(set.delete(10_000_000)).toBe(true);
@@ -144,7 +144,7 @@ describe('EncodedTermSet', () => {
       }
       set.add(300_000);
       set.add(400_000);
-      expect((<any> set).bits.length).toBeGreaterThan(400_000 / 32);
+      expect((<any> set).bitset.words.length).toBeGreaterThan(400_000 / 32);
       expect(set.size).toBe(8196);
       expect([ ...set ].slice(-4)).toEqual([ 300_000, 400_000, 'a', -1 ]);
     });

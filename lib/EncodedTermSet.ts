@@ -12,7 +12,6 @@ const MIN_BITSET_INDEXES = 4096;
  * A Set takes about 21 bytes per entry.
  */
 const MAX_BITS_PER_INDEX = 64;
-
 /**
  * The bound on the indexes that a bitset holds, so that bitwise operations on them stay within 32 bits.
  */
@@ -24,6 +23,14 @@ const MAX_INDEX = 2 ** 31;
  */
 function isIndex(term: unknown): term is number {
   return typeof term === 'number' && Number.isInteger(term) && term >= 0 && term < MAX_INDEX;
+}
+
+/**
+ * A bitset of indexes, kept in an object of its own so that iterators keep reading it when it grows.
+ */
+interface IBitset {
+  words: Uint32Array;
+  size: number;
 }
 
 /**
@@ -39,8 +46,7 @@ function isIndex(term: unknown): term is number {
 export class EncodedTermSet<TE> implements Iterable<TE> {
   private readonly maxSetSize: number;
   private readonly sets: Set<TE>[] = [ new Set() ];
-  private bits: Uint32Array | undefined;
-  private bitsSize = 0;
+  private bitset: IBitset | undefined;
   // While there is no bitset: the number of indexes in the sets, and the largest one.
   private setsIndexes = 0;
   private setsMaxIndex = -1;
@@ -56,7 +62,7 @@ export class EncodedTermSet<TE> implements Iterable<TE> {
    * The number of terms in this set.
    */
   public get size(): number {
-    let size = this.bitsSize;
+    let size = this.bitset?.size ?? 0;
     for (const set of this.sets) {
       size += set.size;
     }
@@ -68,22 +74,23 @@ export class EncodedTermSet<TE> implements Iterable<TE> {
    * @param term An encoded term.
    */
   public add(term: TE): void {
-    if (this.bits && isIndex(term) && (term < this.bits.length * 32 || this.grow(term))) {
+    const bitset = this.bitset;
+    if (bitset && isIndex(term) && (term < bitset.words.length * 32 || this.grow(bitset, term))) {
       const word = term >>> 5;
       const mask = 1 << (term & 31);
-      const value = this.bits[word];
+      const value = bitset.words[word];
       if ((value & mask) === 0) {
-        this.bits[word] = value | mask;
-        this.bitsSize++;
+        bitset.words[word] = value | mask;
+        bitset.size++;
       }
       return;
     }
-    if (this.addToSets(term) && !this.bits && isIndex(term)) {
+    if (this.addToSets(term) && !bitset && isIndex(term)) {
       this.setsIndexes++;
       this.setsMaxIndex = Math.max(this.setsMaxIndex, term);
       if (this.setsIndexes >= MIN_BITSET_INDEXES && this.setsMaxIndex < this.setsIndexes * MAX_BITS_PER_INDEX) {
-        this.bits = new Uint32Array(Math.ceil((this.setsMaxIndex + 1) / 32));
-        this.moveIndexesToBits();
+        this.bitset = { words: new Uint32Array(Math.ceil((this.setsMaxIndex + 1) / 32)), size: 0 };
+        this.moveIndexesToBitset(this.bitset);
       }
     }
   }
@@ -94,20 +101,21 @@ export class EncodedTermSet<TE> implements Iterable<TE> {
    * @return boolean If the term was present.
    */
   public delete(term: TE): boolean {
-    if (this.bits && isIndex(term) && term < this.bits.length * 32) {
+    const bitset = this.bitset;
+    if (bitset && isIndex(term) && term < bitset.words.length * 32) {
       const word = term >>> 5;
       const mask = 1 << (term & 31);
-      const value = this.bits[word];
+      const value = bitset.words[word];
       if ((value & mask) === 0) {
         return false;
       }
-      this.bits[word] = value & ~mask;
-      this.bitsSize--;
+      bitset.words[word] = value & ~mask;
+      bitset.size--;
       return true;
     }
     for (const set of this.sets) {
       if (set.delete(term)) {
-        if (!this.bits && isIndex(term)) {
+        if (!bitset && isIndex(term)) {
           this.setsIndexes--;
         }
         return true;
@@ -116,19 +124,8 @@ export class EncodedTermSet<TE> implements Iterable<TE> {
     return false;
   }
 
-  public* [Symbol.iterator](): IterableIterator<TE> {
-    // The bitset is read again for every word, so that terms added while iterating are also produced.
-    for (let word = 0; this.bits && word < this.bits.length; word++) {
-      let value = this.bits[word];
-      while (value !== 0) {
-        const lowest = value & -value;
-        yield <TE> <unknown> (word * 32 + 31 - Math.clz32(lowest));
-        value ^= lowest;
-      }
-    }
-    for (const set of this.sets) {
-      yield* set;
-    }
+  public [Symbol.iterator](): Iterator<TE> {
+    return new EncodedTermSetIterator(this.bitset, this.sets);
   }
 
   /**
@@ -157,33 +154,77 @@ export class EncodedTermSet<TE> implements Iterable<TE> {
 
   /**
    * Grow the bitset so that it can hold the given index, unless that would take too many bits per index.
+   * @param bitset The bitset.
    * @param index An index beyond the bitset.
    * @return boolean If the bitset was grown.
    */
-  private grow(index: number): boolean {
-    if (index >= (this.bitsSize + 1) * MAX_BITS_PER_INDEX) {
+  private grow(bitset: IBitset, index: number): boolean {
+    if (index >= (bitset.size + 1) * MAX_BITS_PER_INDEX) {
       return false;
     }
-    const bits = new Uint32Array(Math.max(Math.ceil((index + 1) / 32), Math.ceil(this.bits!.length * 1.5)));
-    bits.set(this.bits!);
-    this.bits = bits;
-    this.moveIndexesToBits();
+    const words = new Uint32Array(Math.max(Math.ceil((index + 1) / 32), Math.ceil(bitset.words.length * 1.5)));
+    words.set(bitset.words);
+    bitset.words = words;
+    this.moveIndexesToBitset(bitset);
     return true;
   }
 
   /**
    * Move the indexes from the sets that the bitset can hold to the bitset.
+   * @param bitset The bitset.
    */
-  private moveIndexesToBits(): void {
-    const bits = this.bits!;
+  private moveIndexesToBitset(bitset: IBitset): void {
     for (const set of this.sets) {
       for (const term of set) {
-        if (isIndex(term) && term < bits.length * 32) {
+        if (isIndex(term) && term < bitset.words.length * 32) {
           set.delete(term);
-          bits[term >>> 5] |= 1 << (term & 31);
-          this.bitsSize++;
+          bitset.words[term >>> 5] |= 1 << (term & 31);
+          bitset.size++;
         }
       }
     }
+  }
+}
+
+/**
+ * Produces the terms of a bitset and then those of its sets.
+ * This is a class rather than a generator, as V8 iterates it nearly as fast as a Set, and a generator twice as slow.
+ */
+class EncodedTermSetIterator<TE> implements Iterator<TE> {
+  private readonly bitset: IBitset | undefined;
+  private readonly sets: Set<TE>[];
+  private word = -1;
+  private value = 0;
+  private setIndex = 0;
+  private setIterator: Iterator<TE> | undefined;
+
+  public constructor(bitset: IBitset | undefined, sets: Set<TE>[]) {
+    this.bitset = bitset;
+    this.sets = sets;
+  }
+
+  public next(): IteratorResult<TE> {
+    // The words are read again on every call, so that indexes added while iterating are also produced.
+    if (this.bitset) {
+      const words = this.bitset.words;
+      while (this.value === 0 && this.word < words.length - 1) {
+        this.value = words[++this.word];
+      }
+      if (this.value !== 0) {
+        const lowest = this.value & -this.value;
+        this.value ^= lowest;
+        return { value: <TE> <unknown> (this.word * 32 + 31 - Math.clz32(lowest)), done: false };
+      }
+    }
+    while (this.setIndex < this.sets.length) {
+      this.setIterator ??= this.sets[this.setIndex].values();
+      const result = this.setIterator.next();
+      if (!result.done) {
+        return result;
+      }
+      this.setIterator = undefined;
+      this.setIndex++;
+    }
+    return { value: undefined, done: true };
   }
 }
