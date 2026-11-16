@@ -7,6 +7,7 @@ import type { QuadTermName } from 'rdf-terms';
 import {
   matchPattern,
   QUAD_TERM_NAMES,
+  someTermsNested,
 } from 'rdf-terms';
 import { BindingsIterator } from './BindingsIterator';
 import { BindingsProducer, FilteringBindingsProducer } from './BindingsProducer';
@@ -35,6 +36,19 @@ import {
 } from './OrderUtils';
 import type { EncodedQuadTerms, QuadPatternTerms } from './PatternTerm';
 import { TermOrder } from './TermOrder';
+
+/**
+ * Options for producing bindings.
+ */
+export interface IRdfStoreBindingsOptions {
+  /**
+   * Variables of the pattern of which the values are not needed, such as variables that a query does not use elsewhere.
+   * They are matched as any other variable, but are not bound,
+   * and bindings are not ordered on them, nor on any component after them.
+   * Variables that occur more than once in the pattern, also within quoted triple patterns, are bound anyway.
+   */
+  unusedVariables?: RDF.Variable[];
+}
 
 /**
  * An RDF store allows quads to be stored and fetched, based on one or more customizable indexes.
@@ -68,6 +82,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     indexNodes: false,
     indexDistinctTerms: true,
     indexDistinctObjectCounts: false,
+    unusedVariables: true,
   };
 
   private readonly indexNodes: Map<TE, EncodedTermSet<TE>> | undefined;
@@ -217,6 +232,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * @param predicate The predicate of the pattern.
    * @param object The object of the pattern.
    * @param graph The graph of the pattern.
+   * @param unusedVariables The variables of the pattern that are not bound.
    */
   private resultOrderOf(
     index: IRdfStoreIndex<TE, boolean>,
@@ -225,12 +241,24 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     predicate: RDF.Term,
     object: RDF.Term,
     graph: RDF.Term,
+    unusedVariables: RDF.Variable[] | undefined,
   ): QuadTermName[] | undefined {
     if (index.termOrder === undefined) {
       return undefined;
     }
     const byComponent: Record<string, RDF.Term> = { subject, predicate, object, graph };
-    return componentOrder.filter(component => byComponent[component].termType === 'Variable');
+    const order: QuadTermName[] = [];
+    for (const component of componentOrder) {
+      const term = byComponent[component];
+      if (term.termType === 'Variable') {
+        // Bindings are not ordered on anything after a variable that they do not bind
+        if (isUnused(term, unusedVariables)) {
+          break;
+        }
+        order.push(component);
+      }
+    }
+    return order;
   }
 
   /**
@@ -727,6 +755,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * @param predicate The predicate, which can be a variable.
    * @param object The object, which can be a variable.
    * @param graph The graph, which can be a variable.
+   * @param unusedVariables Variables that are matched without being bound.
    * @return A producer of bindings, or undefined if the pattern can not produce any results.
    */
   private prepareBindings(
@@ -735,10 +764,12 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     predicate: RDF.Term,
     object: RDF.Term,
     graph: RDF.Term,
+    unusedVariables: RDF.Variable[] | undefined,
   ): {
     producer: BindingsProducer<TE>;
     componentOrder: QuadTermName[];
     index: IRdfStoreIndex<TE, boolean>;
+    unboundVariables: RDF.Variable[] | undefined;
   } | undefined {
     // Construct a quad pattern array
     const [ quadComponents ] =
@@ -762,11 +793,12 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
       indexWrapped.componentOrderPermutation,
       [ subject, predicate, object, graph ],
     );
+    const unboundVariables = unusedVariables && occurringOnce(terms, unusedVariables);
     let variableMask = 0;
     let hasQuadVariables = false;
     for (let i = 0; i < terms.length; i++) {
       const termType = terms[i].termType;
-      if (termType === 'Variable' || termType === 'Quad') {
+      if (termType === 'Quad' || (termType === 'Variable' && !isUnused(terms[i], unboundVariables))) {
         variableMask |= 1 << i;
         hasQuadVariables = hasQuadVariables || termType === 'Quad';
       }
@@ -808,11 +840,13 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
         producer: new BindingsProducer<TE>(bindingsFactory, source, this.dictionary, terms, variableIndexes),
         componentOrder: indexWrapped.componentOrder,
         index: indexWrapped.index,
+        unboundVariables,
       };
     }
     return {
       componentOrder: indexWrapped.componentOrder,
       index: indexWrapped.index,
+      unboundVariables,
       producer: new FilteringBindingsProducer<TE>(
         bindingsFactory,
         source,
@@ -833,6 +867,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * @param predicate The predicate, which can be a variable.
    * @param object The object, which can be a variable.
    * @param graph The graph, which can be a variable.
+   * @param options Options, such as variables that need not be bound.
    */
   public* readBindings(
     bindingsFactory: RDF.BindingsFactory,
@@ -840,8 +875,10 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     predicate: RDF.Term,
     object: RDF.Term,
     graph: RDF.Term,
+    options?: IRdfStoreBindingsOptions,
   ): IterableIterator<RDF.Bindings> {
-    const prepared = this.prepareBindings(bindingsFactory, subject, predicate, object, graph);
+    const prepared = this
+      .prepareBindings(bindingsFactory, subject, predicate, object, graph, options?.unusedVariables);
     if (!prepared) {
       return;
     }
@@ -860,6 +897,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * @param predicate The predicate, which can be a variable.
    * @param object The object, which can be a variable.
    * @param graph The graph, which can be a variable.
+   * @param options Options, such as variables that need not be bound.
    */
   public getBindings(
     bindingsFactory: RDF.BindingsFactory,
@@ -867,11 +905,13 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     predicate: RDF.Term,
     object: RDF.Term,
     graph: RDF.Term,
+    options?: IRdfStoreBindingsOptions,
   ): RDF.Bindings[] {
     // This intentionally does not delegate to readBindings:
     // draining a generator costs an extra suspend/resume and an iterator result object per binding.
     const bindingsArray: RDF.Bindings[] = [];
-    const prepared = this.prepareBindings(bindingsFactory, subject, predicate, object, graph);
+    const prepared = this
+      .prepareBindings(bindingsFactory, subject, predicate, object, graph, options?.unusedVariables);
     if (prepared) {
       const producer = prepared.producer;
       let bindings: RDF.Bindings | null = producer.read();
@@ -890,6 +930,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
    * @param predicate The predicate, which can be a variable.
    * @param object The object, which can be a variable.
    * @param graph The graph, which can be a variable.
+   * @param options Options, such as variables that need not be bound.
    */
   public matchBindings(
     bindingsFactory: RDF.BindingsFactory,
@@ -897,15 +938,25 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     predicate: RDF.Term,
     object: RDF.Term,
     graph: RDF.Term,
+    options?: IRdfStoreBindingsOptions,
   ): AsyncIterator<RDF.Bindings> {
-    const prepared = this.prepareBindings(bindingsFactory, subject, predicate, object, graph);
+    const prepared = this
+      .prepareBindings(bindingsFactory, subject, predicate, object, graph, options?.unusedVariables);
     return new BindingsIterator(
       prepared?.producer,
       prepared ?
         this.createSeeker(prepared.index, prepared.componentOrder, prepared.producer) :
         undefined,
       prepared ?
-        this.resultOrderOf(prepared.index, prepared.componentOrder, subject, predicate, object, graph) :
+        this.resultOrderOf(
+          prepared.index,
+          prepared.componentOrder,
+          subject,
+          predicate,
+          object,
+          graph,
+          prepared.unboundVariables,
+        ) :
         undefined,
     );
   }
@@ -1226,6 +1277,26 @@ export interface IRdfStoreIndexWrapped<TE> {
   componentOrderPermutation: number[];
   componentOrderInverse: Record<QuadTermName, number>;
   index: IRdfStoreIndex<TE, boolean>;
+}
+
+/**
+ * The given variables that occur once in the given pattern terms, also counting occurrences in quoted triple patterns.
+ * Variables that occur more than once must be bound, since their occurrences are compared.
+ * @param terms The terms of a pattern.
+ * @param variables Variables of the pattern.
+ */
+function occurringOnce(terms: RDF.Term[], variables: RDF.Variable[]): RDF.Variable[] {
+  return variables.filter(variable => terms.filter(term => term.equals(variable)).length === 1 &&
+    !terms.some(term => term.termType === 'Quad' && someTermsNested(term, nested => nested.equals(variable))));
+}
+
+/**
+ * Check if the given term is one of the given unused variables.
+ * @param term An RDF term.
+ * @param unusedVariables Variables that are not bound, if any.
+ */
+function isUnused(term: RDF.Term, unusedVariables: RDF.Variable[] | undefined): boolean {
+  return unusedVariables !== undefined && unusedVariables.some(variable => variable.equals(term));
 }
 
 /**
