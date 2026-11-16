@@ -440,7 +440,6 @@ Nodes are all terms that are either a subject or object within the store.
 This method can only be called when the store is constructed with `indexNodes: true`.
 
 It returns a generator of tuples containing the named graph as first element and the node term as second element.
-Nodes are produced in no particular order.
 
 This can for example be useful for optimizing the Nodes function in SPARQL's property paths:
 https://www.w3.org/TR/sparql12-query/#defn_nodeSet

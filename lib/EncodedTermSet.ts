@@ -3,8 +3,7 @@
  */
 const MAX_SET_SIZE = 2 ** 23;
 /**
- * The number of indexes a set must hold before they move to a bitset,
- * so that small sets keep their insertion order and do not allocate a bitset.
+ * The number of indexes a set must hold before they move to a bitset.
  */
 const MIN_BITSET_INDEXES = 4096;
 /**
@@ -34,7 +33,7 @@ interface IBitset {
 }
 
 /**
- * A set of encoded terms without the limit of 2^24 entries of a JavaScript Set.
+ * A set of encoded terms that can go beyond the limit of 2^24 entries of a JavaScript Set.
  *
  * Non-negative integer encodings, such as those of numeric term dictionaries,
  * move to a bitset once there are enough of them close together, as that takes far less memory than a Set.
@@ -188,7 +187,6 @@ export class EncodedTermSet<TE> implements Iterable<TE> {
 
 /**
  * Produces the terms of a bitset and then those of its sets.
- * This is a class rather than a generator, as V8 iterates it nearly as fast as a Set, and a generator twice as slow.
  */
 class EncodedTermSetIterator<TE> implements Iterator<TE> {
   private readonly bitset: IBitset | undefined;
