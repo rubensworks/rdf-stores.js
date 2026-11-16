@@ -2560,6 +2560,41 @@ describe('RdfStore', () => {
         [ DF.namedNode('g2'), DF.namedNode('o2') ],
       ]);
     });
+
+    describe.each([
+      [ 'one by one', () => RdfStore.createDefault(true), false ],
+      [ 'in a batch', () => RdfStore.createOrdered({ nodes: true }), true ],
+    ])('with a large graph added %s', (_, create, batch) => {
+      const quads = Array.from({ length: 5_000 }, (__, i) => DF.quad(
+        DF.namedNode(`s${i}`),
+        DF.namedNode('p'),
+        DF.namedNode(`o${i}`),
+        DF.namedNode('g'),
+      ));
+
+      beforeEach(() => {
+        store = create();
+        if (batch) {
+          store.addQuads(quads);
+        } else {
+          for (const quad of quads) {
+            store.addQuad(quad);
+          }
+        }
+      });
+
+      it('counts and reads all nodes', () => {
+        expect(store.countNodes(DF.namedNode('g'))).toBe(10_000);
+        expect(new Set(store.getNodes(DF.namedNode('g')).map(([ , node ]) => node.value)))
+          .toEqual(new Set(quads.flatMap(quad => [ quad.subject.value, quad.object.value ])));
+      });
+
+      it('removes nodes', () => {
+        store.removeQuad(quads[0]);
+        expect(store.countNodes(DF.namedNode('g'))).toBe(9_998);
+        expect(store.getNodes(DF.namedNode('g')).map(([ , node ]) => node.value)).not.toContain('s0');
+      });
+    });
   });
 
   describe('readBindings', () => {

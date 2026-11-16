@@ -14,6 +14,7 @@ import { DatasetCoreWrapper } from './dataset/DatasetCoreWrapper';
 import type { ITermDictionary } from './dictionary/ITermDictionary';
 import { TermDictionaryNumberRecordFullTerms } from './dictionary/TermDictionaryNumberRecordFullTerms';
 import { TermDictionaryQuotedIndexed } from './dictionary/TermDictionaryQuotedIndexed';
+import { EncodedTermSet } from './EncodedTermSet';
 import { deriveSortedOrder } from './index/deriveSortedOrder';
 import type { IRdfStoreIndex } from './index/IRdfStoreIndex';
 import { RdfStoreIndexNestedMapQuoted } from './index/RdfStoreIndexNestedMapQuoted';
@@ -69,7 +70,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
     indexDistinctObjectCounts: false,
   };
 
-  private readonly indexNodes: Map<TE, Set<TE>> | undefined;
+  private readonly indexNodes: Map<TE, EncodedTermSet<TE>> | undefined;
   /**
    * Whether or not the dictionary and all indexes support quoted triple patterns.
    * This is invariant for the lifetime of the store, so it is determined once upon construction.
@@ -305,7 +306,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
       if (this.indexNodes) {
         let graphIndex = this.indexNodes.get(quadEncoded[3]);
         if (!graphIndex) {
-          graphIndex = new Set();
+          graphIndex = new EncodedTermSet();
           this.indexNodes.set(quadEncoded[3], graphIndex);
         }
         graphIndex.add(quadEncoded[0]);
@@ -499,7 +500,7 @@ export class RdfStore<TE = any, TQ extends RDF.BaseQuad = RDF.Quad> implements R
         const graph = <TE> <unknown> buffer[offset + 3];
         let graphIndex = this.indexNodes.get(graph);
         if (!graphIndex) {
-          graphIndex = new Set();
+          graphIndex = new EncodedTermSet();
           this.indexNodes.set(graph, graphIndex);
         }
         graphIndex.add(<TE> <unknown> buffer[offset]);
