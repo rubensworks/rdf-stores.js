@@ -9,12 +9,6 @@ const MAX_CHUNK_SIZE = 2 ** 22;
  * which spreads its keys over objects of at most 2^22 keys each.
  * Keys are only added, never replaced or removed.
  *
- * Unlike a Map, an object internalizes its keys. This makes lookups by those same strings about twice as fast,
- * and turns strings that are slices of larger strings into references to compact copies.
- *
- * While it holds fewer keys than that, it costs one object lookup like a plain object.
- * Beyond that, a lookup checks each object in turn.
- *
  * Values may not be undefined.
  */
 export class ChunkedRecord<TV> {

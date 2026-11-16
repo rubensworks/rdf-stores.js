@@ -34,8 +34,6 @@ function copyString(value: string): string {
 
 /**
  * A term dictionary that encodes to numbers, and stores the dictionary in memory.
- * Terms are kept in chunked objects and Maps, so that they are not bound by objects slowing down beyond about
- * 2^23 keys, nor by V8's limit of 2^24 entries per Map.
  * The reverse dictionary will store full RDF term objects,
  * resulting in slightly better query performance at the cost of slightly higher memory usage.
  */

@@ -7,9 +7,6 @@ const MAX_CHUNK_SIZE = 2 ** 23;
  * A map without the limit of 2^24 entries of a JavaScript Map,
  * which spreads its entries over Maps of at most 2^23 entries each.
  *
- * While it holds fewer entries than that, it costs one Map lookup like a plain Map.
- * Beyond that, a lookup checks each Map in turn.
- *
  * Values may not be undefined.
  */
 export class ChunkedMap<TK, TV> {
