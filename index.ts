@@ -1,3 +1,4 @@
+export * from './lib/ChunkedMap';
 export * from './lib/dataset/DatasetCoreWrapper';
 export * from './lib/dictionary/ITermDictionary';
 export * from './lib/dictionary/TermDictionaryNumberMap';

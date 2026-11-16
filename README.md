@@ -690,7 +690,7 @@ This library implements different approaches for dictionary encoding.
 
 * `TermDictionaryNumberMap`: Encodes stringified representations of terms to `number` using `Map` objects.
 * `TermDictionaryNumberRecord`: Encodes stringified representations of terms to `number` using `Record` objects.
-* `TermDictionaryNumberRecordFullTerms`: Encodes stringified representations of terms to `number` using `Record` objects, but keeps track of original term objects during decoding. (**Fastest when not requiring quoted triples**)
+* `TermDictionaryNumberRecordFullTerms`: Encodes terms to `number` using `Map`s that are not limited to 2^24 entries, and keeps copies of term objects for decoding. (**Fastest when not requiring quoted triples**)
 * `TermDictionaryQuoted`: Delegates quoted triples and other RDF terms to separate dictionaries.
 * `TermDictionaryQuotedIndexed`: Stores quoted triples inside an index structure, and other RDF terms using a separate dictionary. (**Fastest when requiring quoted triples**)
 * `TermDictionaryQuotedReferential`: Delegates quoted triples and other RDF terms to separate dictionaries, but terms inside quoted triples are stored in the plain terms dictionary.

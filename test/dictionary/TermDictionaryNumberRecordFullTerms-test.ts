@@ -213,8 +213,8 @@ describe('TermDictionaryNumberRecordFullTerms', () => {
       expect(dict.decode(4)).toEqualRdfTerm(DF.literal('abc', { language: 'en_us', direction: 'rtl' }));
     });
 
-    it('should decode to copies of literals and blank nodes, and the given named nodes', () => {
-      const namedNode = DF.namedNode('ex:s');
+    it('should decode to copies of named nodes, blank nodes and literals', () => {
+      const namedNode = DF.namedNode('ex:a long named node');
       const blankNode = DF.blankNode('b1');
       const typed = DF.literal('a long literal value', DF.namedNode('ex:type'));
       const language = DF.literal('a long literal value', 'en');
@@ -226,7 +226,7 @@ describe('TermDictionaryNumberRecordFullTerms', () => {
 
       for (const [ encoding, term ] of terms.entries()) {
         expect(dict.decode(encoding)).toEqualRdfTerm(term);
-        expect(dict.decode(encoding) === term).toBe(term === namedNode);
+        expect(dict.decode(encoding)).not.toBe(term);
       }
       expect(decodeLiteral(3).datatype)
         .toEqualRdfTerm(DF.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#langString'));
