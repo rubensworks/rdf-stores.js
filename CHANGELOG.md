@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+<a name="v2.10.2"></a>
+## [v2.10.2](https://github.com/rubensworks/rdf-stores.js/compare/v2.9.1...v2.10.2) - 2026-11-16
+
+### Fixed
+* [Add chunked maps and records to enable large dictionaries (#65)](https://github.com/rubensworks/rdf-stores.js/commit/952360673cd729133a8e1e8859b3aac51b478dcc)
+
 <a name="v2.10.1"></a>
 ## [v2.10.1](https://github.com/rubensworks/rdf-stores.js/compare/v2.10.0...v2.10.1) - 2026-11-15
 
