@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+<a name="v2.10.3"></a>
+## [v2.10.3](https://github.com/rubensworks/rdf-stores.js/compare/v2.10.2...v2.10.3) - 2026-11-16
+
+### Fixed
+* [Add EncodedTermSet to index very large numbers of nodes (#64)](https://github.com/rubensworks/rdf-stores.js/commit/f7feda38cfc0c6d500f9b2296521eb3081cc7a0d)
+
 <a name="v2.10.2"></a>
 ## [v2.10.2](https://github.com/rubensworks/rdf-stores.js/compare/v2.9.1...v2.10.2) - 2026-11-16
 
