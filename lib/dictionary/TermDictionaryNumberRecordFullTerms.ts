@@ -2,6 +2,7 @@ import type * as RDF from '@rdfjs/types';
 import { DataFactory } from 'rdf-data-factory';
 import { termToString } from 'rdf-string';
 import { ChunkedMap } from '../ChunkedMap';
+import { ChunkedRecord } from '../ChunkedRecord';
 import type { ITermDictionary } from './ITermDictionary';
 
 /**
@@ -33,14 +34,14 @@ function copyString(value: string): string {
 
 /**
  * A term dictionary that encodes to numbers, and stores the dictionary in memory.
- * Terms are kept in chunked Maps, so that they are not bound by V8's limit of 2^24 entries per Map,
- * nor by objects slowing down beyond about 2^23 keys.
+ * Terms are kept in chunked objects and Maps, so that they are not bound by objects slowing down beyond about
+ * 2^23 keys, nor by V8's limit of 2^24 entries per Map.
  * The reverse dictionary will store full RDF term objects,
  * resulting in slightly better query performance at the cost of slightly higher memory usage.
  */
 export class TermDictionaryNumberRecordFullTerms implements ITermDictionary<number> {
   private lastId = 0;
-  private readonly dictionary = new ChunkedMap<string, number>();
+  private readonly dictionary = new ChunkedRecord<number>();
   // Blank nodes and literals are keyed by their value, so no key string has to be built for them.
   private readonly blankNodes = new ChunkedMap<string, number>();
   // Literals without a language by datatype, and literals with a language by language and direction.
@@ -81,11 +82,9 @@ export class TermDictionaryNumberRecordFullTerms implements ITermDictionary<numb
         const key = termToString(term);
         let encoded = this.dictionary.get(key);
         if (encoded === undefined) {
-          // Map keys are not internalized like object keys, so a slice from a parser would keep its chunk in memory.
-          const value = copyString(key);
           encoded = this.lastId++;
-          this.dictionary.set(value, encoded);
-          this.reverseDictionary[encoded] = term.termType === 'NamedNode' ? this.dataFactory.namedNode(value) : term;
+          this.dictionary.add(key, encoded);
+          this.reverseDictionary[encoded] = term;
         }
         return encoded;
       }
