@@ -305,6 +305,16 @@ describe('TermDictionaryNumberRecordFullTerms', () => {
       expect([ ...dict.encodings() ]).toEqual(literals.map((literal, i) => i));
     });
 
+    it('should list literals that are stored as numbers among the other encodings', () => {
+      expect(dict.encode(DF.literal('1', integer))).toBe(0);
+      expect(dict.encode(DF.namedNode('ex:a'))).toBe(1);
+      expect(dict.encode(DF.literal('2', integer))).toBe(2);
+      expect(dict.encode(DF.literal('a'))).toBe(3);
+      expect([ ...dict.encodings() ]).toEqual([ 0, 1, 2, 3 ]);
+      expect(dict.decode(2)).toEqualRdfTerm(DF.literal('2', integer));
+      expect(dict.decode(3)).toEqualRdfTerm(DF.literal('a'));
+    });
+
     it('should encode and decode literals in other lexical forms as usual', () => {
       const literals = [
         DF.literal('05', integer),
