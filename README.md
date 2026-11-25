@@ -658,6 +658,8 @@ const store = RdfStore.createOrdered({
   ],
   // Optional: if nodes must be indexed
   nodes: true,
+  // Optional: if integer, date, dateTime and boolean literals are stored as numbers, see below
+  compactLiterals: true,
 });
 ```
 
@@ -709,6 +711,19 @@ For example, the following will use `TermDictionaryQuotedIndexed` with a `TermDi
   dictionary: new TermDictionaryQuotedIndexed(new TermDictionaryNumberRecordFullTerms())
 }
 ```
+
+`TermDictionaryNumberRecordFullTerms` can store literals of integer types (such as `xsd:integer` and `xsd:int`),
+`xsd:date`, `xsd:dateTime` and `xsd:boolean` as numbers instead of term objects, which takes less memory.
+This is disabled by default, and is enabled with the `compactLiterals` option:
+```typescript
+{
+  dictionary: new TermDictionaryNumberRecordFullTerms(new DataFactory(), { compactLiterals: true })
+}
+```
+Only literals in the lexical form that their number formats back to are stored this way,
+such as `"5"` but not `"05"` or `"+5"`, and only dates and date-times in the form of `toISOString()`,
+such as `"2010-01-03T10:00:00.000Z"`. Other literals are stored as usual, so every literal is decoded exactly as it was encoded.
+Decoding a literal that is stored as a number creates a new term object each time.
 
 ### Data Factory
 
