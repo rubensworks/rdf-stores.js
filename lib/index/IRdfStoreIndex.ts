@@ -105,6 +105,11 @@ export interface IRdfStoreIndex<TE, TV> {
    */
   setAllSorted?: (sorted: Int32Array, count: number) => number;
   /**
+   * Store the quads in less memory, for an index that is no longer changed. Optional.
+   * Changing the index afterwards undoes this.
+   */
+  compress?: () => void;
+  /**
    * Count the terms that exist in the index.
    * Each returned array corresponds to the terms specified by given quad term names.
    * This corresponds to the semantics of {@link #findTerms}, and returns counts instead of terms.

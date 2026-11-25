@@ -675,6 +675,8 @@ new RdfStore<number>({
     mergeThreshold: 32,
     // Optional: quads checked one by one when skipping a group, before searching instead
     linearProbes: 8,
+    // Optional: the maximum number of quads per leaf after compress()
+    compressedLeafCapacity: 128,
   }),
   dictionary,
   dataFactory: new DataFactory(),
@@ -683,6 +685,24 @@ new RdfStore<number>({
 ```
 
 A comparator that considers two different terms equal is allowed: such terms are then ordered on their encoding.
+
+#### Compressing a store that is no longer changed
+
+`store.compress()` stores the quads of `RdfStoreIndexSortedBlocks` indexes in less memory,
+for stores that are loaded once and then only queried:
+
+```typescript
+const store = RdfStore.createOrdered();
+store.import(stream).on('end', () => {
+  store.compress();
+});
+```
+
+The quads are then kept in leaves of at most 128 quads (the `compressedLeafCapacity` index option),
+each quad stored as the components that differ from the previous quad, in variable-length integers.
+Lookups and scans decode the leaves they read, which makes queries somewhat slower,
+and changing the store afterwards decompresses all of its quads again, after which `compress` can be called again.
+Other index types are not affected.
 
 ### Dictionaries
 

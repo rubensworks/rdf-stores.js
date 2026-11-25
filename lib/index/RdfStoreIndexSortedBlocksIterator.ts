@@ -77,7 +77,7 @@ export class RdfStoreIndexSortedBlocksIterator implements IterableIterator<Encod
       return;
     }
     const offset = cursor.offset * 4;
-    const prefix = index.leaves[cursor.leaf].slice(offset, offset + level);
+    const prefix = index.leafAt(cursor.leaf).slice(offset, offset + level);
     index.advance(cursor, (data, dataOffset) => {
       for (let i = 0; i < level; i++) {
         if (data[dataOffset + i] !== prefix[i]) {
@@ -103,7 +103,7 @@ export class RdfStoreIndexSortedBlocksIterator implements IterableIterator<Encod
       this.done = true;
       return DONE;
     }
-    const data = index.leaves[cursor.leaf];
+    const data = index.leafAt(cursor.leaf);
     const offset = cursor.offset * 4;
     const value: EncodedQuadTerms<number> = [ data[offset], data[offset + 1], data[offset + 2], data[offset + 3] ];
     this.last = value;
