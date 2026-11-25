@@ -175,6 +175,42 @@ describe('RdfStoreIndexSortedBlocks', () => {
     }
   });
 
+  it('finds the distinct terms at one level like a scan, also of groups that span leaves', () => {
+    // Tiny leaves make the groups of the few distinct terms at the first levels span several leaves.
+    index = new RdfStoreIndexSortedBlocks(options(), { leafCapacity: 4 });
+    for (let i = 0; i < 400; i++) {
+      index.set(randomQuad(), true);
+    }
+    const all = [ ...index.findEncoded([ undefined, undefined, undefined, undefined ], <any> [ undefined ]) ];
+    for (const quad of [ all[0], all[123], all.at(-1)! ]) {
+      for (let prefix = 0; prefix < 4; prefix++) {
+        const filterTerms = prefix === 0 ? undefined : quad.map((id, level) => level < prefix ? id : undefined);
+        for (let level = 0; level < 4; level++) {
+          const matchTerms = [ 0, 1, 2, 3 ].map(other => other === level);
+          const expected: number[] = [];
+          for (const other of all) {
+            if (other.slice(0, prefix).every((id, i) => id === quad[i]) && !expected.includes(other[level])) {
+              expected.push(other[level]);
+            }
+          }
+          expect([ ...index.findDistinctTerms(matchTerms, filterTerms) ].map(([ id ]) => id)).toEqual(expected);
+        }
+      }
+    }
+  });
+
+  it('searches past the leaves that hold a single group when finding distinct terms', () => {
+    index = new RdfStoreIndexSortedBlocks(options(), { leafCapacity: 4 });
+    for (let i = 0; i < 400; i++) {
+      index.set(randomQuad(), true);
+    }
+    const all = [ ...index.findEncoded([ undefined, undefined, undefined, undefined ], <any> [ undefined ]) ];
+    const advance = jest.spyOn(index, 'advance');
+    expect([ ...index.findDistinctTerms([ true, false, false, false ]) ])
+      .toHaveLength(new Set(all.map(([ id ]) => id)).size);
+    expect(advance).toHaveBeenCalledWith(expect.anything(), expect.any(Function));
+  });
+
   it('seeks to the end of an empty index', () => {
     expect(index.seekKey([ 1, 2, 3, 4 ], 2, false)).toEqual({ leaf: index.leaves.length, offset: 0 });
   });
